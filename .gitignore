@@ -32,3 +32,10 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI coding agent instructions
+# Dibagikan manual ke anggota tim (bukan lewat git), jadi tidak di-push.
+/AGENTS.md
+/OPENCODE.md
+/.cursor/
+/.github/copilot-instructions.md
