@@ -1,24 +1,27 @@
 import 'dart:math' as math;
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../viewmodels/camera_vm.dart';
+
 /// Screen UI untuk "Scan Kamera" pada aplikasi Roastmate.
-/// Dibuat sesuai arsitektur MVVM + Feature-First (Statis / UI Dummy).
-class CameraScreen extends StatefulWidget {
+/// Terintegrasi dengan Riverpod 2.x & CameraController (MVVM Architecture).
+class CameraScreen extends ConsumerStatefulWidget {
   const CameraScreen({super.key});
 
   @override
-  State<CameraScreen> createState() => _CameraScreenState();
+  ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> {
-  // State interaktif sederhana untuk keperluan UI dummy
-  String _selectedZoom = '1x';
-  bool _isFlashOn = false;
-  bool _isLightOn = true;
-
+class _CameraScreenState extends ConsumerState<CameraScreen> {
   @override
   Widget build(BuildContext context) {
+    // Membaca state kamera dari Riverpod ViewModel
+    final cameraState = ref.watch(cameraViewModelProvider);
+    final cameraVM = ref.read(cameraViewModelProvider.notifier);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0EB),
       appBar: _buildAppBar(context),
@@ -45,10 +48,10 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // 1. Placeholder Latar Belakang Tampilan Kamera
+                      // 1. Tampilan Kamera Asli (CameraPreview) atau Placeholder Latar Belakang
                       Positioned.fill(
-                        child: _CameraPreviewPlaceholder(
-                          isLightOn: _isLightOn,
+                        child: _CameraLivePreview(
+                          state: cameraState,
                         ),
                       ),
 
@@ -109,17 +112,13 @@ class _CameraScreenState extends State<CameraScreen> {
 
                             // Tombol Lightbulb / Lampu Pencerah
                             _IconButtonCircle(
-                              icon: _isLightOn
+                              icon: cameraState.isLightOn
                                   ? Icons.lightbulb
                                   : Icons.lightbulb_outline,
-                              iconColor: _isLightOn
+                              iconColor: cameraState.isLightOn
                                   ? const Color(0xFFFDE047)
                                   : Colors.white,
-                              onTap: () {
-                                setState(() {
-                                  _isLightOn = !_isLightOn;
-                                });
-                              },
+                              onTap: () => cameraVM.toggleLight(),
                             ),
                           ],
                         ),
@@ -301,17 +300,23 @@ class _CameraScreenState extends State<CameraScreen> {
 
                 // Panel Kontrol Bawah (Bottom Controls Panel)
                 _BottomControlPanel(
-                  selectedZoom: _selectedZoom,
-                  onZoomChanged: (zoom) {
-                    setState(() {
-                      _selectedZoom = zoom;
-                    });
-                  },
-                  isFlashOn: _isFlashOn,
-                  onFlashToggled: () {
-                    setState(() {
-                      _isFlashOn = !_isFlashOn;
-                    });
+                  state: cameraState,
+                  onZoomChanged: (zoom) => cameraVM.setZoom(zoom),
+                  onFlashToggled: () => cameraVM.toggleFlash(),
+                  onShutterPressed: () async {
+                    final image = await cameraVM.takePicture();
+                    if (image != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF5A382C),
+                          content: Text(
+                            'Foto berhasil diambil!\nPath: ${image.path}',
+                            style: GoogleFonts.inter(color: Colors.white),
+                          ),
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
                   },
                 ),
               ],
@@ -344,7 +349,6 @@ class _CameraScreenState extends State<CameraScreen> {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Logo Badge Cokelat Bundar Dengan Ikon Biji Kopi
           Container(
             width: 34,
             height: 34,
@@ -395,38 +399,71 @@ class _CameraScreenState extends State<CameraScreen> {
 // SUB-WIDGETS & CUSTOM PAINTERS
 // =============================================================================
 
-/// Placeholder Tampilan Sorotan Kamera dengan Gambar Biji Kopi Statis
-class _CameraPreviewPlaceholder extends StatelessWidget {
-  final bool isLightOn;
+/// Umpan Kamera Langsung (CameraPreview) dengan Fallback Gambar Placeholder
+class _CameraLivePreview extends StatelessWidget {
+  final CameraState state;
 
-  const _CameraPreviewPlaceholder({
-    required this.isLightOn,
+  const _CameraLivePreview({
+    required this.state,
   });
 
   @override
   Widget build(BuildContext context) {
+    final controller = state.controller;
+    final isReady = state.isInitialized &&
+        controller != null &&
+        controller.value.isInitialized;
+
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Latar Gambar Biji Kopi Dummy (Unsplash dengan Fallback Warna Gelap)
-        Image.network(
-          'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1000&auto=format&fit=crop',
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: const Color(0xFF2C221E),
-              child: const Center(
-                child: Icon(
-                  Icons.coffee_outlined,
-                  size: 80,
-                  color: Color(0xFF4A3A34),
+        if (isReady)
+          // Menampilkan Umpan Uji Kamera Asli Tanpa Distorsi (Preserve Aspect Ratio)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return ClipRect(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxWidth * controller.value.aspectRatio,
+                    child: CameraPreview(controller),
+                  ),
                 ),
+              );
+            },
+          )
+        else
+          // Fallback Gambar & Loading jika kamera belum terinisialisasi / emulator tanpa kamera
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?q=80&w=1000&auto=format&fit=crop',
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: const Color(0xFF2C221E),
+                    child: const Center(
+                      child: Icon(
+                        Icons.coffee_outlined,
+                        size: 80,
+                        color: Color(0xFF4A3A34),
+                      ),
+                    ),
+                  );
+                },
               ),
-            );
-          },
-        ),
+              if (state.isLoading)
+                const Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF86EFAC),
+                  ),
+                ),
+            ],
+          ),
 
-        // Gradient & Vignette Gelap di Atas Gambar untuk Meniru Kamera Realistis
+        // Layer Gradient Vignette di atas kamera
         AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           decoration: BoxDecoration(
@@ -434,9 +471,9 @@ class _CameraPreviewPlaceholder extends StatelessWidget {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.black.withValues(alpha: isLightOn ? 0.35 : 0.65),
-                Colors.black.withValues(alpha: isLightOn ? 0.20 : 0.55),
-                Colors.black.withValues(alpha: isLightOn ? 0.45 : 0.75),
+                Colors.black.withValues(alpha: state.isLightOn ? 0.30 : 0.60),
+                Colors.black.withValues(alpha: state.isLightOn ? 0.15 : 0.50),
+                Colors.black.withValues(alpha: state.isLightOn ? 0.40 : 0.70),
               ],
             ),
           ),
@@ -484,16 +521,16 @@ class _IconButtonCircle extends StatelessWidget {
 
 /// Panel Kontrol Bawah (Zoom, Shutter, Galeri, Flash & Catatan Kaki)
 class _BottomControlPanel extends StatelessWidget {
-  final String selectedZoom;
+  final CameraState state;
   final ValueChanged<String> onZoomChanged;
-  final bool isFlashOn;
   final VoidCallback onFlashToggled;
+  final VoidCallback onShutterPressed;
 
   const _BottomControlPanel({
-    required this.selectedZoom,
+    required this.state,
     required this.onZoomChanged,
-    required this.isFlashOn,
     required this.onFlashToggled,
+    required this.onShutterPressed,
   });
 
   @override
@@ -533,8 +570,9 @@ class _BottomControlPanel extends StatelessWidget {
 
               // Tombol Shutter Bulat Besar
               GestureDetector(
-                onTap: () {},
-                child: Container(
+                onTap: state.isTakingPicture ? null : onShutterPressed,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
                   width: 72,
                   height: 72,
                   decoration: BoxDecoration(
@@ -553,25 +591,34 @@ class _BottomControlPanel extends StatelessWidget {
                     ],
                   ),
                   child: Center(
-                    child: Container(
-                      width: 58,
-                      height: 58,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFE5DDD5),
-                          width: 2,
-                        ),
-                      ),
-                    ),
+                    child: state.isTakingPicture
+                        ? const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF5A382C),
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : Container(
+                            width: 58,
+                            height: 58,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE5DDD5),
+                                width: 2,
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ),
 
               // Tombol Flash (Mati / Nyala)
               _buildActionButton(
-                icon: isFlashOn ? Icons.flash_on : Icons.flash_off,
-                label: isFlashOn ? 'Nyala' : 'Mati',
+                icon: state.isFlashOn ? Icons.flash_on : Icons.flash_off,
+                label: state.isFlashOn ? 'Nyala' : 'Mati',
                 onTap: onFlashToggled,
               ),
             ],
@@ -595,7 +642,7 @@ class _BottomControlPanel extends StatelessWidget {
   }
 
   Widget _buildZoomOption(String zoomText) {
-    final isSelected = selectedZoom == zoomText;
+    final isSelected = state.selectedZoom == zoomText;
     return GestureDetector(
       onTap: () => onZoomChanged(zoomText),
       child: AnimatedContainer(
