@@ -5,6 +5,7 @@ import '../../core/roastmate_spacing.dart';
 import '../../core/roastmate_radius.dart';
 import '../../data/mock_analysis_history.dart';
 import '../../domain/analysis_history_item.dart';
+import 'inspection_detail_screen.dart';
 import 'widgets/history_app_header.dart';
 import 'widgets/history_filter_bar.dart';
 import 'widgets/history_card.dart';
@@ -34,7 +35,7 @@ class AnalysisHistoryScreen extends StatefulWidget {
 }
 
 class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
-  static const List<String> _filterOptions = ['Semua', 'Arabica', 'Robusta'];
+  static const List<String> _filterOptions = ['Semua', 'Arabica', 'Robusta', 'Mixed'];
 
   String _selectedFilter = 'Semua';
 
@@ -51,7 +52,16 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
       'Semua': items.length,
       'Arabica': items.where((item) => item.species == 'Arabica').length,
       'Robusta': items.where((item) => item.species == 'Robusta').length,
+      'Mixed': items.where((item) => item.species == 'Mixed').length,
     };
+  }
+
+  void _openDetail(AnalysisHistoryItem item) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => InspectionDetailScreen(result: item.detail),
+      ),
+    );
   }
 
   void _onExportCsv() {
@@ -87,7 +97,7 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
                 _buildEmptyState()
               else
                 for (int i = 0; i < items.length; i++) ...[
-                  HistoryCard(item: items[i]),
+                  HistoryCard(item: items[i], onTap: () => _openDetail(items[i])),
                   if (i < items.length - 1) const SizedBox(height: RoastmateSpacing.md),
                 ],
               const SizedBox(height: RoastmateSpacing.xl),
