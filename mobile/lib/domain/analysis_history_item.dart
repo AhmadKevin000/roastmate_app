@@ -2,26 +2,21 @@ import 'inspection_result.dart';
 
 /// Satu baris riwayat analisis untuk daftar di tab Analisis.
 ///
-/// Versi ringkas dari [InspectionResult]: hanya memuat field yang tampil di
-/// kartu riwayat (tanpa deteksi, rekomendasi, atau bukti visual).
+/// Membungkus [InspectionResult] lengkap (dipakai layar Detail Inspeksi) dan
+/// menambahkan [dateLabel] khusus tampilan daftar.
 class AnalysisHistoryItem {
-  final String batchName;
+  final InspectionResult detail;
   final String dateLabel;
-  final String species; // 'Arabica' | 'Robusta' | 'Mixed'
-  final int qualityScore;
-  final int visibleBeans;
-  final Map<DefectClass, int> defectCounts;
 
-  const AnalysisHistoryItem({
-    required this.batchName,
-    required this.dateLabel,
-    required this.species,
-    required this.qualityScore,
-    required this.visibleBeans,
-    required this.defectCounts,
-  });
+  const AnalysisHistoryItem({required this.detail, required this.dateLabel});
 
-  int get healthyCount => defectCounts[DefectClass.healthy] ?? 0;
+  String get batchName => detail.batchName;
+  String get species => detail.species;
+  int get qualityScore => detail.qualityScore;
+  int get visibleBeans => detail.visibleBeans;
+  Map<DefectClass, int> get defectCounts => detail.defectCounts;
+
+  int get healthyCount => detail.healthyCount;
 
   /// Jumlah biji defect = total terlihat - Healthy.
   int get defectTotal => visibleBeans - healthyCount;
