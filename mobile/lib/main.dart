@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'pages/main_page.dart';
 
 void main() {
-  runApp(const RoastmateApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    const ProviderScope(
+      child: RoastmateApp(),
+    ),
+  );
 }
 
 class RoastmateApp extends StatelessWidget {

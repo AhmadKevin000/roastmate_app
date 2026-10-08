@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../features/camera/views/camera_screen.dart';
 
 // ============================================================
 // Design System: Warm Technical Minimalism
@@ -48,7 +49,7 @@ class HomePage extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              _buildScanBanner(),
+              _buildScanBanner(context),
               const SizedBox(height: 24),
               _buildRecentAnalysisHeader(),
               const SizedBox(height: 16),
@@ -473,7 +474,7 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // SCAN BANNER
   // ============================================================
-  Widget _buildScanBanner() {
+  Widget _buildScanBanner(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
@@ -539,7 +540,14 @@ class HomePage extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CameraScreen(),
+                      ),
+                    );
+                  },
                   icon: const Icon(Icons.camera_alt, color: _primary),
                   label: const Text(
                     'Buka Kamera',
