@@ -1,0 +1,34 @@
+# Root .gitignore
+#
+# Project Flutter sebenarnya ada di dalam folder `mobile/` dan punya
+# .gitignore-nya sendiri. File ini mencegah artefak yang di-generate
+# ulang di root (mis. kalau `flutter create` / IDE dijalankan dari sini)
+# muncul sebagai untracked di `git status`.
+
+# Dart / Flutter
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Platform scaffolding (kalau ke-generate ulang di root)
+/android/
+/ios/
+/macos/
+/linux/
+/windows/
+/web/
+
+# OS
+.DS_Store
+Thumbs.db
