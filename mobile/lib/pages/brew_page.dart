@@ -1,22 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../features/brew/views/brew_catalog_screen.dart';
+
+/// Host tab "Seduh".
+///
+/// Isi sebenarnya ada di `features/brew/` (fitur-first). `MainPage` tetap
+/// memanggil `BrewPage()`, sehingga `main.dart` & `main_page.dart` tidak perlu
+/// diubah.
 class BrewPage extends StatelessWidget {
   const BrewPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Seduh', style: TextStyle(color: Color(0xFF422E26), fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: const Center(
-        child: Text(
-          'Halaman Seduh (Belum Tersedia)',
-          style: TextStyle(color: Color(0xFF422E26), fontSize: 16),
-        ),
-      ),
-    );
+    return const BrewCatalogScreen();
   }
 }
