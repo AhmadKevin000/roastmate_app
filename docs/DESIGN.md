@@ -179,7 +179,7 @@ spacing:
 
 ## Brand & Style
 
-The design system embodies a warm technical minimalism aesthetic, replacing sterile laboratory software conventions with an artisanal, grounded coffee-grading atmosphere. It strikes an intentional equilibrium between computational precision (computer vision defect classification, extraction metrics, indicative tier grading) and human sensory craft (roasting profiles, tactile surfaces, ritualistic manual brewing).
+The design system embodies a warm technical minimalism aesthetic, replacing sterile laboratory software conventions with an artisanal, grounded coffee-grading atmosphere. It strikes an intentional equilibrium between computational precision (computer vision defect classification, batch quality scoring, indicative tier grading) and human sensory craft (roasting profiles, tactile surfaces, ritualistic manual brewing).
 
 ### Personality & Emotional Resonance
 - **Artisanal Rigor:** Reassuring, analytical, and scientifically sound without feeling clinical or intimidating.
@@ -220,7 +220,7 @@ Quality Profile kanonik adalah `High` · `Medium` · `Low`. Tampilan grade dipet
 The typographic hierarchy utilizes **Inter** across all display, body, and label roles to maintain structural precision, neutral neutrality, and extreme legibility when parsing complex data tables and machine vision logs.
 
 ### Application Rules
-- **Display & Headlines:** Used for indicative overall quality scores, extraction percentages, and top-level screen names. Set with a tight tracking rhythm and firm weights (700) to project structural stability.
+- **Display & Headlines:** Used for indicative overall quality scores and top-level screen names. Set with a tight tracking rhythm and firm weights (700) to project structural stability.
 - **Titles & Subtitles:** Standardized to 600 weight to maintain scan-reading efficiency across dense recipe steps and defect counters without creating typographic vibration.
 - **Body:** Neutral weights (400) optimized for sustained reading during brewing guides, tasting notes, and diagnostic explanations.
 - **Labels & Micro-copy:** Set with slight positive letter-spacing (`0.1px` to `0.3px`) and semi-bold weights (600) to ensure immediate decipherability in all-caps indicative grade tags (`GRADE INDIKATIF — SPECIALTY`) and compact metric pills.

@@ -46,12 +46,17 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: RoastmateColors.textPrimary),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: RoastmateColors.textPrimary,
+          ),
           onPressed: () => Navigator.maybePop(context),
         ),
         title: Text(
           "Detail Inspeksi",
-          style: RoastmateText.titleLg.copyWith(color: RoastmateColors.textPrimary),
+          style: RoastmateText.titleLg.copyWith(
+            color: RoastmateColors.textPrimary,
+          ),
         ),
         centerTitle: true,
         actions: [
@@ -60,26 +65,24 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
             child: CircleAvatar(
               backgroundColor: RoastmateColors.primary,
               radius: 16,
-              child: const Icon(Icons.person, size: 20, color: RoastmateColors.surface),
+              child: const Icon(
+                Icons.person,
+                size: 20,
+                color: RoastmateColors.surface,
+              ),
             ),
           ),
         ],
       ),
       body: _buildBody(),
-      bottomNavigationBar: RoastmateBottomNav(
-        currentIndex: 1, // Analisis tab active
-        onTap: (index) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Tab $index belum diimplementasi")),
-          );
-        },
-      ),
     );
   }
 
   Widget _buildBody() {
     if (_state == ViewState.loading) {
-      return const Center(child: CircularProgressIndicator(color: RoastmateColors.primary));
+      return const Center(
+        child: CircularProgressIndicator(color: RoastmateColors.primary),
+      );
     }
 
     if (_state == ViewState.error || widget.result == null) {
@@ -114,7 +117,11 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
               constraints: const BoxConstraints(maxWidth: 840),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: constraints.maxWidth >= 600 ? (constraints.maxWidth > 720 ? (constraints.maxWidth - 720) / 2 : 0) : 0,
+                  horizontal: constraints.maxWidth >= 600
+                      ? (constraints.maxWidth > 720
+                            ? (constraints.maxWidth - 720) / 2
+                            : 0)
+                      : 0,
                 ),
                 child: Column(
                   children: [
@@ -127,24 +134,35 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                     const SizedBox(height: RoastmateSpacing.xl),
                     QualityScoreCard(result: result),
                     const SizedBox(height: RoastmateSpacing.xl),
-                    if (result.roast.toLowerCase() != 'green' && result.recommendation != null)
+                    if (result.roast.toLowerCase() != 'green' &&
+                        result.recommendation != null)
                       BrewRecommendationCard(result: result),
-                    if (result.roast.toLowerCase() == 'green' || result.recommendation == null)
+                    if (result.roast.toLowerCase() == 'green' ||
+                        result.recommendation == null)
                       Container(
-                        margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: RoastmateSpacing.lg,
+                        ),
                         padding: const EdgeInsets.all(RoastmateSpacing.lg),
                         decoration: BoxDecoration(
                           color: RoastmateColors.statusInfoContainer,
-                          borderRadius: BorderRadius.circular(RoastmateRadius.large),
+                          borderRadius: BorderRadius.circular(
+                            RoastmateRadius.large,
+                          ),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.info, color: RoastmateColors.statusInfo),
+                            const Icon(
+                              Icons.info,
+                              color: RoastmateColors.statusInfo,
+                            ),
                             const SizedBox(width: RoastmateSpacing.md),
                             Expanded(
                               child: Text(
                                 "Biji masih Green — perlu roasting, tanpa parameter seduh.",
-                                style: RoastmateText.bodyLg.copyWith(color: RoastmateColors.textPrimary),
+                                style: RoastmateText.bodyLg.copyWith(
+                                  color: RoastmateColors.textPrimary,
+                                ),
                               ),
                             ),
                           ],

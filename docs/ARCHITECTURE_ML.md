@@ -74,6 +74,19 @@ URL sumber lengkap (asli + mirror) ada di **Lampiran A**.
 | DS008 | foreign-matters | foreign_matter | Map |
 | DS008 | severe/slight-insect-damage | insect_damage | Map |
 
+### Mapping label training ↔ enum aplikasi
+
+Label target training memakai **snake_case**; enum yang disimpan di DB dan ditampilkan di UI memakai **Title Case**. Pemetaan wajib eksplisit:
+
+| Target (training) | Enum DB/UI |
+|---|---|
+| `healthy` | `Healthy` |
+| `broken` | `Broken` |
+| `insect_damage` | `Insect Damage` |
+| `quaker` | `Quaker` |
+| `scorched` | `Scorched` |
+| `foreign_matter` | `Foreign Matter` |
+
 ### Hard Rules
 - `burnt` ≠ otomatis `scorched`.
 - Grade A/B ≠ otomatis `healthy`.
@@ -121,7 +134,7 @@ Fitur per biji: `area`, `perimeter`, `width`, `height`, `aspect_ratio`, `circula
 
 ## 7. Batch Aggregation
 
-Metrik: `visible_bean_count`, `species_distribution`, `roast_distribution`, hitungan per kelas defect, `defect_rate`, `shape_uniformity`, `size_uniformity`, `roast_uniformity`.
+Metrik: `visible_beans`, `species` (dominan), `roast_distribution`, hitungan per kelas defect, `defect_rate`, `shape_uniformity`, `size_uniformity`, `roast_uniformity`.
 
 ```
 defect_rate = total_defective_beans / total_visible_beans
@@ -134,7 +147,7 @@ Aturan: hanya biji **terlihat** yang dinilai; biji tertutup tidak dinilai.
 ## 8. Confidence & Mixed Batch
 
 - Confidence < threshold → `uncertain`.
-- Distribusi species/roast terlalu dekat → `Mixed / Uncertain`.
+- Distribusi species terlalu dekat → species `Mixed`; distribusi roast terlalu dekat → status `uncertain`.
 - Jangan memaksakan satu kelas saat confidence/distribusi tidak memadai.
 
 ---
@@ -176,25 +189,21 @@ Pemetaan ke Indicative Grade (default, dapat dikonfigurasi):
 
 ## 10. Brewing Knowledge Base
 
-Struktur metode:
+Knowledge base = dua tabel: `brew_methods` (deskriptif) dan `brew_recipes` (otoritatif). **Definisi skema, tipe, constraint, dan index lengkap ada di `DATABASE_SCHEMA.md`.**
 
-```
-method_id, method_name, method_type, suitable_species,
-quality_profile, roast_context, grind_size,
-water_volume_ml, temperature_c, brewing_time_s,
-description, source
-```
+Peran:
+- `brew_methods` — metadata metode, **tidak** menyimpan parameter seduh.
+- `brew_recipes` — pemilik seluruh parameter seduh: `dose_g`, `water_volume_ml`, `grind_size`, `temperature_c`, `brewing_time_s`, `source`, `is_default`, `steps` (JSON), `notes`.
 
-Contoh: `M001 V60 pour_over` · `M002 French Press immersion` · `M003 AeroPress hybrid` · `M004 Moka Pot pressure`.
+Contoh metode: `M001 V60 pour_over` · `M002 French Press immersion` · `M003 AeroPress hybrid` · `M004 Moka Pot pressure` · `M005 Kopi Tubruk immersion`.
 
-Struktur resep:
-
-```
-recipe_id, method_id, species, quality_profile, roast_context,
-grind_size, water_volume_ml, temperature_c, brewing_time_s, source
-```
-
-Aturan: nilai parameter **harus** berasal/diturunkan secara terdokumentasi dari sumber (BR001–BR004). Jangan mengarang parameter.
+### Aturan
+- Parameter seduh **hanya ada di `brew_recipes`**. Tidak diduplikasi di `brew_methods`.
+- Nilai parameter **harus** berasal/diturunkan secara terdokumentasi dari sumber (BR001–BR004). Jangan mengarang parameter.
+- Katalog metode menampilkan parameter dari resep `is_default = 1`.
+- Langkah disimpan di `steps` JSON; tiap item punya `phase` (`prep` = persiapan & alat, `brew` = langkah seduh). Tips rasa disimpan di `notes`.
+- Rasio **tidak disimpan**; dihitung `water_volume_ml / dose_g`.
+- KB disimpan di **SQLite** (`DATABASE_SCHEMA.md`).
 
 ---
 
@@ -217,7 +226,8 @@ method_score = species_match + quality_match + profile_match + context_match
 Bobot dapat dikonfigurasi tanpa retraining.
 
 ### Grind / Air / Suhu / Waktu
-- Semua berasal dari **resep terpilih** (knowledge base), bukan model visi.
+- Semua berasal dari **`brew_recipes`** (resep terpilih), bukan model visi.
+- Diambil via `recipe_id` terpilih, termasuk `dose_g`, `water_volume_ml`, `temperature_c`, `brewing_time_s`, dan `source`.
 - Grind disimpan sebagai kategori: Fine · Medium-Fine · Medium · Medium-Coarse · Coarse.
 - Setting grinder numerik tidak universal antar grinder.
 
@@ -276,30 +286,35 @@ Bandingkan: accuracy, F1/mAP, latency, RAM, ukuran model.
 ```json
 {
   "species": "Arabica",
-  "species_confidence": 0.94,
   "roast": "Medium",
   "roast_confidence": 0.91,
+  "roast_distribution": { "Light": 3, "Medium": 19, "Dark": 2 },
   "visible_beans": 24,
   "defects": {
-    "healthy": 20, "broken": 2, "insect_damage": 1,
-    "quaker": 1, "scorched": 0, "foreign_matter": 0
+    "Healthy": 20, "Broken": 2, "Insect Damage": 1,
+    "Quaker": 1, "Scorched": 0, "Foreign Matter": 0
   },
   "defect_rate": 0.167,
   "shape_uniformity": 0.86,
+  "size_uniformity": 0.88,
   "roast_uniformity": 0.9,
+  "status": "OK",
   "quality_score": 82,
-  "quality_profile": "high",
+  "quality_profile": "High",
   "recommendation": {
     "primary_method": "V60",
     "alternative_method": "AeroPress",
+    "dose_g": 15,
     "grind_size": "Medium-Fine",
     "water_volume_ml": 240,
     "temperature_c": 92,
     "brewing_time_s": 165,
-    "reason": "Compatible with the detected coffee profile."
+    "reason": "Sesuai dengan profil kopi terdeteksi."
   }
 }
 ```
+
+Catatan: `status` (`OK` / `Uncertain`) diturunkan dari `roast_confidence` vs ambang, bukan kelas paksa.
 
 ---
 

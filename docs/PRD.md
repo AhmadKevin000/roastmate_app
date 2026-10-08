@@ -14,7 +14,7 @@ Yang dihasilkan:
 
 | Output | Sumber |
 |---|---|
-| Jenis kopi (Arabica / Robusta) | Model visi (YOLOv8n-Cls) |
+| Jenis kopi (Arabica / Robusta / Mixed) | Model visi (YOLOv8n-Cls) |
 | Tingkat roast (Green / Light / Medium / Dark) | Model visi (YOLOv8n-Cls) |
 | Defect per biji (6 kelas) | Model visi (YOLOv8n-Cls) |
 | Bentuk & keseragaman batch | OpenCV (bukan ML) |
@@ -66,13 +66,13 @@ Aplikasi memiliki 3 tab utama.
 
 ### Tab Beranda
 - Sapaan & ringkasan.
-- Komposisi jenis biji (Arabica vs Robusta) dari seluruh riwayat.
+- Komposisi jenis biji (Arabica / Robusta / Mixed) dari seluruh riwayat.
 - Statistik: total analisis, rata-rata skor.
 - Kartu CTA "Scan Batch Baru" → kamera.
 - Daftar analisis terakhir (ringkas).
 
 ### Tab Analisis
-- Riwayat analisis (daftar + filter Semua / Arabica / Robusta).
+- Riwayat analisis (daftar + filter Semua / Arabica / Robusta / Mixed).
 - Setiap item: nama, tanggal, jenis, jumlah biji terlihat, jumlah defect, skor, grade.
 - Buka detail inspeksi (hasil analisis lengkap).
 - Ekspor CSV.
@@ -139,7 +139,7 @@ Seduh
 - Rekomendasi seduh terkalibrasi (metode utama + parameter).
 - Metode alternatif.
 - Bukti visual klasifikasi (bounding box berlabel + zoom).
-- Rincian komposisi biji per kelas (jumlah + persentase).
+- Rincian komposisi **defect** per kelas (jumlah + persentase). Species ditampilkan sebagai satu jenis biji saja.
 - Disclaimer: penilaian indikatif, bukan sertifikasi laboratorium.
 
 ### FR-05 Riwayat Analisis
@@ -165,7 +165,7 @@ Seduh
 
 ### FR-09 Confidence & Mixed Batch
 - Bila confidence di bawah threshold → tandai `uncertain`.
-- Bila distribusi species/roast terlalu dekat → tandai `Mixed / Uncertain`.
+- Bila distribusi species terlalu dekat → species `Mixed`; bila distribusi roast terlalu dekat → status `uncertain`.
 - Tidak memaksakan satu kelas.
 
 ---
@@ -178,6 +178,7 @@ Seduh
 | Mode operasi | On-device, offline (tanpa internet) |
 | Latensi inference | < ~1 detik per foto |
 | Penggunaan RAM | < ~120 MB |
+| Ukuran model total | ≤ ~4 MB (perlu dikaji ulang) |
 | Privasi | Foto tidak pernah dikirim ke server |
 | Riwayat | Tersimpan lokal (SQLite) |
 | Bahasa UI | Indonesia |
@@ -188,7 +189,9 @@ Seduh
 ## 8. Taksonomi & Definisi
 
 ### Species
-`Arabica` · `Robusta` · `Mixed / Uncertain`
+`Arabica` · `Robusta` · `Mixed`
+
+> `Mixed` menandai batch campuran/ambigu. Status `uncertain` (confidence di bawah ambang) adalah **status tampilan**, bukan nilai species — lihat FR-09.
 
 ### Roast
 `Green` · `Light` · `Medium` · `Dark`
