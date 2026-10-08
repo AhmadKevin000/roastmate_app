@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_page.dart';
 import 'brew_page.dart';
-import '../data/mock_inspection.dart';
-import '../features/analysis/inspection_detail_screen.dart';
+import '../features/analysis/analysis_history_screen.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -15,12 +14,9 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
-  static final List<Widget> _widgetOptions = <Widget>[
+  static const List<Widget> _widgetOptions = <Widget>[
     HomePage(),
-    InspectionDetailScreen(
-      result: mockInspectionResult,
-      initialState: ViewState.content,
-    ),
+    AnalysisHistoryScreen(showBottomNav: false),
     BrewPage(),
   ];
 
