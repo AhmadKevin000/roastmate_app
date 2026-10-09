@@ -1,0 +1,2 @@
+experiment_id,date,model_task,architecture,datasets,classes,split,augmentation,epochs,imgsz,batch,acc_top1,macro_f1,test_acc_top1,test_macro_f1,confusion_notes,model_path,git_commit,notes
+EXP-ROAST-001,CONTOH,roast,yolov8n-cls,DS003,"Green,Light,Medium,Dark",70/15/15,"fliplr + degrees<=10 + hsv ringan",50,224,32,,,,,"fokus Light<->Medium, Medium<->Dark",ml/models/best_int8.tflite,,,"Baris contoh — hapus/ganti saat run pertama"
