@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../viewmodels/camera_vm.dart';
+import '../viewmodels/scan_view_model.dart';
 
 /// Screen UI untuk "Scan Kamera" pada aplikasi Roastmate.
 /// Terintegrasi dengan Riverpod 2.x & CameraController (MVVM Architecture).

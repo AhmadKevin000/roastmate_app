@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../features/camera/views/camera_screen.dart';
+import '../features/scan/presentation/views/scan_view.dart';
 
 // ============================================================
 // Design System: Warm Technical Minimalism
