@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/roastmate_colors.dart';
-import '../../../core/theme/roastmate_text.dart';
-import '../../../core/theme/roastmate_spacing.dart';
-import '../../../core/theme/roastmate_radius.dart';
-import '../../../shared/models/analysis_result.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../shared/models/analysis_result.dart';
 import 'bean_overlay_painter.dart';
 
 class VisualEvidenceCard extends StatelessWidget {

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/roastmate_colors.dart';
-import '../../../core/theme/roastmate_text.dart';
-import '../../../core/theme/roastmate_spacing.dart';
-import '../../../core/theme/roastmate_radius.dart';
-import '../../../shared/models/analysis_result.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../shared/models/analysis_result.dart';
 
 class DefectRow extends StatelessWidget {
   final DefectClass defectClass;

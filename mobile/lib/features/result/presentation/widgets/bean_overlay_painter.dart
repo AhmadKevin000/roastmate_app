@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/roastmate_colors.dart';
-import '../../../shared/models/analysis_result.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../shared/models/analysis_result.dart';
 
 class BeanOverlayPainter extends CustomPainter {
   final List<BeanDetection> detections;

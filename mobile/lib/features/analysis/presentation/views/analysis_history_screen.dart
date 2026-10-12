@@ -5,7 +5,7 @@ import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../data/sources/mock_analysis_history.dart';
 import '../../domain/entities/analysis_history_item.dart';
-import '../../inspection_detail_screen.dart';
+import '../../../result/presentation/views/result_view.dart';
 import '../widgets/history_app_header.dart';
 import '../widgets/history_filter_bar.dart';
 import '../widgets/history_card.dart';
