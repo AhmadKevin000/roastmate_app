@@ -1,7 +1,7 @@
 import 'dart:ui';
 
 import '../domain/analysis_history_item.dart';
-import '../domain/inspection_result.dart';
+import '../shared/models/analysis_result.dart';
 
 /// Data dummy riwayat analisis untuk mengembangkan UI (belum tersambung SQLite).
 ///

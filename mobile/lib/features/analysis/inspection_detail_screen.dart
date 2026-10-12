@@ -3,7 +3,7 @@ import '../../core/theme/roastmate_colors.dart';
 import '../../core/theme/roastmate_text.dart';
 import '../../core/theme/roastmate_spacing.dart';
 import '../../core/theme/roastmate_radius.dart';
-import '../../domain/inspection_result.dart';
+import '../../shared/models/analysis_result.dart';
 import 'widgets/inspection_header.dart';
 import 'widgets/quality_score_card.dart';
 import 'widgets/brew_recommendation_card.dart';

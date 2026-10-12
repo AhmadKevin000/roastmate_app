@@ -1,9 +1,15 @@
-import 'dart:ui';
+import '../enums/defect_class.dart';
+import '../enums/indicative_grade.dart';
+import '../enums/quality_profile.dart';
+import 'bean_detection.dart';
 
-enum DefectClass { healthy, broken, insectDamage, quaker, scorched, foreignMatter }
-enum QualityProfile { high, medium, low }
-enum IndicativeGrade { specialty, premium, standard, belowStandard, offGrade }
+// Re-export enum & model terkait agar konsumen cukup mengimpor satu berkas hasil.
+export '../enums/defect_class.dart';
+export '../enums/indicative_grade.dart';
+export '../enums/quality_profile.dart';
+export 'bean_detection.dart';
 
+/// Hasil lengkap satu sesi analisis batch (Detail Inspeksi).
 class InspectionResult {
   final String batchLabel;
   final String batchName;
@@ -37,7 +43,8 @@ class InspectionResult {
 
   int get healthyCount => defectCounts[DefectClass.healthy] ?? 0;
 
-  double get defectRate => visibleBeans > 0 ? (visibleBeans - healthyCount) / visibleBeans : 0.0;
+  double get defectRate =>
+      visibleBeans > 0 ? (visibleBeans - healthyCount) / visibleBeans : 0.0;
 
   QualityProfile get qualityProfile {
     if (qualityScore >= 75) return QualityProfile.high;
@@ -96,16 +103,4 @@ class AlternativeMethod {
   final String description;
 
   AlternativeMethod({required this.title, required this.description});
-}
-
-class BeanDetection {
-  final DefectClass classLabel;
-  final Rect normalizedRect; // 0..1
-  final double confidence;
-
-  BeanDetection({
-    required this.classLabel,
-    required this.normalizedRect,
-    required this.confidence,
-  });
 }

@@ -3,7 +3,7 @@ import '../../../core/theme/roastmate_colors.dart';
 import '../../../core/theme/roastmate_text.dart';
 import '../../../core/theme/roastmate_spacing.dart';
 import '../../../core/theme/roastmate_radius.dart';
-import '../../../domain/inspection_result.dart';
+import '../../../shared/models/analysis_result.dart';
 
 class AlternativeMethodTile extends StatelessWidget {
   final AlternativeMethod method;

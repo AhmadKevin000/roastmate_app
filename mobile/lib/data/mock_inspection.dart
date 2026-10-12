@@ -1,5 +1,5 @@
 import 'dart:ui';
-import '../domain/inspection_result.dart';
+import '../shared/models/analysis_result.dart';
 
 final mockInspectionResult = InspectionResult(
   batchLabel: "Batch #042",
