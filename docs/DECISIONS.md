@@ -49,6 +49,8 @@ Ambang grade = parameter sistem, dapat dikonfigurasi.
 **Keputusan:** `burnt`, `mold`, `under` → **EXCLUDED** dari training taxonomy final.
 `burnt` tidak otomatis dipetakan ke `scorched`.
 
+Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; `insect`+`mold` sebenarnya satu kelas gabungan `insectOrMold`.
+
 ---
 
 ## D-04 — "Moisture predictions" dihapus
@@ -237,9 +239,34 @@ Ambang grade = parameter sistem, dapat dikonfigurasi.
 
 ---
 
+## D-19 — Penyelarasan dataset hasil verifikasi (Roboflow MCP + sumber asli)
+
+**Konteks:** Verifikasi DS004–DS009 (12 Okt 2026) menemukan:
+(a) DS004 memuat kelas **`normal`** (1.311, kelas terbesar) yang tidak tercatat, dan `insect`+`mold` sebenarnya satu kelas gabungan **`insectOrMold`** (45 insect + 2 mold);
+(b) DS007 bertipe **instance-segmentation**, bukan detection;
+(c) DS008 punya **17 kelas**, dokumen hanya memetakan 5;
+(d) DS008 & DS009 bertaksonomi identik namun **ID gambar tidak beririsan** (561 vs 800 sampel → 0 irisan);
+(e) model Defect §5 mencampur biji **mentah** (DS008/DS009) dan **sangrai** (DS004/DS007).
+
+**Keputusan:**
+- **Model Defect difokuskan biji SANGRAI (roasted-only): DS004 + DS007.** DS008/DS009 tidak dipakai untuk classifier Defect → menghapus mismatch domain (e). `insect_damage` tetap valid karena kerusakan struktural (lubang) tetap terlihat setelah disangrai.
+- **DS004 diperbaiki** (menggantikan daftar kelas yang keliru di §2/§3): `normal`→`healthy`, `quaker`→`quaker`, `frag`→`broken`, `insect` (⊂ `insectOrMold`)→`insect_damage`; `mold`, `burnt`, `under`→EXCLUDED.
+- **`Foreign Matter` dikecualikan** dari training (tidak ada sumber roasted). Enum DB tetap 6 nilai.
+- **Kelas ekstra = kandidat fitur (Opsi A).** Kelas di luar 6 kelas final dicatat dan berpotensi menjadi fitur batch-level (mis. `husk_rate`, `immature_rate`); kelas bermakna setara di-grouping lebih dulu.
+- **DS009 = sumber bentuk (Opsi A).** Mask instance-segmentation dipakai offline untuk kalibrasi `circularity`/`solidity` (OpenCV) dan validasi `shape_uniformity`/`size_uniformity`; bukan training model.
+- **DS008 + DS009 boleh digabung** dengan **group-aware split by-source**.
+- **Tidak ada perubahan skema DB:** enum `defect_class` tetap 6 nilai.
+
+**Dampak:**
+- `ARCHITECTURE_ML.md` §2 (tabel + catatan bias), §3 (mapping + inventaris 17 kelas + kandidat fitur), §5 (Defect roasted-only), Lampiran A (snapshot verifikasi).
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan).
 - Ambang deteksi "mixed batch" (jarak distribusi).
-- Cakupan roast untuk robusta hijau (gap DS006 tanpa kelas `Green`).
+- Cakupan roast untuk robusta hijau (gap DS006 tanpa kelas `Green` — terkonfirmasi, belum terisi).
 - Validasi angka bobot quality engine terhadap data nyata.
+- `Foreign Matter` tanpa sumber roasted → cari dataset roasted bila kelas ini dibutuhkan.
+- Spot-check pelabelan DS007 (satu sampel `Scorched` tampak pucat seperti quaker/immature).
