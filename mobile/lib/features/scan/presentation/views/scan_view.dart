@@ -3,8 +3,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/widgets/roastmate_app_bar.dart';
 import '../../../result/data/sources/mock_inspection_source.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
@@ -30,8 +32,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     final cameraVM = ref.read(cameraViewModelProvider.notifier);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F0EB),
-      appBar: _buildAppBar(context),
+      backgroundColor: RoastmateColors.background,
+      appBar: const RoastmateAppBar(title: 'Scan Biji Kopi'),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -110,10 +112,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Scan Batch Kopi',
-                                    style: GoogleFonts.inter(
+                                    style: RoastmateText.labelMd.copyWith(
                                       color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
                                     ),
                                   ),
                                 ],
@@ -163,9 +163,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                                   const SizedBox(width: 8),
                                   Text(
                                     'Arahkan kamera ke biji kopi yang terlihat',
-                                    style: GoogleFonts.inter(
+                                    style: RoastmateText.bodySm.copyWith(
                                       color: Colors.white,
-                                      fontSize: 12.5,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -199,9 +198,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     'Pencahayaan Baik',
-                                    style: GoogleFonts.inter(
+                                    style: RoastmateText.bodySm.copyWith(
                                       color: const Color(0xFF86EFAC),
-                                      fontSize: 12,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -294,9 +292,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                               const SizedBox(width: 8),
                               Text(
                                 'Tidak perlu menata satu per satu biji',
-                                style: GoogleFonts.inter(
+                                style: RoastmateText.bodySm.copyWith(
                                   color: Colors.white,
-                                  fontSize: 12.5,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -341,6 +338,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     }
 
     setState(() => _isAnalyzing = true);
+    // Hentikan pratinjau kamera selama analisis berjalan.
+    await cameraVM.stopPreview();
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
@@ -350,76 +349,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
 
     setState(() => _isAnalyzing = false);
-    context.push(
+    // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
+    context.pushReplacement(
       '/result/scan-${DateTime.now().millisecondsSinceEpoch}',
       extra: result,
-    );
-  }
-
-  /// App Bar Transparan / Bergaya Kustom dengan Tombol Back, Judul & Avatar
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: const Color(0xFFF5F0EB),
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      leading: IconButton(
-        icon: const Icon(
-          Icons.arrow_back,
-          color: Color(0xFF3D2A20),
-          size: 24,
-        ),
-        onPressed: () {
-          if (context.canPop()) {
-            context.pop();
-          }
-        },
-      ),
-      centerTitle: true,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: const Color(0xFF5A382C),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(
-              Icons.grain_rounded,
-              color: Color(0xFFF5F0EB),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Text(
-            'Scan Biji Kopi',
-            style: GoogleFonts.inter(
-              color: const Color(0xFF3D2A20),
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              color: Color(0xFF4A2E23),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.person,
-              color: Color(0xFFF5F0EB),
-              size: 22,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -660,9 +593,8 @@ class _BottomControlPanel extends StatelessWidget {
           Text(
             'Roastmate hanya menilai biji yang terlihat pada permukaan foto.',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: RoastmateText.bodySm.copyWith(
               color: const Color(0xFFB8ACA0),
-              fontSize: 12,
               height: 1.3,
             ),
           ),
@@ -686,10 +618,9 @@ class _BottomControlPanel extends StatelessWidget {
         ),
         child: Text(
           zoomText,
-          style: GoogleFonts.inter(
+          style: RoastmateText.titleSm.copyWith(
             color: isSelected ? const Color(0xFF1E1613) : Colors.white70,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            fontSize: isSelected ? 14 : 13,
           ),
         ),
       ),
@@ -725,9 +656,8 @@ class _BottomControlPanel extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: RoastmateText.bodySm.copyWith(
               color: Colors.white70,
-              fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
           ),

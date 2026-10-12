@@ -62,6 +62,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('RESULT:Gayo Natural'), findsOneWidget);
+
+      // Layar kamera harus keluar dari stack (kamera dilepas) — bukan tetap
+      // aktif di belakang halaman hasil.
+      expect(find.byType(CameraScreen), findsNothing);
     },
   );
 }

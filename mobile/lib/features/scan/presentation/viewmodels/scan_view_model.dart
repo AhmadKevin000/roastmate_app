@@ -218,6 +218,31 @@ class CameraViewModel extends StateNotifier<CameraState> {
     }
   }
 
+  /// Menghentikan pratinjau & melepas kamera.
+  ///
+  /// Dipanggil sebelum pindah ke halaman hasil analisis agar modul kamera
+  /// tidak tetap aktif saat layar hasil ditampilkan.
+  Future<void> stopPreview() async {
+    final controller = state.controller;
+    if (controller == null) return;
+
+    try {
+      await controller.pausePreview();
+    } catch (_) {}
+
+    await controller.dispose();
+
+    // Kosongkan controller agar tidak di-dispose dua kali saat provider
+    // (autoDispose) ikut dilepas ketika layar kamera di-unmount.
+    state = CameraState(
+      isLoading: false,
+      isInitialized: false,
+      isFlashOn: state.isFlashOn,
+      isLightOn: state.isLightOn,
+      selectedZoom: state.selectedZoom,
+    );
+  }
+
   @override
   void dispose() {
     state.controller?.dispose();
