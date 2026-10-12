@@ -1,44 +1,56 @@
 #!/usr/bin/env python3
-"""Push notebook ke Kaggle lewat REST API v1, dengan datasetDataSources.
+"""Push notebook ke Kaggle (dengan dataset sources) lewat Kaggle CLI.
 
-Kenapa lewat REST? MCP `save_notebook` MENGABAIKAN `datasetDataSources`, jadi
-dataset tidak pernah ter-attach. Push lewat REST berhasil melakukannya.
+Catatan penting soal API Kaggle:
+  REST `POST /api/v1/kernels/push` versi lama menerima field `id` berisi
+  "user/slug". API sekarang memisahkan `id` (integer) dan `slug` (string),
+  jadi mengirim `id` sebagai "user/slug" ditolak dengan
+  "Could not convert string to integer ... Path 'id'".
+  Kaggle CLI sudah menangani ini dengan benar, jadi kita pakai CLI.
 
-Token dibaca dari env `KAGGLE_MCP_TOKEN` (atau `KAGGLE_KEY`).
+Metadata ditulis ke `kernel-metadata.json` di folder staging, lalu
+`kaggle kernels push -p <folder>` dijalankan.
+
+Token dibaca dari env `KAGGLE_API_TOKEN` (atau KAGGLE_MCP_TOKEN).
 JANGAN menulis token ke file repo mana pun.
 
 Contoh:
-  KAGGLE_MCP_TOKEN=$(grep -o 'KGAT_[A-Za-z0-9]*' ~/.zshrc | head -1) \\
+  KAGGLE_API_TOKEN=$(grep -o 'KGAT_[A-Za-z0-9]*' ~/.zshrc | head -1) \\
     python3 ml/scripts/kaggle_push_notebook.py \\
       --notebook ml/notebooks/roast_classification_exp002.ipynb \\
       --title "Roastmate Roast Classification EXP-002" \\
       --slug roastmate-roast-classification-exp002 \\
-      --datasets ahmadkevinmalikz/roastmate-ds003-dedup
+      --datasets ahmadkevinmalikz/roastmate-ds003-dedup --wait
 """
 
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
-API = "https://www.kaggle.com/api/v1"
+DEFAULT_KAGGLE = "/private/var/folders/70/xs_n7dt96vjfq5n_clt3pn5m0000gn/T/opencode/kaggle-venv/bin/kaggle"
 
 
-def request(url, token, method="GET", body=None):
-    data = json.dumps(body).encode() if body is not None else None
-    req = urllib.request.Request(url, data=data, method=method)
-    req.add_header("Authorization", f"Bearer {token}")
-    req.add_header("Content-Type", "application/json")
-    try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            raw = r.read().decode()
-            return r.status, (json.loads(raw) if raw.strip().startswith(("{", "[")) else raw)
-    except urllib.error.HTTPError as e:
-        return e.code, e.read().decode()[:2000]
+def kaggle_bin():
+    found = shutil.which("kaggle")
+    if found:
+        return found
+    if Path(DEFAULT_KAGGLE).is_file():
+        return DEFAULT_KAGGLE
+    sys.exit("CLI `kaggle` tidak ditemukan. Install: pip install kaggle")
+
+
+def env_with_token():
+    env = dict(os.environ)
+    token = env.get("KAGGLE_API_TOKEN") or env.get("KAGGLE_MCP_TOKEN") or env.get("KAGGLE_KEY")
+    if not token:
+        sys.exit("Token tidak ada: set KAGGLE_API_TOKEN")
+    env["KAGGLE_API_TOKEN"] = token
+    return env
 
 
 def main():
@@ -48,56 +60,63 @@ def main():
     ap.add_argument("--slug", required=True)
     ap.add_argument("--username", default="ahmadkevinmalikz")
     ap.add_argument("--datasets", nargs="*", default=[])
+    ap.add_argument("--stage", default="ml/data/kaggle_kernel")
     ap.add_argument("--no-gpu", action="store_true")
     ap.add_argument("--wait", action="store_true")
     args = ap.parse_args()
 
-    token = os.environ.get("KAGGLE_MCP_TOKEN") or os.environ.get("KAGGLE_KEY")
-    if not token:
-        sys.exit("Token tidak ada: set KAGGLE_MCP_TOKEN")
+    nb = Path(args.notebook)
+    if not nb.is_file():
+        sys.exit(f"Notebook tidak ada: {nb}")
 
-    text = Path(args.notebook).read_text()
-    payload = {
+    stage = Path(args.stage)
+    if stage.exists():
+        shutil.rmtree(stage)
+    stage.mkdir(parents=True)
+
+    code_file = nb.name
+    shutil.copy2(nb, stage / code_file)
+
+    meta = {
         "id": f"{args.username}/{args.slug}",
-        "newTitle": args.title,
-        "text": text,
+        "title": args.title,
+        "code_file": code_file,
         "language": "python",
-        "kernelType": "notebook",
-        "isPrivate": True,
-        "enableGpu": not args.no_gpu,
-        "enableInternet": True,
-        "machineShape": "NvidiaTeslaT4",
-        "datasetDataSources": args.datasets,
-        "kernelExecutionType": "SaveAndRunAll",
+        "kernel_type": "notebook",
+        "is_private": True,
+        "enable_gpu": not args.no_gpu,
+        "enable_internet": True,
+        "dataset_sources": args.datasets,
+        "competition_sources": [],
+        "kernel_sources": [],
+        "model_sources": [],
+        "keywords": [],
+        "machine_shape": "NvidiaTeslaT4",
     }
-    print(f"Push {payload['id']}")
+    (stage / "kernel-metadata.json").write_text(json.dumps(meta, indent=2) + "\n")
+
+    print(f"Push {meta['id']}")
     print(f"  title    : {args.title}")
     print(f"  datasets : {args.datasets or '(none)'}")
-    print(f"  gpu      : {payload['enableGpu']}")
+    print(f"  gpu      : {meta['enable_gpu']}")
+    print(f"  stage    : {stage}")
 
-    status, resp = request(f"{API}/kernels/push", token, "POST", payload)
-    print(f"  HTTP {status}")
-    if status >= 300:
-        sys.exit(f"PUSH GAGAL: {resp}")
-    print(f"  resp: {resp if isinstance(resp, str) else json.dumps(resp)[:300]}")
-
-    # verifikasi datasetDataSources benar-benar terpasang
-    time.sleep(5)
-    st, meta = request(f"{API}/kernels/pull?userName={args.username}&kernelSlug={args.slug}", token)
-    if st == 200 and isinstance(meta, dict):
-        got = meta.get("datasetDataSources") or meta.get("metadata", {}).get("datasetDataSources")
-        print(f"\nVerifikasi pull: datasetDataSources = {got}")
-        if args.datasets and got != args.datasets:
-            print(f"  PERINGATAN: diharapkan {args.datasets}")
-    else:
-        print(f"\nPull gagal (HTTP {st}): {meta}")
+    r = subprocess.run(
+        [kaggle_bin(), "kernels", "push", "-p", str(stage)],
+        env=env_with_token(), text=True, capture_output=True,
+    )
+    print(r.stdout.strip())
+    if r.returncode != 0:
+        sys.exit(f"PUSH GAGAL:\n{r.stderr.strip()}")
 
     if args.wait:
-        for _ in range(240):
-            st, s = request(
-                f"{API}/kernels/status?userName={args.username}&kernelSlug={args.slug}", token
+        print("\nMenunggu sesi selesai (polling)...")
+        for _ in range(360):
+            s = subprocess.run(
+                [kaggle_bin(), "kernels", "status", f"{args.username}/{args.slug}"],
+                env=env_with_token(), text=True, capture_output=True,
             )
-            state = s.get("status") if isinstance(s, dict) else s
+            state = s.stdout.strip()
             print(f"  status: {state}")
             if state in ("complete", "error", "cancelled"):
                 break
