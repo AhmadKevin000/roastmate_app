@@ -47,8 +47,10 @@ cat > "$STAGE/dataset-metadata.json" <<EOF
 EOF
 
 echo "Ukuran staging: $(du -sh "$STAGE" | cut -f1)"
+# Kaggle CLI 2.x memakai KAGGLE_API_TOKEN untuk endpoint upload;
+# KAGGLE_USERNAME/KAGGLE_KEY (gaya lama) ditolak pada datasets create/version.
 export KAGGLE_USERNAME="$USER"
-export KAGGLE_KEY="$TOKEN"
+export KAGGLE_API_TOKEN="$TOKEN"
 
 if "$KAGGLE_BIN" datasets list -m --csv 2>/dev/null | tail -n +2 | cut -d, -f1 | grep -qx "$USER/$SLUG"; then
   echo "Dataset sudah ada -> buat versi baru"
