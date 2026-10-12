@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/roastmate_colors.dart';
-import '../../../core/roastmate_radius.dart';
-import '../../../core/roastmate_spacing.dart';
-import '../../../core/roastmate_text.dart';
+import '../../../core/theme/roastmate_colors.dart';
+import '../../../core/theme/roastmate_radius.dart';
+import '../../../core/theme/roastmate_spacing.dart';
+import '../../../core/theme/roastmate_text.dart';
 import '../../../domain/brew_recipe.dart';
 
 /// Bagian "Panduan Langkah" pada Detail Resep.

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/roastmate_colors.dart';
+import '../../../core/theme/roastmate_colors.dart';
 
 class RoastmateBottomNav extends StatelessWidget {
   final int currentIndex;

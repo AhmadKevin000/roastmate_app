@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/roastmate_colors.dart';
+import '../../../core/theme/roastmate_colors.dart';
 import '../../../domain/inspection_result.dart';
 
 class BeanOverlayPainter extends CustomPainter {

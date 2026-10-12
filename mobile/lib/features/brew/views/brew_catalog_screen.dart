@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/roastmate_colors.dart';
-import '../../../core/roastmate_radius.dart';
-import '../../../core/roastmate_spacing.dart';
-import '../../../core/roastmate_text.dart';
+import '../../../core/theme/roastmate_colors.dart';
+import '../../../core/theme/roastmate_radius.dart';
+import '../../../core/theme/roastmate_spacing.dart';
+import '../../../core/theme/roastmate_text.dart';
 import '../viewmodels/brew_vm.dart';
 import '../widgets/brew_method_card.dart';
 import '../widgets/brewing_tip_card.dart';

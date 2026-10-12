@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'pages/main_page.dart';
-import 'core/roastmate_theme.dart';
+import 'core/theme/roastmate_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
