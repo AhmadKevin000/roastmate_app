@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/roastmate_colors.dart';
-import '../../core/theme/roastmate_text.dart';
-import '../../core/theme/roastmate_spacing.dart';
-import '../../core/theme/roastmate_radius.dart';
-import '../../data/mock_analysis_history.dart';
-import '../../domain/analysis_history_item.dart';
-import 'inspection_detail_screen.dart';
-import 'widgets/history_app_header.dart';
-import 'widgets/history_filter_bar.dart';
-import 'widgets/history_card.dart';
-import 'widgets/history_export_card.dart';
-import 'widgets/roastmate_bottom_nav.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../data/sources/mock_analysis_history.dart';
+import '../../domain/entities/analysis_history_item.dart';
+import '../../inspection_detail_screen.dart';
+import '../widgets/history_app_header.dart';
+import '../widgets/history_filter_bar.dart';
+import '../widgets/history_card.dart';
+import '../widgets/history_export_card.dart';
+import '../../../../core/widgets/roastmate_bottom_nav.dart';
 
 /// Layar Riwayat Analisis (tab Analisis).
 ///

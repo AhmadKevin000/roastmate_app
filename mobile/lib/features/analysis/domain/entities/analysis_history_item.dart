@@ -1,4 +1,4 @@
-import '../shared/models/analysis_result.dart';
+import '../../../../shared/models/analysis_result.dart';
 
 /// Satu baris riwayat analisis untuk daftar di tab Analisis.
 ///

@@ -10,7 +10,7 @@ import 'widgets/brew_recommendation_card.dart';
 import 'widgets/visual_evidence_card.dart';
 import 'widgets/composition_breakdown_card.dart';
 import 'widgets/disclaimer_banner.dart';
-import 'widgets/roastmate_bottom_nav.dart';
+import '../../core/widgets/roastmate_bottom_nav.dart';
 
 enum ViewState { loading, content, error }
 

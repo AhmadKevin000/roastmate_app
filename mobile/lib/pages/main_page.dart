@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_page.dart';
 import 'brew_page.dart';
-import '../features/analysis/analysis_history_screen.dart';
+import '../features/analysis/presentation/views/analysis_history_screen.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
