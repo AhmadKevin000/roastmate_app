@@ -540,10 +540,10 @@ class HomePage extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => context.push('/scan'),
+                  onPressed: () => context.push('/scan/setup'),
                   icon: const Icon(Icons.camera_alt, color: _primary),
                   label: const Text(
-                    'Buka Kamera',
+                    'Mulai Scan',
                     style: TextStyle(
                       color: _primary,
                       fontWeight: FontWeight.w700,

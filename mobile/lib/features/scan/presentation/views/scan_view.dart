@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../result/data/sources/mock_inspection_source.dart';
+import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
+import '../widgets/analyzing_overlay.dart';
 
 /// Screen UI untuk "Scan Kamera" pada aplikasi Roastmate.
 /// Terintegrasi dengan Riverpod 2.x & CameraController (MVVM Architecture).
@@ -17,6 +20,9 @@ class CameraScreen extends ConsumerStatefulWidget {
 }
 
 class _CameraScreenState extends ConsumerState<CameraScreen> {
+  /// True saat simulasi analisis ML berjalan (setelah shutter ditekan).
+  bool _isAnalyzing = false;
+
   @override
   Widget build(BuildContext context) {
     // Membaca state kamera dari Riverpod ViewModel
@@ -26,7 +32,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F0EB),
       appBar: _buildAppBar(context),
-      body: SafeArea(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: Container(
@@ -304,27 +313,46 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                   state: cameraState,
                   onZoomChanged: (zoom) => cameraVM.setZoom(zoom),
                   onFlashToggled: () => cameraVM.toggleFlash(),
-                  onShutterPressed: () async {
-                    final image = await cameraVM.takePicture();
-                    if (image != null && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF5A382C),
-                          content: Text(
-                            'Foto berhasil diambil!\nPath: ${image.path}',
-                            style: GoogleFonts.inter(color: Colors.white),
-                          ),
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                    }
-                  },
+                  onShutterPressed: _analyzeAndOpenResult,
                 ),
               ],
             ),
           ),
         ),
       ),
+          if (_isAnalyzing) const Positioned.fill(child: AnalyzingOverlay()),
+        ],
+      ),
+    );
+  }
+
+  /// Menjalankan simulasi analisis (delay ±2 dtk) lalu membuka Detail Inspeksi.
+  ///
+  /// Pipeline ML belum tersedia; hasil memakai data mock dengan `batchName`
+  /// ditimpa nama jenis biji yang diisi pada form setup.
+  Future<void> _analyzeAndOpenResult() async {
+    final cameraVM = ref.read(cameraViewModelProvider.notifier);
+    final image = await cameraVM.takePicture();
+    if (!mounted) return;
+
+    if (image != null) {
+      debugPrint('=== ML PIPELINE READY ===');
+      debugPrint('Path File Foto untuk YOLOv8-Nano: ${image.path}');
+    }
+
+    setState(() => _isAnalyzing = true);
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted) return;
+
+    final batchName = ref.read(scanBatchNameProvider).trim();
+    final result = mockInspectionResult.copyWith(
+      batchName: batchName.isEmpty ? mockInspectionResult.batchName : batchName,
+    );
+
+    setState(() => _isAnalyzing = false);
+    context.push(
+      '/result/scan-${DateTime.now().millisecondsSinceEpoch}',
+      extra: result,
     );
   }
 
@@ -571,6 +599,7 @@ class _BottomControlPanel extends StatelessWidget {
 
               // Tombol Shutter Bulat Besar
               GestureDetector(
+                key: const Key('scan_shutter_button'),
                 onTap: state.isTakingPicture ? null : onShutterPressed,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),

@@ -41,6 +41,40 @@ class InspectionResult {
     required this.modelVersion,
   });
 
+  /// Salinan dengan sebagian field diganti (mis. menimpa `batchName` dari
+  /// nama yang diisi pengguna pada form sebelum scan).
+  InspectionResult copyWith({
+    String? batchLabel,
+    String? batchName,
+    String? analyzedAgo,
+    int? qualityScore,
+    int? visibleBeans,
+    Map<DefectClass, int>? defectCounts,
+    String? species,
+    String? roast,
+    String? summaryText,
+    BrewRecommendation? recommendation,
+    List<AlternativeMethod>? alternatives,
+    List<BeanDetection>? detections,
+    String? modelVersion,
+  }) {
+    return InspectionResult(
+      batchLabel: batchLabel ?? this.batchLabel,
+      batchName: batchName ?? this.batchName,
+      analyzedAgo: analyzedAgo ?? this.analyzedAgo,
+      qualityScore: qualityScore ?? this.qualityScore,
+      visibleBeans: visibleBeans ?? this.visibleBeans,
+      defectCounts: defectCounts ?? this.defectCounts,
+      species: species ?? this.species,
+      roast: roast ?? this.roast,
+      summaryText: summaryText ?? this.summaryText,
+      recommendation: recommendation ?? this.recommendation,
+      alternatives: alternatives ?? this.alternatives,
+      detections: detections ?? this.detections,
+      modelVersion: modelVersion ?? this.modelVersion,
+    );
+  }
+
   int get healthyCount => defectCounts[DefectClass.healthy] ?? 0;
 
   double get defectRate =>
