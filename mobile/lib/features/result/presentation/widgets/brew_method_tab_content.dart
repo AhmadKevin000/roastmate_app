@@ -9,64 +9,43 @@ import '../../../../shared/models/analysis_result.dart';
 
 /// Isi satu tab pada kartu rekomendasi seduh.
 ///
-/// Tab utama menampilkan parameter seduh lengkap; tab alternatif menampilkan
-/// judul + deskripsi yang tersedia. Setiap tab punya CTA ke Detail Resep
-/// (`/brewing/:methodId`) bila [methodId] dikenal.
+/// Struktur **identik** untuk semua tab (utama maupun alternatif): judul +
+/// deskripsi + empat kartu parameter seduh + CTA ke Detail Resep.
 class BrewMethodTabContent extends StatelessWidget {
-  final BrewRecommendation? primary;
-  final AlternativeMethod? alternative;
+  final BrewMethodInfo info;
+
+  /// `methodId` katalog (untuk CTA). Null bila metode tidak dikenal katalog.
   final String? methodId;
 
-  const BrewMethodTabContent({
-    super.key,
-    this.primary,
-    this.alternative,
-    this.methodId,
-  });
+  const BrewMethodTabContent({super.key, required this.info, this.methodId});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (primary != null) ...[
-          Text(
-            primary!.methodTitle,
-            style: RoastmateText.titleLg.copyWith(
-              color: RoastmateColors.textPrimary,
-            ),
+        Text(
+          info.title,
+          style: RoastmateText.titleLg.copyWith(
+            color: RoastmateColors.textPrimary,
           ),
-          const SizedBox(height: RoastmateSpacing.sm),
-          Text(
-            primary!.reasonText,
-            style: RoastmateText.bodyMd.copyWith(
-              color: RoastmateColors.textSecondary,
-            ),
+        ),
+        const SizedBox(height: RoastmateSpacing.sm),
+        Text(
+          info.description,
+          style: RoastmateText.bodyMd.copyWith(
+            color: RoastmateColors.textSecondary,
           ),
-          const SizedBox(height: RoastmateSpacing.lg),
-          _buildMetrics(primary!),
-        ] else if (alternative != null) ...[
-          Text(
-            alternative!.title,
-            style: RoastmateText.titleLg.copyWith(
-              color: RoastmateColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: RoastmateSpacing.sm),
-          Text(
-            alternative!.description,
-            style: RoastmateText.bodyMd.copyWith(
-              color: RoastmateColors.textSecondary,
-            ),
-          ),
-        ],
+        ),
+        const SizedBox(height: RoastmateSpacing.lg),
+        _buildMetrics(),
         const SizedBox(height: RoastmateSpacing.lg),
         _buildCta(context),
       ],
     );
   }
 
-  Widget _buildMetrics(BrewRecommendation rec) {
+  Widget _buildMetrics() {
     // Tinggi mengikuti isi: tiap sel boleh 1 atau 2 baris teks tanpa terpotong.
     return Column(
       children: [
@@ -78,8 +57,8 @@ class BrewMethodTabContent extends StatelessWidget {
                 child: _buildMetricItem(
                   Icons.scale_outlined,
                   "Rasio Seduh",
-                  rec.ratio,
-                  rec.ratioSub,
+                  info.ratio,
+                  info.ratioSub,
                 ),
               ),
               const SizedBox(width: RoastmateSpacing.md),
@@ -87,8 +66,8 @@ class BrewMethodTabContent extends StatelessWidget {
                 child: _buildMetricItem(
                   Icons.thermostat_outlined,
                   "Suhu Air",
-                  rec.tempC,
-                  rec.tempCSub,
+                  info.tempC,
+                  info.tempCSub,
                 ),
               ),
             ],
@@ -103,8 +82,8 @@ class BrewMethodTabContent extends StatelessWidget {
                 child: _buildMetricItem(
                   Icons.blur_circular_outlined,
                   "Tingkat Gilingan",
-                  rec.grind,
-                  rec.grindSub,
+                  info.grind,
+                  info.grindSub,
                 ),
               ),
               const SizedBox(width: RoastmateSpacing.md),
@@ -112,8 +91,8 @@ class BrewMethodTabContent extends StatelessWidget {
                 child: _buildMetricItem(
                   Icons.timer_outlined,
                   "Target Waktu",
-                  rec.targetTime,
-                  rec.targetTimeSub,
+                  info.targetTime,
+                  info.targetTimeSub,
                 ),
               ),
             ],

@@ -130,11 +130,87 @@ class BrewRecommendation {
     required this.targetTime,
     required this.targetTimeSub,
   });
+
+  /// Konversi ke representasi seragam untuk tab rekomendasi seduh.
+  BrewMethodInfo toInfo() => BrewMethodInfo(
+        title: methodTitle,
+        description: reasonText,
+        ratio: ratio,
+        ratioSub: ratioSub,
+        tempC: tempC,
+        tempCSub: tempCSub,
+        grind: grind,
+        grindSub: grindSub,
+        targetTime: targetTime,
+        targetTimeSub: targetTimeSub,
+      );
 }
 
 class AlternativeMethod {
   final String title;
   final String description;
+  final String ratio;
+  final String ratioSub;
+  final String tempC;
+  final String tempCSub;
+  final String grind;
+  final String grindSub;
+  final String targetTime;
+  final String targetTimeSub;
 
-  AlternativeMethod({required this.title, required this.description});
+  AlternativeMethod({
+    required this.title,
+    required this.description,
+    required this.ratio,
+    required this.ratioSub,
+    required this.tempC,
+    required this.tempCSub,
+    required this.grind,
+    required this.grindSub,
+    required this.targetTime,
+    required this.targetTimeSub,
+  });
+
+  /// Konversi ke representasi seragam untuk tab rekomendasi seduh.
+  BrewMethodInfo toInfo() => BrewMethodInfo(
+        title: title,
+        description: description,
+        ratio: ratio,
+        ratioSub: ratioSub,
+        tempC: tempC,
+        tempCSub: tempCSub,
+        grind: grind,
+        grindSub: grindSub,
+        targetTime: targetTime,
+        targetTimeSub: targetTimeSub,
+      );
+}
+
+/// Representasi seragam satu metode seduh (utama maupun alternatif).
+///
+/// Dipakai agar isi tiap tab rekomendasi memiliki struktur identik.
+class BrewMethodInfo {
+  final String title;
+  final String description;
+  final String ratio;
+  final String ratioSub;
+  final String tempC;
+  final String tempCSub;
+  final String grind;
+  final String grindSub;
+  final String targetTime;
+  final String targetTimeSub;
+
+  const BrewMethodInfo({
+    required this.title,
+    required this.description,
+    required this.ratio,
+    required this.ratioSub,
+    required this.tempC,
+    required this.tempCSub,
+    required this.grind,
+    required this.grindSub,
+    required this.targetTime,
+    required this.targetTimeSub,
+  });
 }

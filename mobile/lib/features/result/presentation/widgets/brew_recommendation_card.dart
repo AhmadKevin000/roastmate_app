@@ -8,11 +8,12 @@ import '../../../../shared/models/analysis_result.dart';
 import '../../../brew/data/sources/method_lookup.dart';
 import 'brew_method_tab_content.dart';
 
-/// Kartu rekomendasi seduh dengan **tab per metode**.
+/// Kartu rekomendasi seduh dengan **navigasi tab berupa chip bertumpuk ke
+/// bawah** (scrollable bersama halaman).
 ///
-/// Tab pertama (default aktif) adalah metode yang direkomendasikan; opsi
-/// alternatif tersembunyi di tab lain sampai dipilih. Setiap tab punya CTA
-/// menuju Detail Resep.
+/// Chip pertama adalah metode yang direkomendasikan (ditandai badge
+/// "Direkomendasikan"); opsi alternatif tersedia di chip lain. Isi tiap tab
+/// memiliki struktur identik.
 class BrewRecommendationCard extends StatefulWidget {
   final InspectionResult result;
 
@@ -22,45 +23,8 @@ class BrewRecommendationCard extends StatefulWidget {
   State<BrewRecommendationCard> createState() => _BrewRecommendationCardState();
 }
 
-class _BrewRecommendationCardState extends State<BrewRecommendationCard>
-    with SingleTickerProviderStateMixin {
-  TabController? _tabController;
-
-  int get _tabCount => 1 + widget.result.alternatives.length;
-
-  @override
-  void initState() {
-    super.initState();
-    _createController();
-  }
-
-  @override
-  void didUpdateWidget(covariant BrewRecommendationCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.result.alternatives.length !=
-        widget.result.alternatives.length) {
-      _tabController?.removeListener(_onTabChanged);
-      _tabController?.dispose();
-      _createController();
-    }
-  }
-
-  void _createController() {
-    _tabController = TabController(length: _tabCount, vsync: this)
-      ..addListener(_onTabChanged);
-  }
-
-  void _onTabChanged() {
-    // Ganti isi tab saat indeks berubah.
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _tabController?.removeListener(_onTabChanged);
-    _tabController?.dispose();
-    super.dispose();
-  }
+class _BrewRecommendationCardState extends State<BrewRecommendationCard> {
+  int _selected = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -87,17 +51,20 @@ class _BrewRecommendationCardState extends State<BrewRecommendationCard>
     final tabs = <_BrewTab>[
       _BrewTab(
         label: _shortMethodLabel(rec.methodTitle, 'Utama'),
+        info: rec.toInfo(),
         methodId: resolveMethodId(rec.methodTitle),
+        recommended: true,
       ),
       for (final alt in widget.result.alternatives)
         _BrewTab(
           label: _shortMethodLabel(alt.title, 'Alternatif'),
+          info: alt.toInfo(),
           methodId: resolveMethodId(alt.title),
+          recommended: false,
         ),
     ];
 
-    final controller = _tabController!;
-    final index = controller.index.clamp(0, tabs.length - 1);
+    final index = _selected.clamp(0, tabs.length - 1);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
@@ -129,25 +96,25 @@ class _BrewRecommendationCardState extends State<BrewRecommendationCard>
             ],
           ),
           const SizedBox(height: RoastmateSpacing.md),
-          TabBar(
-            controller: controller,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: RoastmateColors.primary,
-            unselectedLabelColor: RoastmateColors.textSecondary,
-            labelStyle: RoastmateText.labelLg,
-            unselectedLabelStyle: RoastmateText.labelLg,
-            indicatorColor: RoastmateColors.primary,
-            indicatorSize: TabBarIndicatorSize.label,
-            dividerColor: RoastmateColors.borderDefault,
-            tabs: [for (final tab in tabs) Tab(text: tab.label)],
+          // Navigasi tab: chip bertumpuk ke bawah (bukan menyamping).
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (int i = 0; i < tabs.length; i++)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: RoastmateSpacing.sm),
+                  child: _MethodChip(
+                    label: tabs[i].label,
+                    recommended: tabs[i].recommended,
+                    selected: i == index,
+                    onTap: () => setState(() => _selected = i),
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: RoastmateSpacing.lg),
+          const SizedBox(height: RoastmateSpacing.md),
           BrewMethodTabContent(
-            primary: index == 0 ? rec : null,
-            alternative: index == 0
-                ? null
-                : widget.result.alternatives[index - 1],
+            info: tabs[index].info,
             methodId: tabs[index].methodId,
           ),
         ],
@@ -169,10 +136,109 @@ class _BrewRecommendationCardState extends State<BrewRecommendationCard>
   }
 }
 
-/// Satu entri tab: label + `methodId` katalog (bila dikenali).
+/// Chip navigasi tab (rounded seperti tombol).
+class _MethodChip extends StatelessWidget {
+  final String label;
+  final bool recommended;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _MethodChip({
+    required this.label,
+    required this.recommended,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = BorderRadius.circular(RoastmateRadius.small);
+
+    return Material(
+      color: selected
+          ? RoastmateColors.espressoSoft
+          : RoastmateColors.surfaceContainer,
+      borderRadius: radius,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: radius,
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: RoastmateSpacing.lg,
+            vertical: RoastmateSpacing.md,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: radius,
+            border: Border.all(
+              color: selected
+                  ? RoastmateColors.primary
+                  : RoastmateColors.borderDefault,
+              width: selected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: RoastmateSpacing.sm,
+            runSpacing: RoastmateSpacing.xs,
+            children: [
+              Text(
+                label,
+                style: RoastmateText.labelLg.copyWith(
+                  color: selected
+                      ? RoastmateColors.primary
+                      : RoastmateColors.textSecondary,
+                ),
+              ),
+              if (recommended) const _RecommendedBadge(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Badge kecil penanda metode yang direkomendasikan.
+class _RecommendedBadge extends StatelessWidget {
+  const _RecommendedBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = RoastmateColors.grade['specialty']!;
+    final color = tokens['color']!;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: tokens['container'],
+        borderRadius: BorderRadius.circular(RoastmateRadius.full),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            'Direkomendasikan',
+            style: RoastmateText.labelSm.copyWith(color: color),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Satu entri tab: label, isi seragam, dan `methodId` katalog (bila dikenali).
 class _BrewTab {
   final String label;
+  final BrewMethodInfo info;
   final String? methodId;
+  final bool recommended;
 
-  const _BrewTab({required this.label, this.methodId});
+  const _BrewTab({
+    required this.label,
+    required this.info,
+    required this.methodId,
+    required this.recommended,
+  });
 }

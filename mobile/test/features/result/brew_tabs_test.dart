@@ -1,7 +1,8 @@
-// Widget test: kartu rekomendasi seduh sebagai tabs.
+// Widget test: kartu rekomendasi seduh dengan navigasi chip bertumpuk ke bawah.
 //
-// Fokus: tab default = metode utama, tab alternatif tersembunyi sampai dipilih,
-// dan CTA mengarah ke Detail Resep.
+// Fokus: chip default = metode yang direkomendasikan (berbadge), isi tab
+// alternatif tersembunyi sampai chip-nya dipilih, struktur isi tiap tab
+// identik, dan CTA mengarah ke Detail Resep.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,31 +35,60 @@ Widget _app() => MaterialApp.router(
   ),
 );
 
+/// Label struktur parameter yang dipakai sama rata di setiap tab.
+const _metricLabels = <String>[
+  'Rasio Seduh',
+  'Suhu Air',
+  'Tingkat Gilingan',
+  'Target Waktu',
+];
+
 void main() {
-  testWidgets('Tab default adalah metode yang direkomendasikan', (
+  testWidgets('Chip default adalah metode direkomendasikan + berbadge', (
     tester,
   ) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
-    // Label tab utama + isi parameter lengkapnya.
+    // Chip navigasi tampil untuk semua opsi (utama + alternatif).
     expect(find.text('Pour Over'), findsOneWidget);
-    expect(find.text('Pour Over (V60) — Clean & Bright'), findsOneWidget);
-    expect(find.text('Rasio Seduh'), findsOneWidget);
+    expect(find.text('Aeropress'), findsOneWidget);
+    expect(find.text('French Press'), findsOneWidget);
 
-    // Isi tab alternatif tersembunyi default.
+    // Hanya chip utama yang berbadge "Direkomendasikan".
+    expect(find.text('Direkomendasikan'), findsOneWidget);
+
+    // Isi tab utama tampil lengkap.
+    expect(find.text('Pour Over (V60) — Clean & Bright'), findsOneWidget);
+    for (final label in _metricLabels) {
+      expect(find.text(label), findsOneWidget);
+    }
+
+    // Isi tab alternatif tersembunyi secara default.
     expect(find.text('Aeropress (Inverted)'), findsNothing);
   });
 
-  testWidgets('Pilih tab alternatif menampilkan opsi lain', (tester) async {
+  testWidgets('Memilih chip alternatif menampilkan isi berstruktur sama', (
+    tester,
+  ) async {
     await tester.pumpWidget(_app());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Aeropress'));
     await tester.pumpAndSettle();
 
+    // Judul alternatif tampil, judul utama hilang.
     expect(find.text('Aeropress (Inverted)'), findsOneWidget);
     expect(find.text('Pour Over (V60) — Clean & Bright'), findsNothing);
+
+    // Struktur parameter identik dengan tab utama.
+    for (final label in _metricLabels) {
+      expect(find.text(label), findsOneWidget);
+    }
+    expect(find.text('Medium-Fine'), findsOneWidget);
+
+    // Badge tetap hanya milik metode utama.
+    expect(find.text('Direkomendasikan'), findsOneWidget);
   });
 
   testWidgets('CTA tab utama membuka Detail Resep (FR-07)', (tester) async {
