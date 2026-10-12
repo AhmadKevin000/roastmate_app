@@ -120,14 +120,38 @@ memakai split `val` dari argumen `data`, dan bila folder `train/` tidak ada ia a
 (`calib/train/` dan `calib/val/`, isi identik, keduanya dari split train), dan notebook
 memverifikasi setiap gambar kalibrasi ∈ split train sebelum export.
 
-## 6. Hasil training (float)
+## 6. Diagnostik sisa near-duplicate lintas split
+
+Dedup 0.95 menjamin tidak ada grup yang melintasi split, tetapi **bukan** berarti tidak ada
+kemiripan sisa. Kemiripan maksimum tiap gambar ke split lain (embedding ResNet-18):
+
+| Arah | maks | rata-rata | p95 | min | pasangan >0.93 | >0.94 |
+|---|---|---|---|---|---|---|
+| train → val | 0.9500 | 0.9192 | 0.9414 | 0.8430 | 198 | 54 |
+| train → test | 0.9499 | 0.9187 | 0.9407 | 0.8606 | 208 | 48 |
+| val → test | 0.9499 | 0.9164 | 0.9397 | 0.8174 | 28 | 8 |
+
+Artinya: masih ada ratusan gambar val/test yang punya "tetangga dekat" di train
+(similarity 0.93–0.95, di bawah ambang dedup). Ini karena dataset sumber memang sangat
+redundan, bukan karena split salah. Konsekuensinya harus jujur dicatat:
+
+> Skor val/test yang sangat tinggi pada dataset ini **tidak boleh** dibaca sebagai
+> performa pada foto pengguna nyata. Dataset DS003 punya latar, pencahayaan, dan
+> sudut pengambilan yang seragam, sehingga jauh lebih mudah daripada foto asli.
+
+Keterbatasan lain: grup 13 gambar (bagian 3) terbentuk karena *chaining*, sehingga
+sebagian anggotanya sebenarnya hanya mirip (~0.89), bukan kembar. Efeknya konservatif
+(gambar tetap satu split), tetapi ukuran grup tidak akurat dan perlu diperbaiki nanti
+(mis. complete-linkage atau ambang bertingkat).
+
+## 7. Hasil training (float)
 
 PENDING
 
-## 7. Hasil INT8 dan selisih
+## 8. Hasil INT8 dan selisih
 
 PENDING
 
-## 8. Fokus Light↔Medium dan Medium↔Dark
+## 9. Fokus Light↔Medium dan Medium↔Dark
 
 PENDING
