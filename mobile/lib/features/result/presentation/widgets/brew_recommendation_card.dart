@@ -1,19 +1,72 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/roastmate_colors.dart';
-import '../../../../core/theme/roastmate_text.dart';
-import '../../../../core/theme/roastmate_spacing.dart';
-import '../../../../core/theme/roastmate_radius.dart';
-import '../../../../shared/models/analysis_result.dart';
-import 'alternative_method_tile.dart';
 
-class BrewRecommendationCard extends StatelessWidget {
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../shared/models/analysis_result.dart';
+import '../../../brew/data/sources/method_lookup.dart';
+import 'brew_method_tab_content.dart';
+
+/// Kartu rekomendasi seduh dengan **tab per metode**.
+///
+/// Tab pertama (default aktif) adalah metode yang direkomendasikan; opsi
+/// alternatif tersembunyi di tab lain sampai dipilih. Setiap tab punya CTA
+/// menuju Detail Resep.
+class BrewRecommendationCard extends StatefulWidget {
   final InspectionResult result;
 
-  const BrewRecommendationCard({Key? key, required this.result}) : super(key: key);
+  const BrewRecommendationCard({super.key, required this.result});
+
+  @override
+  State<BrewRecommendationCard> createState() => _BrewRecommendationCardState();
+}
+
+class _BrewRecommendationCardState extends State<BrewRecommendationCard>
+    with SingleTickerProviderStateMixin {
+  TabController? _tabController;
+
+  int get _tabCount => 1 + widget.result.alternatives.length;
+
+  @override
+  void initState() {
+    super.initState();
+    _createController();
+  }
+
+  @override
+  void didUpdateWidget(covariant BrewRecommendationCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.result.alternatives.length !=
+        widget.result.alternatives.length) {
+      _tabController?.removeListener(_onTabChanged);
+      _tabController?.dispose();
+      _createController();
+    }
+  }
+
+  void _createController() {
+    _tabController = TabController(length: _tabCount, vsync: this)
+      ..addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    // Ganti isi tab saat indeks berubah.
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _tabController?.removeListener(_onTabChanged);
+    _tabController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    if (result.recommendation == null) {
+    final rec = widget.result.recommendation;
+
+    if (rec == null) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
         padding: const EdgeInsets.all(RoastmateSpacing.lg),
@@ -24,12 +77,27 @@ class BrewRecommendationCard extends StatelessWidget {
         ),
         child: Text(
           "Biji masih Green — perlu roasting, tanpa parameter seduh",
-          style: RoastmateText.bodyLg.copyWith(color: RoastmateColors.textPrimary),
+          style: RoastmateText.bodyLg.copyWith(
+            color: RoastmateColors.textPrimary,
+          ),
         ),
       );
     }
 
-    final rec = result.recommendation!;
+    final tabs = <_BrewTab>[
+      _BrewTab(
+        label: _shortMethodLabel(rec.methodTitle, 'Utama'),
+        methodId: resolveMethodId(rec.methodTitle),
+      ),
+      for (final alt in widget.result.alternatives)
+        _BrewTab(
+          label: _shortMethodLabel(alt.title, 'Alternatif'),
+          methodId: resolveMethodId(alt.title),
+        ),
+    ];
+
+    final controller = _tabController!;
+    final index = controller.index.clamp(0, tabs.length - 1);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
@@ -44,131 +112,67 @@ class BrewRecommendationCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.coffee_maker_outlined, size: 16, color: RoastmateColors.textSecondary),
+              const Icon(
+                Icons.coffee_maker_outlined,
+                size: 16,
+                color: RoastmateColors.textSecondary,
+              ),
               const SizedBox(width: RoastmateSpacing.sm),
               Flexible(
                 child: Text(
                   "REKOMENDASI SEDUH TERKALIBRASI",
-                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+                  style: RoastmateText.labelSm.copyWith(
+                    color: RoastmateColors.textSecondary,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: RoastmateSpacing.md),
-          Text(
-            rec.methodTitle,
-            style: RoastmateText.titleLg.copyWith(color: RoastmateColors.textPrimary),
-          ),
-          const SizedBox(height: RoastmateSpacing.sm),
-          Text(
-            rec.reasonText,
-            style: RoastmateText.bodyMd.copyWith(color: RoastmateColors.textSecondary),
-          ),
-          const SizedBox(height: RoastmateSpacing.lg),
-          // Tinggi kartu mengikuti isi: tiap sel boleh 1 atau 2 baris teks tanpa
-          // terpotong (menggantikan GridView rasio-tetap yang memicu overflow).
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _buildMetricItem(Icons.scale_outlined, "Rasio Seduh", rec.ratio, rec.ratioSub),
-                ),
-                const SizedBox(width: RoastmateSpacing.md),
-                Expanded(
-                  child: _buildMetricItem(Icons.thermostat_outlined, "Suhu Air", rec.tempC, rec.tempCSub),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: RoastmateSpacing.md),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _buildMetricItem(Icons.blur_circular_outlined, "Tingkat Gilingan", rec.grind, rec.grindSub),
-                ),
-                const SizedBox(width: RoastmateSpacing.md),
-                Expanded(
-                  child: _buildMetricItem(Icons.timer_outlined, "Target Waktu", rec.targetTime, rec.targetTimeSub),
-                ),
-              ],
-            ),
+          TabBar(
+            controller: controller,
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            labelColor: RoastmateColors.primary,
+            unselectedLabelColor: RoastmateColors.textSecondary,
+            labelStyle: RoastmateText.labelLg,
+            unselectedLabelStyle: RoastmateText.labelLg,
+            indicatorColor: RoastmateColors.primary,
+            indicatorSize: TabBarIndicatorSize.label,
+            dividerColor: RoastmateColors.borderDefault,
+            tabs: [for (final tab in tabs) Tab(text: tab.label)],
           ),
           const SizedBox(height: RoastmateSpacing.lg),
-          const Divider(color: RoastmateColors.borderDefault),
-          const SizedBox(height: RoastmateSpacing.lg),
-          Row(
-            children: [
-              const Icon(Icons.filter_alt_outlined, size: 16, color: RoastmateColors.textSecondary),
-              const SizedBox(width: RoastmateSpacing.sm),
-              Flexible(
-                child: Text(
-                  "OPSI METODE ALTERNATIF",
-                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
-                ),
-              ),
-            ],
+          BrewMethodTabContent(
+            primary: index == 0 ? rec : null,
+            alternative: index == 0
+                ? null
+                : widget.result.alternatives[index - 1],
+            methodId: tabs[index].methodId,
           ),
-          const SizedBox(height: RoastmateSpacing.md),
-          ...result.alternatives.map((alt) => Padding(
-                padding: const EdgeInsets.only(bottom: RoastmateSpacing.sm),
-                child: AlternativeMethodTile(method: alt),
-              )),
-          const SizedBox(height: RoastmateSpacing.sm),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Detail Resep akan tersedia di versi berikutnya")),
-                );
-              },
-              icon: const Icon(Icons.arrow_forward, size: 16, color: RoastmateColors.primary),
-              label: Text("Lihat Detail Resep", style: RoastmateText.labelLg.copyWith(color: RoastmateColors.primary)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: RoastmateColors.espressoSoft,
-                foregroundColor: RoastmateColors.primary,
-                elevation: 0,
-                minimumSize: const Size(0, 48),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RoastmateRadius.small)),
-              ),
-            ),
-          )
         ],
       ),
     );
   }
 
-  Widget _buildMetricItem(IconData icon, String label, String value, String sub) {
-    return Container(
-      padding: const EdgeInsets.all(RoastmateSpacing.sm),
-      decoration: BoxDecoration(
-        color: RoastmateColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(RoastmateRadius.small),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: RoastmateColors.textSecondary),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  label,
-                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(value, style: RoastmateText.titleMd.copyWith(color: RoastmateColors.textPrimary)),
-          Text(sub, style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary)),
-        ],
-      ),
-    );
+  /// Nama metode dipendekkan untuk label tab (segmen sebelum pemisah pertama).
+  static String _shortMethodLabel(String title, String fallback) {
+    const separators = [' — ', ' – ', ' - ', ' (', ' / ', ': '];
+    final trimmed = title.trim();
+    var cut = trimmed.length;
+    for (final sep in separators) {
+      final idx = trimmed.indexOf(sep);
+      if (idx > 0 && idx < cut) cut = idx;
+    }
+    final label = trimmed.substring(0, cut).trim();
+    return label.isEmpty ? fallback : label;
   }
+}
+
+/// Satu entri tab: label + `methodId` katalog (bila dikenali).
+class _BrewTab {
+  final String label;
+  final String? methodId;
+
+  const _BrewTab({required this.label, this.methodId});
 }
