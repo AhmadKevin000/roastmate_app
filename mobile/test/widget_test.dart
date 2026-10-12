@@ -7,8 +7,8 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pbl_sem5/main.dart';
-import 'package:pbl_sem5/pages/main_page.dart';
+import 'package:pbl_sem5/app/app.dart';
+import 'package:pbl_sem5/app/main_page.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {

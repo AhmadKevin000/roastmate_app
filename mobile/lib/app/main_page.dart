@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../features/home/presentation/views/home_view.dart';
-import 'brew_page.dart';
+import '../features/brew/presentation/views/brew_catalog_screen.dart';
 import '../features/analysis/presentation/views/analysis_history_screen.dart';
 
 class MainPage extends StatefulWidget {
@@ -17,7 +17,7 @@ class _MainPageState extends State<MainPage> {
   static const List<Widget> _widgetOptions = <Widget>[
     HomePage(),
     AnalysisHistoryScreen(showBottomNav: false),
-    BrewPage(),
+    BrewCatalogScreen(),
   ];
 
   void _onItemTapped(int index) {
