@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_page.dart';
+import '../features/home/presentation/views/home_view.dart';
 import 'brew_page.dart';
 import '../features/analysis/presentation/views/analysis_history_screen.dart';
 
