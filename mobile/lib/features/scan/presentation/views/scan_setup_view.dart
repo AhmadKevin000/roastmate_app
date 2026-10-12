@@ -6,6 +6,7 @@ import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/widgets/roastmate_app_bar.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 
 /// Layar setup sebelum scan: mengisi nama jenis biji kopi yang akan dipindai.
@@ -48,27 +49,7 @@ class _ScanSetupViewState extends ConsumerState<ScanSetupView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: AppBar(
-        backgroundColor: RoastmateColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: RoastmateColors.textPrimary,
-          ),
-          onPressed: () {
-            if (context.canPop()) context.pop();
-          },
-        ),
-        title: Text(
-          'Setup Scan',
-          style: RoastmateText.titleLg.copyWith(
-            color: RoastmateColors.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      appBar: const RoastmateAppBar(title: 'Setup Scan'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),

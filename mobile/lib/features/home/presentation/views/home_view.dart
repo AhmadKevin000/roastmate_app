@@ -1,29 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/widgets/roastmate_app_header.dart';
+
 // ============================================================
-// Design System: Warm Technical Minimalism
+// Design System: Warm Technical Minimalism (token di core/theme)
 // ============================================================
-// Primary:   #5A382C
-// Secondary: #8B5E3C
-// Tertiary:  #5E6B4A
-// Neutral:   #796E66
-// Background:#F5F0EB
-// Card:      #EDE7E0
-// Font:      Inter (applied globally via GoogleFonts.interTextTheme)
+// Primary:   #5A382C   Secondary: #8B5E3C   Tertiary: #5E6B4A
+// Font:      Inter (diatur global via theme)
 // ============================================================
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
-  // -- Color constants --
-  static const Color _primary = Color(0xFF5A382C);
-  static const Color _secondary = Color(0xFF8B5E3C);
-  static const Color _tertiary = Color(0xFF5E6B4A);
-  static const Color _neutral = Color(0xFF796E66);
-  static const Color _background = Color(0xFFF5F0EB);
-  static const Color _cardBg = Color(0xFFEDE7E0);
-  static const Color _cardWhite = Colors.white;
+  // -- Color constants (selaras core/theme) --
+  static const Color _primary = RoastmateColors.primary;
+  static const Color _secondary = RoastmateColors.secondary;
+  static const Color _tertiary = RoastmateColors.tertiary;
+  static const Color _neutral = RoastmateColors.textSecondary;
+  static const Color _background = RoastmateColors.background;
+  static const Color _cardBg = RoastmateColors.surfaceContainer;
+  static const Color _cardWhite = RoastmateColors.surface;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +33,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              const RoastmateAppHeader(subtitle: 'Beranda'),
               const SizedBox(height: 24),
               _buildGreeting(),
               const SizedBox(height: 24),
@@ -60,72 +58,6 @@ class HomePage extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  // ============================================================
-  // HEADER
-  // ============================================================
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Image.asset(
-                'assets/images/logo.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Roastmate',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: _primary,
-                  ),
-                ),
-                Text(
-                  'Beranda',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: _neutral,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(
-                Icons.settings_outlined,
-                color: _primary,
-              ),
-              onPressed: () {},
-            ),
-            const SizedBox(width: 8),
-            const CircleAvatar(
-              radius: 18,
-              backgroundColor: _primary,
-              child: Icon(Icons.person, color: Colors.white, size: 20),
-            ),
-          ],
-        ),
-      ],
     );
   }
 

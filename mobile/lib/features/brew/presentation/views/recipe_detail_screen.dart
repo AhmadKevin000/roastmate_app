@@ -6,6 +6,7 @@ import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/widgets/roastmate_app_bar.dart';
 import '../../domain/entities/brew_recipe.dart';
 import '../viewmodels/brew_view_model.dart';
 import '../widgets/brewing_step_list.dart';
@@ -28,68 +29,7 @@ class RecipeDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: AppBar(
-        backgroundColor: RoastmateColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: RoastmateColors.textPrimary,
-          ),
-          onPressed: () {
-            if (context.canPop()) context.pop();
-          },
-        ),
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(RoastmateRadius.micro),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-            ),
-            const SizedBox(width: RoastmateSpacing.sm),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Roastmate',
-                  style: RoastmateText.titleSm.copyWith(
-                    color: RoastmateColors.primary,
-                  ),
-                ),
-                Text(
-                  'Seduh',
-                  style: RoastmateText.labelSm.copyWith(
-                    color: RoastmateColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        centerTitle: true,
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: RoastmateSpacing.lg),
-            child: CircleAvatar(
-              backgroundColor: RoastmateColors.primary,
-              radius: 16,
-              child: Icon(
-                Icons.person,
-                size: 20,
-                color: RoastmateColors.surface,
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: const RoastmateAppBar(title: 'Detail Resep'),
       body: method == null || recipe == null
           ? _buildNotFound(context)
           : _buildContent(method, recipe),

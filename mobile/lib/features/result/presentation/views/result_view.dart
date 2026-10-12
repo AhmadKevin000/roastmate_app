@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
@@ -12,7 +11,7 @@ import '../widgets/personal_rating_card.dart';
 import '../widgets/visual_evidence_card.dart';
 import '../widgets/composition_breakdown_card.dart';
 import '../widgets/disclaimer_banner.dart';
-import '../../../../core/widgets/roastmate_bottom_nav.dart';
+import '../../../../core/widgets/roastmate_app_bar.dart';
 
 enum ViewState { loading, content, error }
 
@@ -43,41 +42,7 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: AppBar(
-        backgroundColor: RoastmateColors.background,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: RoastmateColors.textPrimary,
-          ),
-          onPressed: () {
-            if (context.canPop()) context.pop();
-          },
-        ),
-        title: Text(
-          "Detail Inspeksi",
-          style: RoastmateText.titleLg.copyWith(
-            color: RoastmateColors.textPrimary,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: RoastmateSpacing.lg),
-            child: CircleAvatar(
-              backgroundColor: RoastmateColors.primary,
-              radius: 16,
-              child: const Icon(
-                Icons.person,
-                size: 20,
-                color: RoastmateColors.surface,
-              ),
-            ),
-          ),
-        ],
-      ),
+      appBar: const RoastmateAppBar(title: 'Detail Inspeksi'),
       body: _buildBody(),
     );
   }

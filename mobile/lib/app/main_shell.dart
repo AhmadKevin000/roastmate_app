@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+import '../core/theme/roastmate_colors.dart';
+import '../core/widgets/roastmate_bottom_nav.dart';
 
 /// Shell navigasi bawah (3 tab) untuk route di dalam `ShellRoute`.
 ///
-/// Tampilan bottom bar dipertahankan sama seperti sebelumnya; yang berubah
-/// hanya sumber pemilihan tab (dari lokasi GoRouter, bukan state lokal).
+/// Bottom bar memakai komponen bersama [RoastmateBottomNav] (core) agar
+/// konsisten dengan tema; pemilihan tab mengikuti lokasi GoRouter.
 class MainShell extends StatelessWidget {
   const MainShell({super.key, required this.child});
 
@@ -30,54 +32,17 @@ class MainShell extends StatelessWidget {
     final selectedIndex = _indexFor(context);
 
     return Scaffold(
+      backgroundColor: RoastmateColors.background,
       body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F0EB),
-          border: const Border(
-            top: BorderSide(color: Color(0xFFE8E0D8), width: 1.0),
+      bottomNavigationBar: DecoratedBox(
+        decoration: const BoxDecoration(
+          border: Border(
+            top: BorderSide(color: RoastmateColors.borderDefault, width: 1.0),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF5A382C).withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
         ),
-        child: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              activeIcon: Icon(Icons.home),
-              label: 'Beranda',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.analytics_outlined),
-              activeIcon: Icon(Icons.analytics),
-              label: 'Analisis',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.coffee_outlined),
-              activeIcon: Icon(Icons.coffee),
-              label: 'Seduh',
-            ),
-          ],
+        child: RoastmateBottomNav(
           currentIndex: selectedIndex,
-          selectedItemColor: const Color(0xFF5A382C),
-          unselectedItemColor: const Color(0xFF796E66),
           onTap: (index) => context.go(_tabLocations[index]),
-          backgroundColor: const Color(0xFFF5F0EB),
-          type: BottomNavigationBarType.fixed,
-          elevation: 0,
-          selectedLabelStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            fontSize: 12,
-          ),
-          unselectedLabelStyle: GoogleFonts.inter(
-            fontWeight: FontWeight.w500,
-            fontSize: 12,
-          ),
         ),
       ),
     );

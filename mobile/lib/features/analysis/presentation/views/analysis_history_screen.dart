@@ -6,11 +6,10 @@ import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../data/sources/mock_analysis_history.dart';
 import '../../domain/entities/analysis_history_item.dart';
-import '../widgets/history_app_header.dart';
 import '../widgets/history_filter_bar.dart';
 import '../widgets/history_card.dart';
 import '../widgets/history_export_card.dart';
-import '../../../../core/widgets/roastmate_bottom_nav.dart';
+import '../../../../core/widgets/roastmate_app_header.dart';
 
 /// Layar Riwayat Analisis (tab Analisis).
 ///
@@ -20,15 +19,10 @@ class AnalysisHistoryScreen extends StatefulWidget {
   /// Daftar item riwayat. Bila null, memakai [mockAnalysisHistory].
   final List<AnalysisHistoryItem>? items;
 
-  /// Tampilkan bottom navigation. Nonaktifkan bila layar dipasang di dalam
-  /// shell navigasi yang sudah punya bottom bar sendiri.
-  final bool showBottomNav;
-
   const AnalysisHistoryScreen({
-    Key? key,
+    super.key,
     this.items,
-    this.showBottomNav = true,
-  }) : super(key: key);
+  });
 
   @override
   State<AnalysisHistoryScreen> createState() => _AnalysisHistoryScreenState();
@@ -81,7 +75,7 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const HistoryAppHeader(),
+              const RoastmateAppHeader(subtitle: 'Analisis'),
               const SizedBox(height: RoastmateSpacing.xl),
               _buildTitleRow(),
               const SizedBox(height: RoastmateSpacing.lg),
@@ -106,16 +100,6 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: widget.showBottomNav
-          ? RoastmateBottomNav(
-              currentIndex: 1,
-              onTap: (index) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Tab $index belum diimplementasi')),
-                );
-              },
-            )
-          : null,
     );
   }
 

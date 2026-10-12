@@ -32,8 +32,7 @@ final GoRouter appRouter = GoRouter(
         ),
         GoRoute(
           path: '/history',
-          builder: (context, state) =>
-              const AnalysisHistoryScreen(showBottomNav: false),
+          builder: (context, state) => const AnalysisHistoryScreen(),
         ),
         GoRoute(
           path: '/brewing',

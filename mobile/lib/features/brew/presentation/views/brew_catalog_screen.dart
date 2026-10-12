@@ -6,6 +6,7 @@ import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/widgets/roastmate_app_header.dart';
 import '../viewmodels/brew_view_model.dart';
 import '../widgets/brew_method_card.dart';
 import '../widgets/brewing_tip_card.dart';
@@ -26,7 +27,7 @@ class BrewCatalogScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const _BrewHeader(),
+              const RoastmateAppHeader(subtitle: 'Seduh'),
               const SizedBox(height: RoastmateSpacing.xl),
               _buildTitleRow(context, state),
               const SizedBox(height: RoastmateSpacing.lg),
@@ -157,72 +158,6 @@ class BrewCatalogScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _BrewHeader extends StatelessWidget {
-  const _BrewHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(RoastmateRadius.small),
-              ),
-              clipBehavior: Clip.hardEdge,
-              child: Image.asset('assets/images/logo.png', fit: BoxFit.cover),
-            ),
-            const SizedBox(width: RoastmateSpacing.md),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Roastmate',
-                  style: RoastmateText.titleMd.copyWith(
-                    color: RoastmateColors.primary,
-                  ),
-                ),
-                Text(
-                  'Seduh',
-                  style: RoastmateText.bodySm.copyWith(
-                    color: RoastmateColors.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(
-                Icons.settings_outlined,
-                color: RoastmateColors.primary,
-              ),
-              onPressed: () {},
-            ),
-            const SizedBox(width: RoastmateSpacing.xs),
-            const CircleAvatar(
-              backgroundColor: RoastmateColors.primary,
-              radius: 16,
-              child: Icon(
-                Icons.person,
-                size: 20,
-                color: RoastmateColors.surface,
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
