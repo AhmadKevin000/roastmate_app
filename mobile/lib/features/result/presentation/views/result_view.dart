@@ -8,6 +8,7 @@ import '../../../../shared/models/analysis_result.dart';
 import '../widgets/inspection_header.dart';
 import '../widgets/quality_score_card.dart';
 import '../widgets/brew_recommendation_card.dart';
+import '../widgets/personal_rating_card.dart';
 import '../widgets/visual_evidence_card.dart';
 import '../widgets/composition_breakdown_card.dart';
 import '../widgets/disclaimer_banner.dart';
@@ -171,6 +172,8 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                           ],
                         ),
                       ),
+                    const SizedBox(height: RoastmateSpacing.xl),
+                    PersonalRatingCard(ratingKey: result.batchLabel),
                     const SizedBox(height: RoastmateSpacing.xl),
                     VisualEvidenceCard(result: result),
                     const SizedBox(height: RoastmateSpacing.xl),
