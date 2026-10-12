@@ -51,8 +51,12 @@ class QualityScoreCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Label & badge grade turun ke baris baru bila ruang tidak mencukupi.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: RoastmateSpacing.sm,
+            runSpacing: RoastmateSpacing.xs,
             children: [
               Text(
                 "SKOR KUALITAS OPTIK",
@@ -65,6 +69,7 @@ class QualityScoreCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(RoastmateRadius.full),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.verified, size: 14, color: gradeColor),
                     const SizedBox(width: 4),
@@ -94,7 +99,10 @@ class QualityScoreCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: RoastmateSpacing.md),
-          Row(
+          // Chip biji & defect turun ke baris baru bila ruang tidak mencukupi.
+          Wrap(
+            spacing: RoastmateSpacing.sm,
+            runSpacing: RoastmateSpacing.sm,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -103,6 +111,7 @@ class QualityScoreCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(RoastmateRadius.full),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.grain, size: 14, color: RoastmateColors.secondary),
                     const SizedBox(width: 4),
@@ -113,7 +122,6 @@ class QualityScoreCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: RoastmateSpacing.sm),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
@@ -121,6 +129,7 @@ class QualityScoreCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(RoastmateRadius.full),
                 ),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(defectIcon, size: 14, color: defectColor),
                     const SizedBox(width: 4),

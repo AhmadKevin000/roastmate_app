@@ -46,9 +46,11 @@ class BrewRecommendationCard extends StatelessWidget {
             children: [
               const Icon(Icons.coffee_maker_outlined, size: 16, color: RoastmateColors.textSecondary),
               const SizedBox(width: RoastmateSpacing.sm),
-              Text(
-                "REKOMENDASI SEDUH TERKALIBRASI",
-                style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+              Flexible(
+                child: Text(
+                  "REKOMENDASI SEDUH TERKALIBRASI",
+                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+                ),
               ),
             ],
           ),
@@ -63,19 +65,36 @@ class BrewRecommendationCard extends StatelessWidget {
             style: RoastmateText.bodyMd.copyWith(color: RoastmateColors.textSecondary),
           ),
           const SizedBox(height: RoastmateSpacing.lg),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            childAspectRatio: 2.2,
-            mainAxisSpacing: RoastmateSpacing.md,
-            crossAxisSpacing: RoastmateSpacing.md,
-            children: [
-              _buildMetricItem(Icons.scale_outlined, "Rasio Seduh", rec.ratio, rec.ratioSub),
-              _buildMetricItem(Icons.thermostat_outlined, "Suhu Air", rec.tempC, rec.tempCSub),
-              _buildMetricItem(Icons.blur_circular_outlined, "Tingkat Gilingan", rec.grind, rec.grindSub),
-              _buildMetricItem(Icons.timer_outlined, "Target Waktu", rec.targetTime, rec.targetTimeSub),
-            ],
+          // Tinggi kartu mengikuti isi: tiap sel boleh 1 atau 2 baris teks tanpa
+          // terpotong (menggantikan GridView rasio-tetap yang memicu overflow).
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildMetricItem(Icons.scale_outlined, "Rasio Seduh", rec.ratio, rec.ratioSub),
+                ),
+                const SizedBox(width: RoastmateSpacing.md),
+                Expanded(
+                  child: _buildMetricItem(Icons.thermostat_outlined, "Suhu Air", rec.tempC, rec.tempCSub),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: RoastmateSpacing.md),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildMetricItem(Icons.blur_circular_outlined, "Tingkat Gilingan", rec.grind, rec.grindSub),
+                ),
+                const SizedBox(width: RoastmateSpacing.md),
+                Expanded(
+                  child: _buildMetricItem(Icons.timer_outlined, "Target Waktu", rec.targetTime, rec.targetTimeSub),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: RoastmateSpacing.lg),
           const Divider(color: RoastmateColors.borderDefault),
@@ -84,9 +103,11 @@ class BrewRecommendationCard extends StatelessWidget {
             children: [
               const Icon(Icons.filter_alt_outlined, size: 16, color: RoastmateColors.textSecondary),
               const SizedBox(width: RoastmateSpacing.sm),
-              Text(
-                "OPSI METODE ALTERNATIF",
-                style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+              Flexible(
+                child: Text(
+                  "OPSI METODE ALTERNATIF",
+                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+                ),
               ),
             ],
           ),
@@ -135,7 +156,12 @@ class BrewRecommendationCard extends StatelessWidget {
             children: [
               Icon(icon, size: 14, color: RoastmateColors.textSecondary),
               const SizedBox(width: 4),
-              Text(label, style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary)),
+              Flexible(
+                child: Text(
+                  label,
+                  style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
