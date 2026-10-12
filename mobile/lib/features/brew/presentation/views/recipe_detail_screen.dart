@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
@@ -36,7 +37,9 @@ class RecipeDetailScreen extends ConsumerWidget {
             Icons.arrow_back,
             color: RoastmateColors.textPrimary,
           ),
-          onPressed: () => Navigator.maybePop(context),
+          onPressed: () {
+            if (context.canPop()) context.pop();
+          },
         ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -114,7 +117,9 @@ class RecipeDetailScreen extends ConsumerWidget {
             ),
             const SizedBox(height: RoastmateSpacing.lg),
             OutlinedButton(
-              onPressed: () => Navigator.maybePop(context),
+              onPressed: () {
+                if (context.canPop()) context.pop();
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: RoastmateColors.primary,
                 side: const BorderSide(color: RoastmateColors.borderDefault),

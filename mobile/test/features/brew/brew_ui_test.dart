@@ -5,11 +5,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:pbl_sem5/features/brew/presentation/views/brew_catalog_screen.dart';
+import 'package:pbl_sem5/features/brew/presentation/views/recipe_detail_screen.dart';
 
-Widget _app() => const ProviderScope(
-      child: MaterialApp(home: BrewCatalogScreen()),
+Widget _app() => ProviderScope(
+      child: MaterialApp.router(
+        routerConfig: GoRouter(
+          initialLocation: '/brewing',
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/brewing',
+              builder: (context, state) => const BrewCatalogScreen(),
+            ),
+            GoRoute(
+              path: '/brewing/:methodId',
+              builder: (context, state) => RecipeDetailScreen(
+                methodId: state.pathParameters['methodId']!,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
 
 void main() {

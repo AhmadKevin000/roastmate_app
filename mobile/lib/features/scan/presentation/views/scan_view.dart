@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../viewmodels/scan_view_model.dart';
@@ -67,8 +68,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                             _IconButtonCircle(
                               icon: Icons.close,
                               onTap: () {
-                                if (Navigator.canPop(context)) {
-                                  Navigator.pop(context);
+                                if (context.canPop()) {
+                                  context.pop();
                                 }
                               },
                             ),
@@ -340,8 +341,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
           size: 24,
         ),
         onPressed: () {
-          if (Navigator.canPop(context)) {
-            Navigator.pop(context);
+          if (context.canPop()) {
+            context.pop();
           }
         },
       ),

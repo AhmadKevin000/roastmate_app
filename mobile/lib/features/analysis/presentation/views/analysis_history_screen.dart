@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../data/sources/mock_analysis_history.dart';
 import '../../domain/entities/analysis_history_item.dart';
-import '../../../result/presentation/views/result_view.dart';
 import '../widgets/history_app_header.dart';
 import '../widgets/history_filter_bar.dart';
 import '../widgets/history_card.dart';
@@ -57,10 +57,9 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
   }
 
   void _openDetail(AnalysisHistoryItem item) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => InspectionDetailScreen(result: item.detail),
-      ),
+    context.push(
+      '/history/${Uri.encodeComponent(item.detail.batchLabel)}',
+      extra: item.detail,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
@@ -8,7 +9,6 @@ import '../../../../core/theme/roastmate_text.dart';
 import '../viewmodels/brew_view_model.dart';
 import '../widgets/brew_method_card.dart';
 import '../widgets/brewing_tip_card.dart';
-import 'recipe_detail_screen.dart';
 
 /// Layar "Resep Seduh" — katalog metode seduh (FR-06).
 class BrewCatalogScreen extends ConsumerWidget {
@@ -63,11 +63,7 @@ class BrewCatalogScreen extends ConsumerWidget {
   }
 
   void _openDetail(BuildContext context, String methodId) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => RecipeDetailScreen(methodId: methodId),
-      ),
-    );
+    context.push('/brewing/$methodId');
   }
 
   Widget _buildTitleRow(BuildContext context, BrewCatalogState state) {

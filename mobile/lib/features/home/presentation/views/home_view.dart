@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../scan/presentation/views/scan_view.dart';
+import 'package:go_router/go_router.dart';
 
 // ============================================================
 // Design System: Warm Technical Minimalism
@@ -540,14 +540,7 @@ class HomePage extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CameraScreen(),
-                      ),
-                    );
-                  },
+                  onPressed: () => context.push('/scan'),
                   icon: const Icon(Icons.camera_alt, color: _primary),
                   label: const Text(
                     'Buka Kamera',

@@ -8,7 +8,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pbl_sem5/app/app.dart';
-import 'package:pbl_sem5/app/main_page.dart';
+import 'package:pbl_sem5/app/main_shell.dart';
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
@@ -16,6 +16,6 @@ void main() {
     await tester.pumpWidget(const RoastmateApp());
 
     // Verify that the app displays its home page.
-    expect(find.byType(MainPage), findsOneWidget);
+    expect(find.byType(MainShell), findsOneWidget);
   });
 }

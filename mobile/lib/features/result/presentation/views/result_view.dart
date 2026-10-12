@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
@@ -50,7 +51,9 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
             Icons.arrow_back,
             color: RoastmateColors.textPrimary,
           ),
-          onPressed: () => Navigator.maybePop(context),
+          onPressed: () {
+            if (context.canPop()) context.pop();
+          },
         ),
         title: Text(
           "Detail Inspeksi",

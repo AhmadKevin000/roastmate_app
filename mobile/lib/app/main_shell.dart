@@ -1,35 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../features/home/presentation/views/home_view.dart';
-import '../features/brew/presentation/views/brew_catalog_screen.dart';
-import '../features/analysis/presentation/views/analysis_history_screen.dart';
 
-class MainPage extends StatefulWidget {
-  const MainPage({super.key});
+/// Shell navigasi bawah (3 tab) untuk route di dalam `ShellRoute`.
+///
+/// Tampilan bottom bar dipertahankan sama seperti sebelumnya; yang berubah
+/// hanya sumber pemilihan tab (dari lokasi GoRouter, bukan state lokal).
+class MainShell extends StatelessWidget {
+  const MainShell({super.key, required this.child});
 
-  @override
-  State<MainPage> createState() => _MainPageState();
-}
+  /// Konten route aktif dari [ShellRoute].
+  final Widget child;
 
-class _MainPageState extends State<MainPage> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    HomePage(),
-    AnalysisHistoryScreen(showBottomNav: false),
-    BrewCatalogScreen(),
+  static const List<String> _tabLocations = <String>[
+    '/home',
+    '/history',
+    '/brewing',
   ];
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  int _indexFor(BuildContext context) {
+    final location = GoRouterState.of(context).uri.path;
+    if (location.startsWith('/history')) return 1;
+    if (location.startsWith('/brewing')) return 2;
+    return 0;
   }
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = _indexFor(context);
+
     return Scaffold(
-      body: _widgetOptions.elementAt(_selectedIndex),
+      body: child,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: const Color(0xFFF5F0EB),
@@ -62,10 +63,10 @@ class _MainPageState extends State<MainPage> {
               label: 'Seduh',
             ),
           ],
-          currentIndex: _selectedIndex,
+          currentIndex: selectedIndex,
           selectedItemColor: const Color(0xFF5A382C),
           unselectedItemColor: const Color(0xFF796E66),
-          onTap: _onItemTapped,
+          onTap: (index) => context.go(_tabLocations[index]),
           backgroundColor: const Color(0xFFF5F0EB),
           type: BottomNavigationBarType.fixed,
           elevation: 0,
