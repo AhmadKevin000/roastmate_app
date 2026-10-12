@@ -21,43 +21,39 @@ class BrewCatalogScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const RoastmateAppHeader(subtitle: 'Seduh'),
-              const SizedBox(height: RoastmateSpacing.xl),
-              _buildTitleRow(context, state),
-              const SizedBox(height: RoastmateSpacing.lg),
-              if (state.isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: RoastmateSpacing.xl),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      color: RoastmateColors.primary,
-                    ),
+      appBar: const RoastmateAppHeader(subtitle: 'Seduh'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTitleRow(context, state),
+            const SizedBox(height: RoastmateSpacing.lg),
+            if (state.isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: RoastmateSpacing.xl),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: RoastmateColors.primary,
                   ),
-                )
-              else if (state.isEmpty)
-                _buildEmpty(context)
-              else
-                for (final method in state.methods)
-                  Padding(
-                    padding:
-                        const EdgeInsets.only(bottom: RoastmateSpacing.lg),
-                    child: BrewMethodCard(
-                      method: method,
-                      recipe: state.recipeForMethod(method.methodId),
-                      onStartSetup: () => _openDetail(context, method.methodId),
-                    ),
+                ),
+              )
+            else if (state.isEmpty)
+              _buildEmpty(context)
+            else
+              for (final method in state.methods)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: RoastmateSpacing.lg),
+                  child: BrewMethodCard(
+                    method: method,
+                    recipe: state.recipeForMethod(method.methodId),
+                    onStartSetup: () => _openDetail(context, method.methodId),
                   ),
-              const SizedBox(height: RoastmateSpacing.sm),
-              const BrewingTipCard(),
-              const SizedBox(height: RoastmateSpacing.xl),
-            ],
-          ),
+                ),
+            const SizedBox(height: RoastmateSpacing.sm),
+            const BrewingTipCard(),
+            const SizedBox(height: RoastmateSpacing.xl),
+          ],
         ),
       ),
     );

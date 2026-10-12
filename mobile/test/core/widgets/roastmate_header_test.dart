@@ -15,7 +15,7 @@ void main() {
   ) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(body: RoastmateAppHeader(subtitle: 'Beranda')),
+        home: Scaffold(appBar: RoastmateAppHeader(subtitle: 'Beranda')),
       ),
     );
     await tester.pumpAndSettle();

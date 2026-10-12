@@ -23,10 +23,11 @@ class AnalysisHistoryItem {
 
   /// Kelas defect (selain Healthy) yang jumlahnya > 0, urut dari terbanyak.
   List<DefectClass> get defectClasses {
-    final entries = defectCounts.entries
-        .where((e) => e.key != DefectClass.healthy && e.value > 0)
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final entries =
+        defectCounts.entries
+            .where((e) => e.key != DefectClass.healthy && e.value > 0)
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
     return entries.map((e) => e.key).toList();
   }
 
@@ -37,6 +38,18 @@ class AnalysisHistoryItem {
     if (qualityScore >= 60) return IndicativeGrade.standard;
     if (qualityScore >= 40) return IndicativeGrade.belowStandard;
     return IndicativeGrade.offGrade;
+  }
+
+  /// Tanggal ringkas untuk kartu Beranda (mis. "12 Mar, 10:24").
+  ///
+  /// Membuang tahun dan label zona waktu dari [dateLabel].
+  String get shortDateLabel {
+    final parts = dateLabel.split(',');
+    final dateShort = parts.first.trim().replaceAll(RegExp(r'\s+\d{4}$'), '');
+    final timeShort = parts.length > 1
+        ? parts[1].trim().replaceAll(' WIB', '').trim()
+        : '';
+    return timeShort.isEmpty ? dateShort : '$dateShort, $timeShort';
   }
 }
 
@@ -55,6 +68,22 @@ String defectShortLabel(DefectClass defectClass) {
       return 'Scorched';
     case DefectClass.foreignMatter:
       return 'Foreign';
+  }
+}
+
+/// Label grade singkat untuk kartu Beranda (mis. "Specialty").
+String gradeShortLabel(IndicativeGrade grade) {
+  switch (grade) {
+    case IndicativeGrade.specialty:
+      return 'Specialty';
+    case IndicativeGrade.premium:
+      return 'Premium';
+    case IndicativeGrade.standard:
+      return 'Standard';
+    case IndicativeGrade.belowStandard:
+      return 'Below Standard';
+    case IndicativeGrade.offGrade:
+      return 'Off Grade';
   }
 }
 

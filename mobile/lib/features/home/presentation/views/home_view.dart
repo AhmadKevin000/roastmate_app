@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/widgets/roastmate_app_header.dart';
+import '../../../analysis/data/sources/mock_analysis_history.dart';
+import '../../../analysis/domain/entities/analysis_history_item.dart';
 
 // ============================================================
 // Design System: Warm Technical Minimalism (token di core/theme)
@@ -27,35 +29,32 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const RoastmateAppHeader(subtitle: 'Beranda'),
-              const SizedBox(height: 24),
-              _buildGreeting(),
-              const SizedBox(height: 24),
-              _buildCompositionCard(),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildTotalAnalysisCard()),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildAverageScoreCard()),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildScanBanner(context),
-              const SizedBox(height: 24),
-              _buildRecentAnalysisHeader(),
-              const SizedBox(height: 16),
-              _buildRecentAnalysisList(),
-              const SizedBox(height: 24),
-              _buildInfoBox(),
-            ],
-          ),
+      appBar: const RoastmateAppHeader(subtitle: 'Beranda'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildGreeting(),
+            const SizedBox(height: 24),
+            _buildCompositionCard(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _buildTotalAnalysisCard()),
+                const SizedBox(width: 16),
+                Expanded(child: _buildAverageScoreCard()),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildScanBanner(context),
+            const SizedBox(height: 24),
+            _buildRecentAnalysisHeader(context),
+            const SizedBox(height: 16),
+            _buildRecentAnalysisList(context),
+            const SizedBox(height: 24),
+            _buildInfoBox(),
+          ],
         ),
       ),
     );
@@ -83,10 +82,7 @@ class HomePage extends StatelessWidget {
               SizedBox(height: 4),
               Text(
                 'Siap untuk grading batch hari ini?',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _neutral,
-                ),
+                style: TextStyle(fontSize: 14, color: _neutral),
               ),
             ],
           ),
@@ -120,11 +116,7 @@ class HomePage extends StatelessWidget {
             children: [
               const Row(
                 children: [
-                  Icon(
-                    Icons.pie_chart_outline,
-                    color: _primary,
-                    size: 20,
-                  ),
+                  Icon(Icons.pie_chart_outline, color: _primary, size: 20),
                   SizedBox(width: 8),
                   Text(
                     'Komposisi Jenis Biji',
@@ -201,12 +193,7 @@ class HomePage extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _buildLegendRow(
-                      _primary,
-                      'Arabica',
-                      '29',
-                      '(68%)',
-                    ),
+                    _buildLegendRow(_primary, 'Arabica', '29', '(68%)'),
                     const SizedBox(height: 12),
                     _buildLegendRow(
                       const Color(0xFFCBBFB5),
@@ -256,10 +243,7 @@ class HomePage extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        Text(
-          percentage,
-          style: const TextStyle(color: _neutral, fontSize: 12),
-        ),
+        Text(percentage, style: const TextStyle(color: _neutral, fontSize: 12)),
       ],
     );
   }
@@ -351,11 +335,7 @@ class HomePage extends StatelessWidget {
                   color: _tertiary.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.star_border,
-                  color: _tertiary,
-                  size: 16,
-                ),
+                child: Icon(Icons.star_border, color: _tertiary, size: 16),
               ),
             ],
           ),
@@ -501,7 +481,7 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // RECENT ANALYSIS HEADER
   // ============================================================
-  Widget _buildRecentAnalysisHeader() {
+  Widget _buildRecentAnalysisHeader(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -513,19 +493,26 @@ class HomePage extends StatelessWidget {
             color: _primary,
           ),
         ),
-        Row(
-          children: [
-            const Text(
-              'Lihat Semua',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: _secondary,
-              ),
+        InkWell(
+          onTap: () => context.go('/history'),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                const Text(
+                  'Lihat Semua',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: _secondary,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                Icon(Icons.chevron_right, color: _secondary, size: 18),
+              ],
             ),
-            const SizedBox(width: 2),
-            Icon(Icons.chevron_right, color: _secondary, size: 18),
-          ],
+          ),
         ),
       ],
     );
@@ -534,169 +521,138 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // RECENT ANALYSIS LIST
   // ============================================================
-  Widget _buildRecentAnalysisList() {
+  Widget _buildRecentAnalysisList(BuildContext context) {
+    // Sumber sama dengan tab Analisis agar judul/skor kartu cocok dengan isi
+    // Detail Inspeksi yang dibuka.
+    final items = mockAnalysisHistory.take(3).toList();
+
     return Column(
       children: [
-        _buildAnalysisCard(
-          title: 'Gayo Natural Anaerob',
-          date: '12 Mar, 10:24',
-          type: 'Arabica',
-          beansCount: '32',
-          score: '88',
-          grade: 'Specialty',
-          gradeColor: _tertiary.withValues(alpha: 0.15),
-          gradeTextColor: _tertiary,
-        ),
-        const SizedBox(height: 12),
-        _buildAnalysisCard(
-          title: 'Temanggung Fine Robusta',
-          date: '10 Mar, 16:15',
-          type: 'Robusta',
-          beansCount: '28',
-          score: '82',
-          grade: 'Premium',
-          gradeColor: const Color(0xFFD9E2E8),
-          gradeTextColor: const Color(0xFF4B6E88),
-        ),
-        const SizedBox(height: 12),
-        _buildAnalysisCard(
-          title: 'Toraja Sapan Washed',
-          date: '08 Mar, 09:30',
-          type: 'Arabica',
-          beansCount: '30',
-          score: '79',
-          grade: 'Standard',
-          gradeColor: _cardBg,
-          gradeTextColor: _secondary,
-        ),
+        for (int i = 0; i < items.length; i++) ...[
+          _buildAnalysisCard(context, items[i]),
+          if (i < items.length - 1) const SizedBox(height: 12),
+        ],
       ],
     );
   }
 
-  Widget _buildAnalysisCard({
-    required String title,
-    required String date,
-    required String type,
-    required String beansCount,
-    required String score,
-    required String grade,
-    required Color gradeColor,
-    required Color gradeTextColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _cardWhite,
+  Widget _buildAnalysisCard(BuildContext context, AnalysisHistoryItem item) {
+    final gradeTokens =
+        RoastmateColors.grade[item.grade.name] ??
+        RoastmateColors.grade['standard']!;
+
+    return Material(
+      color: _cardWhite,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => context.push(
+          '/result/${Uri.encodeComponent(item.detail.batchLabel)}',
+          extra: item.detail,
+        ),
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: _cardBg,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.coffee,
-              color: _secondary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: _primary,
-                          fontSize: 15,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: gradeColor,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        grade,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: gradeTextColor,
-                        ),
-                      ),
-                    ),
-                  ],
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: _cardBg,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$date • $type',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: _neutral,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Icon(Icons.coffee, color: _secondary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(
-                          Icons.grid_on,
-                          size: 12,
-                          color: _neutral,
+                        Expanded(
+                          child: Text(
+                            item.batchName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: _primary,
+                              fontSize: 15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '$beansCount biji terlihat',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: _neutral,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: gradeTokens['container'],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            gradeShortLabel(item.grade),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: gradeTokens['color'],
+                            ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${item.shortDateLabel} • ${item.species}',
+                      style: const TextStyle(fontSize: 12, color: _neutral),
+                    ),
+                    const SizedBox(height: 8),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Skor: ',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: _neutral,
-                          ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.grid_on,
+                              size: 12,
+                              color: _neutral,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${item.visibleBeans} biji terlihat',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: _neutral,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          score,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                            color: _primary,
-                            fontSize: 14,
-                          ),
+                        Row(
+                          children: [
+                            const Text(
+                              'Skor: ',
+                              style: TextStyle(fontSize: 12, color: _neutral),
+                            ),
+                            Text(
+                              '${item.qualityScore}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: _primary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -731,4 +687,3 @@ class HomePage extends StatelessWidget {
     );
   }
 }
-
