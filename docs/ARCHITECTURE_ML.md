@@ -27,18 +27,18 @@ Foto → Image Quality Check → Deteksi Biji → Crop per Biji
 
 ## 2. Dataset
 
-| ID | Nama | Fungsi | Kelas asli | Status |
-|---|---|---|---|---|
-| DS001 | USK-COFFEE Arabica | Green Arabica, morfologi, bentuk | Peaberry, Longberry, Premium, Defect | Core |
-| DS002 | Coffee Bean Grading | Segmentasi, polygon, grading | Grade A–D | Core |
-| DS003 | Coffee Bean 224×224 | Roast classification | Green, Light, Medium, Dark | Core |
-| DS004 | RoastedCoffeeDefect | Defect roasted | frag, insect, quaker, burnt, mold, under | Core |
-| DS005 | Coffee Bean Defect — NG | Deteksi defect biner | NG | Supplemental |
-| DS006 | Kopi Robusta dan Arabika | Species + roast (gap coverage) | Arabica/Robusta × Light/Medium/Dark | Core tambahan |
-| DS007 | Robusta Coffee Bean Defects | Defect robusta | Black, Insect damage, Quaker, Scorched | Core tambahan |
-| DS008 | ROBUSTA DATASET UNCROPPED | Defect + good reference | good, broken-chipped-cut, foreign-matters, severe/slight-insect-damage | Core tambahan |
-| DS009 | Coffee Beans Dataset 2 (Seg) | Segmentasi alternatif | — | Alternatif |
-| DS010 | Custom Mobile Batch | Validasi real-world | — | Wajib (eval) |
+| ID | Nama | Fungsi | Tipe | Gambar | Kelas asli | Status |
+|---|---|---|---|---|---|---|
+| DS001 | USK-COFFEE Arabica | Green Arabica, morfologi, bentuk | klasifikasi (green) | — | Peaberry, Longberry, Premium, Defect | Core |
+| DS002 | Coffee Bean Grading | Segmentasi, polygon, grading | segmentasi | — | Grade A–D | Core |
+| DS003 | Coffee Bean 224×224 | Roast classification | klasifikasi | — | Green, Light, Medium, Dark | Core |
+| DS004 | RoastedCoffeeDefect | Defect roasted | klasifikasi (roasted) | 2.786 | normal, quaker, frag, insectOrMold, burnt, under | Core |
+| DS005 | Coffee Bean Defect — NG | Deteksi defect biner | object-detection | 1.835 | NG | Supplemental |
+| DS006 | Kopi Robusta dan Arabika | Species + roast (gap coverage) | klasifikasi | 583 | Arabica/Robusta × Light/Medium/Dark | Core tambahan |
+| DS007 | Robusta Coffee Bean Defects | Defect robusta (roasted) | instance-segmentation | 332 | Black, Insect damage, Quaker, Scorched | Core tambahan |
+| DS008 | ROBUSTA DATASET UNCROPPED | Defect + good reference (green) | object-detection | 460 | 17 kelas — lihat §3 | Core tambahan |
+| DS009 | Coffee Beans Dataset 2 (Seg) | Sumber bentuk / mask (green) | instance-segmentation | 6.331 | 17 kelas — lihat §3 | Alternatif |
+| DS010 | Custom Mobile Batch | Validasi real-world | foto mobile | — | — | Wajib (eval) |
 
 URL sumber lengkap (asli + mirror) ada di **Lampiran A**.
 
@@ -46,12 +46,15 @@ URL sumber lengkap (asli + mirror) ada di **Lampiran A**.
 - Simpan URL asli, URL mirror (Kaggle), versi/revisi, tanggal akses.
 - Bedakan **sumber asli** vs **mirror**.
 - Jangan merge dataset tanpa pengecekan duplicate/leakage.
-- DS009 jangan digabung ke DS008 sebelum cek provenance (taxonomy mirip).
+- DS008 & DS009 bertaksonomi identik; verifikasi ID gambar (12 Okt 2026) menunjukkan **tidak ada irisan** → boleh digabung dengan **group-aware split by-source**.
 
 ### Catatan bias
 - DS003: cek bias origin/variety/kamera/background/lighting.
 - DS002: species di halaman sumber belum tentu valid sebagai ground truth.
 - DS006 tidak punya kelas `Green` → roast robusta hijau tidak terwakili.
+- DS008 & DS009 = biji **mentah** (green); DS004 & DS007 = biji **sangrai** (roasted) → model Defect difokuskan roasted-only (§5), green tidak dicampur.
+- `immature` (DS008/DS009) = kondisi biji **mentah**, **bukan** roast level.
+- DS004 punya metadata `origin_country`, `variety`, `processing_method` → berguna untuk group-aware split.
 
 ---
 
@@ -59,20 +62,48 @@ URL sumber lengkap (asli + mirror) ada di **Lampiran A**.
 
 | Dataset | Label asli | Target | Aksi |
 |---|---|---|---|
-| DS004 | frag | broken | Map |
-| DS004 | insect | insect_damage | Map |
+| DS004 | normal | healthy | Map |
 | DS004 | quaker | quaker | Map |
+| DS004 | frag | broken | Map |
+| DS004 | insect (⊂ `insectOrMold`) | insect_damage | Map |
+| DS004 | mold (⊂ `insectOrMold`) | — | **EXCLUDED** |
 | DS004 | burnt | — | **EXCLUDED** |
-| DS004 | mold | — | **EXCLUDED** |
 | DS004 | under | — | **EXCLUDED** |
 | DS007 | Insect damage | insect_damage | Map |
 | DS007 | Quaker | quaker | Map |
 | DS007 | Scorched | scorched | Map |
 | DS007 | Black | — | EXCLUDED |
-| DS008 | good | healthy | Map |
-| DS008 | broken-chipped-cut | broken | Map |
-| DS008 | foreign-matters | foreign_matter | Map |
-| DS008 | severe/slight-insect-damage | insect_damage | Map |
+| DS008/DS009 | good / Good | healthy | Map |
+| DS008/DS009 | broken-chipped-cut / Broken | broken | Map |
+| DS008/DS009 | severe/slight-insect-damage | insect_damage | Map |
+| DS008/DS009 | foreign-matters / Foreign matter | — | **EXCLUDED** (tanpa sumber roasted) |
+
+### Inventaris kelas lengkap DS008/DS009 (17 kelas)
+
+Kelas di luar 6 kelas final **tidak dibuang** — dicatat sebagai **kandidat fitur** (lihat D-19).
+
+| Kelas DS008 | Kelas DS009 | Status |
+|---|---|---|
+| good | Good | → healthy |
+| broken-chipped-cut | Broken | → broken |
+| severe-insect-damage, slight-insect-damage | Severe/Slight insect damage | → insect_damage |
+| foreign-matters | Foreign matter | EXCLUDED (tanpa sumber roasted) |
+| full-black | Full black | kandidat fitur |
+| partial-black | Partial black | kandidat fitur |
+| husk | Husk | kandidat fitur |
+| parchment | Parchment | kandidat fitur |
+| dried-cherry-pod | Dry cherry | kandidat fitur |
+| floater | Floater | kandidat fitur |
+| immature | Immature | kandidat fitur |
+| withered | Withered | kandidat fitur |
+| shell | Shell | kandidat fitur |
+| partial-sour | Partial sour | kandidat fitur |
+| full-sour | Full sour | kandidat fitur |
+| fungus-damage | Fungus damage | kandidat fitur |
+
+### Kandidat fitur (Opsi A)
+
+Kelas di luar 6 kelas final adalah kategori cacat green coffee yang sah dan berpotensi menjadi **fitur batch-level** (mis. `husk_rate`, `immature_rate`) untuk Quality Engine (§9). Ditunda sampai baseline terbukti; kelas dengan makna setara di-grouping lebih dulu ke 6 kelas final.
 
 ### Mapping label training ↔ enum aplikasi
 
@@ -86,6 +117,8 @@ Label target training memakai **snake_case**; enum yang disimpan di DB dan ditam
 | `quaker` | `Quaker` |
 | `scorched` | `Scorched` |
 | `foreign_matter` | `Foreign Matter` |
+
+Catatan: `Foreign Matter` tetap ada di enum DB/UI, tetapi **tidak dilatih** pada model Defect (tidak ada sumber roasted).
 
 ### Hard Rules
 - `burnt` ≠ otomatis `scorched`.
@@ -120,9 +153,14 @@ Augmentasi: rotation, flip, scale kecil, brightness, contrast, translation.
 | YOLOv8n Detection | Lokalisasi biji | `bean` | DS002 + DS007 + DS008 |
 | YOLOv8n-Cls | Species | Arabica / Robusta | DS001 + DS006 |
 | YOLOv8n-Cls | Roast | Green / Light / Medium / Dark | DS003 + DS006 |
-| YOLOv8n-Cls | Defect | Healthy, Broken, Insect Damage, Quaker, Scorched, Foreign Matter | DS004 + DS007 + DS008 |
+| YOLOv8n-Cls | Defect (roasted) | Healthy, Broken, Insect Damage, Quaker, Scorched | DS004 + DS007 |
 
 Output deteksi → bounding box → crop → input klasifikasi.
+
+Catatan:
+- Model Defect difokuskan **biji sangrai** (DS004 + DS007); dataset green (DS008/DS009) tidak dicampur agar tidak terjadi mismatch domain.
+- `Foreign Matter` ada di enum tetapi **tidak dilatih** (tanpa sumber roasted).
+- DS007 & DS009 = instance-segmentation → bbox diturunkan dari mask; DS009 dipakai untuk **kalibrasi bentuk (OpenCV §6)**, bukan training model.
 
 ---
 
@@ -350,6 +388,8 @@ Catatan: `status` (`OK` / `Uncertain`) diturunkan dari `roast_confidence` vs amb
 | DS008 | ROBUSTA DATASET UNCROPPED | Roboflow: `renies-workspace/robusta-dataset-uncropped` | — |
 | DS009 | Coffee Beans Dataset 2 (Seg) | Roboflow: `new-workspace-cuswj/coffee-beans-dataset-2-segmentation` | — |
 | DS010 | Custom Mobile Batch | Dibuat tim Roastmate | — |
+
+Catatan: DS004–DS009 diverifikasi via sumber asli + Roboflow MCP, 12 Okt 2026 (workspace `ghazwan-ababil`); snapshot jumlah gambar/kelas ada di §2–§3.
 
 Catatan: lampiran ini jembatan sementara. Saat `dataset_registry.csv` dibuat, URL mentah menjadi sumber kebenaran tunggal dan lampiran ini cukup merujuk padanya.
 
