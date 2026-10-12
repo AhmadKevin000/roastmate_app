@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/roastmate_colors.dart';
-import '../../../core/theme/roastmate_radius.dart';
-import '../../../core/theme/roastmate_spacing.dart';
-import '../../../core/theme/roastmate_text.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_text.dart';
 
 /// Kartu "Artisan Pro-Tips: Kalibrasi Rasa" pada Detail Resep (FR-07).
 class TastingNotesCard extends StatelessWidget {

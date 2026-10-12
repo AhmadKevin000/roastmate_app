@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../features/brew/views/brew_catalog_screen.dart';
+import '../features/brew/presentation/views/brew_catalog_screen.dart';
 
 /// Host tab "Seduh".
 ///

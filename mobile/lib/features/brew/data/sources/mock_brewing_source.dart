@@ -1,4 +1,4 @@
-import '../domain/brew_recipe.dart';
+import '../../domain/entities/brew_recipe.dart';
 
 /// Data mock knowledge base brewing (sementara).
 ///

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:pbl_sem5/features/brew/views/brew_catalog_screen.dart';
+import 'package:pbl_sem5/features/brew/presentation/views/brew_catalog_screen.dart';
 
 Widget _app() => const ProviderScope(
       child: MaterialApp(home: BrewCatalogScreen()),

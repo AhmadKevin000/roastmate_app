@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/roastmate_colors.dart';
-import '../../../core/theme/roastmate_radius.dart';
-import '../../../core/theme/roastmate_spacing.dart';
-import '../../../core/theme/roastmate_text.dart';
-import '../../../domain/brew_recipe.dart';
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../domain/entities/brew_recipe.dart';
 import 'brew_metric_tile.dart';
 
-/// Hero ringkasan resep pada Detail Resep.
-class RecipeSummaryCard extends StatelessWidget {
+/// Kartu metode pada Katalog Seduh (layar "Resep Seduh").
+class BrewMethodCard extends StatelessWidget {
   final BrewMethod method;
-  final BrewRecipe recipe;
+  final BrewRecipe? recipe;
+  final VoidCallback onStartSetup;
 
-  const RecipeSummaryCard({
+  const BrewMethodCard({
     super.key,
     required this.method,
     required this.recipe,
+    required this.onStartSetup,
   });
 
   @override
@@ -51,13 +53,13 @@ class RecipeSummaryCard extends StatelessWidget {
                   children: [
                     Text(
                       method.methodName,
-                      style: RoastmateText.titleMd.copyWith(
+                      style: RoastmateText.titleLg.copyWith(
                         color: RoastmateColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      recipe.flavorProfile,
+                      method.subtitle,
                       style: RoastmateText.bodySm.copyWith(
                         color: RoastmateColors.textSecondary,
                       ),
@@ -65,48 +67,40 @@ class RecipeSummaryCard extends StatelessWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: RoastmateSpacing.md,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: RoastmateColors.espressoSoft,
-                  borderRadius: BorderRadius.circular(RoastmateRadius.full),
-                ),
-                child: Text(
-                  'Rasio ${recipe.ratioLabel}',
-                  style: RoastmateText.labelSm.copyWith(
-                    color: RoastmateColors.primary,
-                  ),
-                ),
-              ),
             ],
           ),
           const SizedBox(height: RoastmateSpacing.lg),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(RoastmateSpacing.md),
+            decoration: BoxDecoration(
+              color: RoastmateColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(RoastmateRadius.small),
+            ),
+            child: Text(
+              '“${method.description}”',
+              style: RoastmateText.bodyMd.copyWith(
+                color: RoastmateColors.textSecondary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+          const SizedBox(height: RoastmateSpacing.md),
           Row(
             children: [
               Expanded(
                 child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Berat',
-                  value: recipe.doseLabel,
+                  icon: Icons.scale_outlined,
+                  label: 'Rasio',
+                  value: recipe?.ratioLabel ?? '—',
                 ),
               ),
               const SizedBox(width: RoastmateSpacing.md),
               Expanded(
                 child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Total Air',
-                  value: recipe.waterLabel,
-                ),
-              ),
-              const SizedBox(width: RoastmateSpacing.md),
-              Expanded(
-                child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Suhu Air',
-                  value: recipe.tempLabel,
+                  icon: Icons.timer_outlined,
+                  label: 'Waktu',
+                  value: recipe?.timeLabel ?? '—',
                 ),
               ),
             ],
@@ -116,28 +110,38 @@ class RecipeSummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Gilingan',
-                  value: recipe.grindLabel,
+                  icon: Icons.grain,
+                  label: 'Grind',
+                  value: recipe?.grindLabel ?? '—',
                 ),
               ),
               const SizedBox(width: RoastmateSpacing.md),
               Expanded(
                 child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Total Waktu',
-                  value: recipe.timeLabel,
-                ),
-              ),
-              const SizedBox(width: RoastmateSpacing.md),
-              Expanded(
-                child: BrewMetricTile(
-                  stacked: true,
-                  label: 'Metode',
-                  value: recipe.pourLabel,
+                  icon: Icons.thermostat_outlined,
+                  label: 'Suhu',
+                  value: recipe?.tempLabel ?? '—',
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: RoastmateSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onStartSetup,
+              icon: const Icon(Icons.tune, size: 18),
+              label: Text('Mulai Setup', style: RoastmateText.labelLg),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: RoastmateColors.terracottaSoft,
+                foregroundColor: RoastmateColors.primary,
+                elevation: 0,
+                minimumSize: const Size(0, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(RoastmateRadius.small),
+                ),
+              ),
+            ),
           ),
         ],
       ),

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../data/mock_brewing.dart';
-import '../../../domain/brew_recipe.dart';
+import '../../data/sources/mock_brewing_source.dart';
+import '../../domain/entities/brew_recipe.dart';
 
 /// State katalog seduh (metode + resep).
 @immutable
