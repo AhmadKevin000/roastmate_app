@@ -1,7 +1,7 @@
 # EXP-ROAST-002 — Model Roast (YOLOv8n-cls) di atas DS003 Ter-dedup
 
-Status: **PENDING** (training berjalan di Kaggle)
-Tanggal: 2026-10-12
+Status: **DONE** (training + evaluasi + export INT8 selesai di Kaggle)
+Tanggal: 2026-10-13
 Dataset: DS003 (`gpiosenka/coffee-bean-dataset-resized-224-x-224`) setelah dedup → `ahmadkevinmalikz/roastmate-ds003-dedup`
 Notebook: `ml/notebooks/roast_classification_exp002.ipynb`
 Split (sumber kebenaran): `ml/registries/split.csv`, SHA256 `b75d9a16cae9d4c394d1c66117612496e1046504cba714d80ab316f5a33ca92c`
@@ -106,6 +106,42 @@ Verifikasi otomatis (skrip gagal bila tidak lolos):
 - (b) setiap kelas hadir di ketiga split — **lolos**
 - (c) tidak ada `path` yang muncul dua kali — **lolos**
 
+### 4.1 Jumlah grup per kelas per split
+
+Jumlah `group_id` unik (bukan jumlah gambar) per kelas per split:
+
+| Kelas | train | val | test | total |
+|---|---|---|---|---|
+| Dark | 181 | 44 | 44 | 269 |
+| Green | 196 | 45 | 45 | 286 |
+| Light | 198 | 45 | 45 | 288 |
+| Medium | 201 | 45 | 45 | 291 |
+| **Total** | **776** | **179** | **179** | **1134** |
+
+Grup berisi >1 gambar hanya ada di split train (42 grup, 102 gambar):
+
+| Kelas | Grup >1 (train) | Gambar dalam grup >1 (train) |
+|---|---|---|
+| Dark | 14 | 40 |
+| Green | 11 | 24 |
+| Light | 10 | 22 |
+| Medium | 7 | 16 |
+| **Total** | **42** | **102** |
+
+Catatan penting: `val` dan `test` **100% singleton** — tidak ada satu pun grup multi-gambar di
+keduanya. Ini bukan hasil desain, melainkan efek samping greedy splitter (baris 59–69
+`make_split.py`): tiap grup ditempatkan ke split dengan rasio-terisi terkecil, dan karena
+target train 4,67× lebih besar (`0.70` vs `0.15`), rasio train selalu paling rendah di awal
+sehingga semua grup besar terserap ke train.
+
+Konsekuensinya dua arah dan keduanya harus jujur dicatat:
+
+- **Bagus:** tidak ada grup near-duplicate yang bocor ke val/test.
+- **Kurang bagus:** kemampuan grup-aware split untuk menjaga val/test dari kebocoran
+  **tidak benar-benar teruji**, karena val/test tidak pernah menerima grup besar. Sisa
+  kemiripan lintas split (bagian 6) sepenuhnya berasal dari pasangan **antar-grup** yang
+  similarity-nya di bawah ambang 0.95.
+
 ## 5. Materialisasi dataset dan kalibrasi INT8
 
 Skrip: `ml/scripts/materialize.py`.
@@ -146,12 +182,126 @@ sebagian anggotanya sebenarnya hanya mirip (~0.89), bukan kembar. Efeknya konser
 
 ## 7. Hasil training (float)
 
-PENDING
+Konfigurasi (dari `args.yaml` dan `run_meta.json`):
+
+| Parameter | Nilai |
+|---|---|
+| Model | YOLOv8n-cls, pretrained |
+| imgsz / batch / seed | 224 / 32 / 42 |
+| Epoch maksimum | 100 |
+| Early stopping | patience 10, monitor `val` |
+| Augmentasi | fliplr 0.5, flipud 0.0, degrees 10, translate 0.1, scale 0.1, **hsv_h 0, hsv_s 0**, hsv_v 0.2 |
+| Kalibrasi INT8 | 200 gambar, **hanya dari split train** |
+
+Augmentasi warna sengaja dinolkan pada hue dan saturasi (aturan keras #5: warna = fitur
+roast). Hanya kecerahan (`hsv_v`) yang diberi ruang 0.2.
+
+Jalannya training:
+
+- Berhenti di **epoch 17** dari 100 (early stopping; tidak ada perbaikan setelah epoch 7).
+- **Best epoch = 7**, tersimpan sebagai `best.pt`.
+- `val/top1` selama training berfluktuasi 0.849 (epoch 3) hingga 1.000 (epoch 7, 10, 15).
+  Fluktuasi ini wajar: val hanya 179 gambar, sehingga 1–2 gambar yang berpindah sudah
+  menggeser akurasi ~0.005–0.01.
+
+Metrik akhir pada `best.pt`:
+
+| Metrik | Val (n=179) | Test (n=179) |
+|---|---|---|
+| Accuracy (top-1) | **1.0000** | **1.0000** |
+| Top-5 accuracy | 1.0000 | 1.0000 |
+| Macro F1 | **1.0000** | **1.0000** |
+
+Laporan per kelas (test):
+
+| Kelas | Precision | Recall | F1 | Support |
+|---|---|---|---|---|
+| Dark | 1.0000 | 1.0000 | 1.0000 | 44 |
+| Green | 1.0000 | 1.0000 | 1.0000 | 45 |
+| Light | 1.0000 | 1.0000 | 1.0000 | 45 |
+| Medium | 1.0000 | 1.0000 | 1.0000 | 45 |
+
+Confusion matrix (baris = label benar, kolom = prediksi; urutan `Dark, Green, Light, Medium`):
+
+```
+[[44  0  0  0]
+ [ 0 45  0  0]
+ [ 0  0 45  0]
+ [ 0  0  0 45]]
+```
+
+Ukuran model: 1.440.004 parameter, 3,3 GFLOPs. `best.pt` = 2.969.800 byte (2,83 MiB).
 
 ## 8. Hasil INT8 dan selisih
 
-PENDING
+Export ke TFLite INT8 memakai kalibrasi dari `ml/data/calib/` (200 gambar, seluruhnya dari
+split train — aturan keras #11 terpenuhi). Notebook memverifikasi ulang setiap gambar
+kalibrasi ∈ split train sebelum export.
+
+| Metrik | Float | INT8 | Selisih |
+|---|---|---|---|
+| Test accuracy | 1.0000 | **1.0000** | **+0.0000** |
+| Test macro F1 | 1.0000 | **1.0000** | **+0.0000** |
+
+Ukuran file:
+
+| Artefak | Byte | MiB |
+|---|---|---|
+| `roast_exp002_best.pt` | 2.969.800 | 2,83 |
+| `roast_exp002_int8.tflite` | 1.584.934 | 1,51 |
+
+Rasio kompresi: **53,4%** dari `best.pt`. Angka 1,51 MiB masih di bawah target ukuran model
+(≤ ~4 MB, lihat `AGENTS.md` §7 — target ini masih perlu dikaji ulang, jadi ini sekadar catatan).
+
+Catatan kejujuran soal selisih: **selisih +0.0000 bukan bukti kuantisasi "gratis"**. Karena
+float sudah 1.0000 di test, tidak ada ruang turun yang bisa terdeteksi. Kalau float 0.97,
+selisih baru akan informatif. Jadi yang benar-benar terbukti di sini hanyalah: INT8 **tidak
+merusak** hasil, bukan bahwa INT8 tidak akan pernah menurunkan akurasi.
 
 ## 9. Fokus Light↔Medium dan Medium↔Dark
 
-PENDING
+Kedua batas yang paling sulit secara visual (dan paling penting untuk roast):
+
+| Kesalahan | Val | Test |
+|---|---|---|
+| Light → Medium | 0 | 0 |
+| Medium → Light | 0 | 0 |
+| Medium → Dark | 0 | 0 |
+| Dark → Medium | 0 | 0 |
+
+Nol kesalahan di kedua arah, pada float maupun INT8.
+
+**Tapi ini tidak boleh dibaca sebagai "masalah batas Medium sudah selesai".** Yang diuji
+baru foto studio DS003. Justru karena batas Medium↔Dark adalah yang paling mudah bocor
+(ingat: pada ambang dedup 0.94 saja sudah muncul pasangan lintas kelas Dark↔Medium di
+bagian 3), nol kesalahan di sini lebih mencerminkan kemudahan dataset daripada kualitas
+model. Uji yang menentukan adalah foto nyata dari HP pengguna (lihat §10).
+
+## 10. Peringatan kejujuran (wajib dibaca sebelum memakai angka ini)
+
+> **Skor 1.0 sempurna di seluruh metrik BUKAN kabar baik — itu tanda dataset sudah "habis".**
+>
+> 1. **Batas 0.95 belum menghilangkan kemiripan lintas split.** Masih ada **198 pasangan
+>    train→val** dengan similarity >0.93 (maksimum 0.9500), **208 pasangan train→test** >0.93,
+>    dan 28 pasangan val→test >0.93 (bagian 6). Dedup MD5 + embedding belum menghapus
+>    redundansi di level "foto studio".
+> 2. **Akar masalahnya DS003 sendiri.** Semua biji difoto di studio seragam — latar putih,
+>    pencahayaan, dan sudut sama. Model tidak perlu belajar membedakan roast; ia cukup
+>    mengenali kondisi pengambilan gambar.
+> 3. **Val/test 100% singleton** (bagian 4.1), jadi grup-aware split tidak pernah benar-benar
+>    diuji pada val/test.
+> 4. **Selisih INT8 +0.0000 tidak informatif** karena float sudah jenuh di 1.0 (bagian 8).
+>
+> **Yang benar-benar terbukti dari EXP-ROAST-002:**
+> - Pipeline sehat dan reproducible (split dari `split.csv`, kalibrasi train-only, seed 42).
+> - INT8 tidak merusak hasil.
+> - Model muat dengan nyaman (1,44 juta parameter; 1,51 MiB INT8).
+>
+> **Yang BELUM terbukti:** ketahanan model pada foto asli pengguna. Angka 1.0 di laporan ini
+> **tidak boleh** diklaim sebagai performa dunia nyata.
+>
+> **Langkah yang diperlukan sebelum klaim apa pun:** uji pada 20–30 foto biji nyata dari HP
+> (cahaya ruangan, latar bebas). Itu satu-satunya bukti yang bermakna. Jika akurasi jatuh
+> jauh, penyebabnya bukan model, melainkan domain DS003 yang terlalu sempit — dan solusinya
+> adalah data tambahan, bukan hyperparameter.
+
