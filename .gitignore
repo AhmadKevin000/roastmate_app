@@ -33,6 +33,14 @@ build/
 .DS_Store
 Thumbs.db
 
+# ML artifacts (detail lengkap ada di ml/.gitignore)
+/ml/data/
+/ml/runs/
+/ml/models/
+/ml/**/*.pt
+/ml/**/*.onnx
+/ml/**/*.tflite
+
 # AI coding agent instructions
 # Dibagikan manual ke anggota tim (bukan lewat git), jadi tidak di-push.
 /AGENTS.md
