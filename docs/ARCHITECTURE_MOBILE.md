@@ -277,7 +277,7 @@ AnalysisResult
 ├── CoffeeProfile      { species, roast, roastDistribution, status }
 ├── BatchAnalysis      { visibleBeans, defectDistribution, shapeUniformity,
 │                        sizeUniformity, roastUniformity }
-├── QualityResult      { score, profile }
+├── QualityResult      { score, profile, summaryText (derived — ML §16) }
 └── BrewingRecommendation
     ├── primaryMethod, alternativeMethod
     ├── doseG, grindSize, waterVolume, temperature, brewingTime

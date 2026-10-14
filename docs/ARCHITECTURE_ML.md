@@ -356,7 +356,25 @@ Catatan: `status` (`OK` / `Uncertain`) diturunkan dari `roast_confidence` vs amb
 
 ---
 
-## 16. Aturan Non-Negotiable (ringkas)
+## 16. Narrative Generation (template-based)
+
+Teks penjelasan di Detail Inspeksi dihasilkan **template lokal** dari angka hasil — bukan ML, bukan knowledge base. Diturunkan saat tampil (mengikuti pola `grade` & `status`, D-12/D-14/D-15).
+
+| Teks | Sumber data | Disimpan? |
+|---|---|---|
+| `summaryText` | `quality_profile`, `defect_rate`, `species`, `roast` | Tidak (diturunkan saat tampil) |
+| `reason` | komponen `method_score` (§11) | Ya — `recommendations.reason` |
+
+### Aturan
+- Bahasa: **Indonesia** (bahasa UI, selaras D-14).
+- Tidak ada LLM/generasi bebas — hanya template + pemetaan nilai → frasa.
+- Knowledge base (`brew_methods`/`brew_recipes`) **tidak** menyediakan narasi; ia hanya menyediakan parameter seduh.
+- Bila `status = Uncertain` → narasi menyebut ketidakpastian, tidak memaksa kelas.
+- Bila `roast = Green` → narasi menyebut "perlu roasting" (§12).
+
+---
+
+## 17. Aturan Non-Negotiable (ringkas)
 
 1. Jangan merge dataset buta-buta; jaga provenance & versi.
 2. Test set tidak untuk training/kalibrasi.
