@@ -1,0 +1,11 @@
+dataset_id,name,role,source_type,source_url,mirror_url,kaggle_slug,license,classes_raw,access_date,version,notes
+DS001,USK-COFFEE Arabica,Core,Original,https://coffee.comvislab-usk.org/,https://www.kaggle.com/datasets/ghazwanababil/usk-coffee-arabica,ghazwanababil/usk-coffee-arabica,,"Peaberry, Longberry, Premium, Defect",,,,"URL dari ARCHITECTURE_ML Lampiran A; belum diverifikasi"
+DS002,Coffee Bean Grading,Core,Original,https://huggingface.co/datasets/SamruddhK/coffee-bean-grading-dataset,,,,"Grade A-D",,,,"HuggingFace; species belum tentu ground truth (bias)"
+DS003,Coffee Bean 224x224,Core,Mirror,,https://www.kaggle.com/datasets/gpiosenka/coffee-bean-dataset-resized-224-x-224,gpiosenka/coffee-bean-dataset-resized-224-x-224,,"Green, Light, Medium, Dark",,,,"Target eksperimen Roast pertama; cek bias origin/kamera"
+DS004,RoastedCoffeeDefect,Core,Original,https://github.com/dont-text-me/RoastedCoffeeDefectDataset,https://www.kaggle.com/datasets/ghazwanababil/roastedcoffeedefectdataset,ghazwanababil/roastedcoffeedefectdataset,,"frag, insect, quaker, burnt, mold, under",,,,"burnt/mold/under EXCLUDED (D-03)"
+DS005,Coffee Bean Defect NG,Supplemental,Roboflow,https://universe.roboflow.com/roasted-coffee-bean-defect-detectionandy/coffee-bean-defect,,,,NG,,,"NG bukan taxonomy final"
+DS006,Kopi Robusta dan Arabika,Core tambahan,Roboflow,https://universe.roboflow.com/tugas-akhir-8wmr1/kopi-robusta-dan-arabika,,,,"Arabica/Robusta x Light/Medium/Dark",,,,"Tidak ada kelas Green"
+DS007,Robusta Coffee Bean Defects,Core tambahan,Roboflow,https://universe.roboflow.com/roasted-coffee-bean-defect/robusta-coffee-bean-defects,,,,"Black, Insect damage, Quaker, Scorched",,,,"Black EXCLUDED"
+DS008,ROBUSTA DATASET UNCROPPED,Core tambahan,Roboflow,https://universe.roboflow.com/renies-workspace/robusta-dataset-uncropped,,,,"good, broken-chipped-cut, foreign-matters, severe/slight-insect-damage",,,,"Jangan merge DS009 sebelum cek provenance"
+DS009,Coffee Beans Dataset 2 (Seg),Alternatif,Roboflow,https://universe.roboflow.com/new-workspace-cuswj/coffee-beans-dataset-2-segmentation,,,,—,,,"Taxonomy mirip DS008"
+DS010,Custom Mobile Batch,Wajib (eval),Custom,,,,,—,,,"Dibuat tim Roastmate; validasi real-world"

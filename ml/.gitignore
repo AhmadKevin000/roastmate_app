@@ -1,0 +1,20 @@
+# ML artifacts — tidak di-commit (dataset & bobot model besar)
+
+# Cache dataset lokal
+data/
+
+# Output training ultralytics
+runs/
+
+# Model hasil export
+models/
+*.pt
+*.onnx
+*.tflite
+*.pb
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
