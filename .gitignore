@@ -47,3 +47,6 @@ Thumbs.db
 /OPENCODE.md
 /.cursor/
 /.github/copilot-instructions.md
+
+# Artefak ML lokal (di luar ml/)
+/runs/
