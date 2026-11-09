@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.0
+Versi: 1.1 (skema DB `schema_version` = 2 — D-19)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -115,6 +115,9 @@ CREATE TABLE analyses (
   created_at            TEXT NOT NULL,
   image_path            TEXT,
   annotated_image_path  TEXT,
+  batch_label           TEXT,
+  batch_name            TEXT,
+  model_version         TEXT,
   species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
   roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
   roast_confidence      REAL,
@@ -132,7 +135,10 @@ CREATE TABLE analyses (
 Catatan:
 - `grade` **tidak ada** di sini — diturunkan dari `quality_profile` saat tampil.
 - `status` (`uncertain`) **tidak disimpan** — diturunkan dari `roast_confidence` vs ambang (lihat bagian 15).
-- `annotated_image_path` = gambar dengan overlay bounding box, dipakai sebagai bukti visual (PRD FR-04).
+- `annotated_image_path` = gambar dengan overlay bounding box, **boleh kosong**. Riwayat menampilkan foto asli (`image_path`) + rekap `analysis_defects`; overlay hanya pada layar hasil analisis langsung (D-19).
+- `batch_label` = label pendek batch (mis. `Batch #042`); `batch_name` = nama batch (mis. `Mandheling Honey Anaerob`).
+- `model_version` = versi model yang menghasilkan analisis (provenance, mis. `Model CV v2.4`).
+- Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-19).
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 

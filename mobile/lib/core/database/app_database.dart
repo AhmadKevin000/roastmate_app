@@ -50,8 +50,19 @@ class AppDatabase {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // v1 = versi awal; belum ada migrasi. Tambahkan migrasi bertingkat di sini
-    // saat kSchemaVersion dinaikkan, lalu perbarui meta.schema_version.
+    // Migrasi bertingkat: jalankan langkah dari oldVersion sampai newVersion.
+    final batch = db.batch();
+
+    // v1 → v2: kolom identitas batch & provenance model (D-19).
+    if (oldVersion < 2) {
+      batch.execute('ALTER TABLE analyses ADD COLUMN batch_label TEXT');
+      batch.execute('ALTER TABLE analyses ADD COLUMN batch_name TEXT');
+      batch.execute('ALTER TABLE analyses ADD COLUMN model_version TEXT');
+    }
+
+    // Tambahkan migrasi v2 → v3 di sini saat kSchemaVersion dinaikkan lagi.
+    await batch.commit(noResult: true);
+
     await db.update(
       'meta',
       <String, Object?>{'value': newVersion.toString()},
