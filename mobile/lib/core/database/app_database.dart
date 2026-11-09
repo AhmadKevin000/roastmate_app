@@ -50,8 +50,12 @@ class AppDatabase {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // v1 = versi awal; belum ada migrasi. Tambahkan migrasi bertingkat di sini
-    // saat kSchemaVersion dinaikkan, lalu perbarui meta.schema_version.
+    // Migrasi bertingkat: tiap kenaikan kSchemaVersion menambah satu blok.
+    if (oldVersion < 2) {
+      // D-20: label batch yang diisi pengguna pada form scan setup.
+      await db.execute('ALTER TABLE analyses ADD COLUMN name TEXT');
+    }
+
     await db.update(
       'meta',
       <String, Object?>{'value': newVersion.toString()},

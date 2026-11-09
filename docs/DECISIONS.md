@@ -262,6 +262,20 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 
 ---
 
+## D-20 — `analyses.name` untuk label batch
+
+**Konteks:** Form scan setup meminta pengguna memberi nama batch (`batchName` di UI), dan nama itu dipakai judul kartu Beranda serta daftar riwayat. Skema `analyses` tidak punya kolom penyimpan nama, sehingga riwayat berbasis SQLite tidak bisa menampilkan nama batch.
+
+**Keputusan:**
+- Tambah kolom **`name TEXT`** (nullable) pada `analyses`.
+- Kolom ini **hanya label tampilan**; tidak dipakai untuk perhitungan quality score, defect rate, atau rekomendasi.
+- Baris lama tanpa nama ditampilkan sebagai `Batch tanpa nama`.
+- `kSchemaVersion` naik **1 → 2** dengan migrasi `ALTER TABLE analyses ADD COLUMN name TEXT`.
+
+**Dampak:** `DATABASE_SCHEMA.md` §6 & §12; `mobile/lib/core/database/schema.dart`; migrasi di `app_database.dart`.
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan).

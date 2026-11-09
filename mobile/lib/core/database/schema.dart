@@ -7,7 +7,11 @@
 library;
 
 /// Versi skema saat ini.
-const int kSchemaVersion = 1;
+///
+/// Riwayat versi:
+/// - v1: skema awal.
+/// - v2: `analyses.name` (label batch dari form scan setup) — lihat D-20.
+const int kSchemaVersion = 2;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -57,6 +61,7 @@ const List<String> kCreateTableStatements = <String>[
   CREATE TABLE analyses (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at            TEXT NOT NULL,
+    name                  TEXT,
     image_path            TEXT,
     annotated_image_path  TEXT,
     species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),

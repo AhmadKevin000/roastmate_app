@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/widgets/roastmate_app_header.dart';
-import '../../../analysis/data/sources/mock_analysis_history.dart';
-import '../../../analysis/domain/entities/analysis_history_item.dart';
+import '../../../../shared/enums/indicative_grade.dart';
+import '../../domain/entities/home_summary.dart';
+import '../viewmodels/home_view_model.dart';
 
 // ============================================================
 // Design System: Warm Technical Minimalism (token di core/theme)
 // ============================================================
 // Primary:   #5A382C   Secondary: #8B5E3C   Tertiary: #5E6B4A
 // Font:      Inter (diatur global via theme)
+//
+// Data: seluruh angka berasal dari SQLite (tabel `analyses`) lewat
+// HomeViewModel. Tidak ada data contoh di file ini.
 // ============================================================
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
-  // -- Color constants (selaras core/theme) --
   static const Color _primary = RoastmateColors.primary;
   static const Color _secondary = RoastmateColors.secondary;
   static const Color _tertiary = RoastmateColors.tertiary;
@@ -26,37 +30,183 @@ class HomePage extends StatelessWidget {
   static const Color _cardWhite = RoastmateColors.surface;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(homeViewModelProvider);
+
     return Scaffold(
       backgroundColor: _background,
       appBar: const RoastmateAppHeader(subtitle: 'Beranda'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildGreeting(),
-            const SizedBox(height: 24),
-            _buildCompositionCard(),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _buildTotalAnalysisCard()),
-                const SizedBox(width: 16),
-                Expanded(child: _buildAverageScoreCard()),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildScanBanner(context),
-            const SizedBox(height: 24),
-            _buildRecentAnalysisHeader(context),
-            const SizedBox(height: 16),
-            _buildRecentAnalysisList(context),
-            const SizedBox(height: 24),
-            _buildInfoBox(),
-          ],
+      body: RefreshIndicator(
+        color: _primary,
+        onRefresh: () => ref.read(homeViewModelProvider.notifier).load(),
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildGreeting(),
+              const SizedBox(height: 24),
+              if (state.isLoading)
+                _buildLoading()
+              else if (state.hasError)
+                _buildError(ref, state.errorMessage!)
+              else if (state.summary.isEmpty)
+                _buildEmptyState(context)
+              else
+                _buildSummary(context, state.summary),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  // ============================================================
+  // STATE: LOADING
+  // ============================================================
+  Widget _buildLoading() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 64),
+      child: Center(child: CircularProgressIndicator(color: _primary)),
+    );
+  }
+
+  // ============================================================
+  // STATE: ERROR
+  // ============================================================
+  Widget _buildError(WidgetRef ref, String message) {
+    return Column(
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _cardWhite,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.error_outline, color: _secondary, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Riwayat analisis gagal dibaca',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: _primary,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Riwayat disimpan lokal di perangkat ini. Coba muat ulang; '
+                'bila masih gagal, buka kembali aplikasi.',
+                style: TextStyle(fontSize: 12, color: _neutral, height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: _neutral),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: () => ref.read(homeViewModelProvider.notifier).load(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: _primary,
+                  side: const BorderSide(color: _secondary, width: 1.5),
+                  minimumSize: const Size(48, 48),
+                ),
+                child: const Text('Coba lagi'),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildInfoBox(),
+      ],
+    );
+  }
+
+  // ============================================================
+  // STATE: EMPTY
+  // ============================================================
+  Widget _buildEmptyState(BuildContext context) {
+    return Column(
+      children: [
+        _buildScanBanner(context),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: _cardWhite,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Column(
+            children: [
+              Icon(Icons.inbox_outlined, size: 40, color: _secondary),
+              SizedBox(height: 12),
+              Text(
+                'Belum ada analisis tersimpan',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: _primary,
+                  fontSize: 15,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Scan batch pertamamu untuk melihat ringkasan kualitas di '
+                'sini. Ringkasan hanya dihitung dari biji yang terlihat '
+                'pada foto.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: _neutral, height: 1.4),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _buildInfoBox(),
+      ],
+    );
+  }
+
+  // ============================================================
+  // STATE: ADA DATA
+  // ============================================================
+  Widget _buildSummary(BuildContext context, HomeSummary summary) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildCompositionCard(summary),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _buildTotalAnalysisCard(summary.totalAnalyses)),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildAverageScoreCard(summary.averageScore, summary),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildScanBanner(context),
+        const SizedBox(height: 24),
+        _buildRecentAnalysisHeader(context),
+        const SizedBox(height: 16),
+        _buildRecentAnalysisList(context, summary.recentAnalyses),
+        const SizedBox(height: 24),
+        _buildInfoBox(),
+      ],
     );
   }
 
@@ -102,7 +252,10 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // COMPOSITION CARD
   // ============================================================
-  Widget _buildCompositionCard() {
+  Widget _buildCompositionCard(HomeSummary summary) {
+    final arabicaShare = summary.shareOf(SpeciesLabels.arabica);
+    final mixedCount = summary.countOf(SpeciesLabels.mixed);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -137,9 +290,9 @@ class HomePage extends StatelessWidget {
                   color: _cardBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
-                  'Total 42 Batch',
-                  style: TextStyle(
+                child: Text(
+                  'Total ${summary.totalAnalyses} Batch',
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: _secondary,
@@ -161,7 +314,7 @@ class HomePage extends StatelessWidget {
                       width: 80,
                       height: 80,
                       child: CircularProgressIndicator(
-                        value: 0.68,
+                        value: arabicaShare,
                         strokeWidth: 10,
                         backgroundColor: const Color(0xFFCBBFB5),
                         valueColor: const AlwaysStoppedAnimation<Color>(
@@ -169,18 +322,18 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const Column(
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          '68%',
-                          style: TextStyle(
+                          '${(arabicaShare * 100).round()}%',
+                          style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             color: _primary,
                             fontSize: 16,
                           ),
                         ),
-                        Text(
+                        const Text(
                           'Arabica',
                           style: TextStyle(fontSize: 10, color: _neutral),
                         ),
@@ -193,14 +346,21 @@ class HomePage extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _buildLegendRow(_primary, 'Arabica', '29', '(68%)'),
+                    _buildLegendRow(
+                      _primary,
+                      SpeciesLabels.arabica,
+                      summary,
+                    ),
                     const SizedBox(height: 12),
                     _buildLegendRow(
                       const Color(0xFFCBBFB5),
-                      'Robusta',
-                      '13',
-                      '(32%)',
+                      SpeciesLabels.robusta,
+                      summary,
                     ),
+                    if (mixedCount > 0) ...[
+                      const SizedBox(height: 12),
+                      _buildLegendRow(_secondary, SpeciesLabels.mixed, summary),
+                    ],
                   ],
                 ),
               ),
@@ -211,12 +371,10 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildLegendRow(
-    Color color,
-    String label,
-    String value,
-    String percentage,
-  ) {
+  Widget _buildLegendRow(Color color, String species, HomeSummary summary) {
+    final count = summary.countOf(species);
+    final percentage = (summary.shareOf(species) * 100).round();
+
     return Row(
       children: [
         Container(
@@ -225,17 +383,21 @@ class HomePage extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: _primary,
-            fontSize: 14,
+        Flexible(
+          child: Text(
+            species,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: _primary,
+              fontSize: 13,
+            ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         Text(
-          value,
+          '$count',
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             color: _primary,
@@ -243,7 +405,10 @@ class HomePage extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 4),
-        Text(percentage, style: const TextStyle(color: _neutral, fontSize: 12)),
+        Text(
+          '($percentage%)',
+          style: const TextStyle(color: _neutral, fontSize: 12),
+        ),
       ],
     );
   }
@@ -251,7 +416,7 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // TOTAL ANALYSIS CARD
   // ============================================================
-  Widget _buildTotalAnalysisCard() {
+  Widget _buildTotalAnalysisCard(int totalAnalyses) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -287,9 +452,9 @@ class HomePage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
-            '42',
-            style: TextStyle(
+          Text(
+            '$totalAnalyses',
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w800,
               color: _primary,
@@ -308,7 +473,7 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // AVERAGE SCORE CARD
   // ============================================================
-  Widget _buildAverageScoreCard() {
+  Widget _buildAverageScoreCard(double averageScore, HomeSummary summary) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -335,24 +500,28 @@ class HomePage extends StatelessWidget {
                   color: _tertiary.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.star_border, color: _tertiary, size: 16),
+                child: const Icon(
+                  Icons.star_border,
+                  color: _tertiary,
+                  size: 16,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '84.5',
-                style: TextStyle(
+                averageScore.toStringAsFixed(1),
+                style: const TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: _primary,
                 ),
               ),
-              Text(
+              const Text(
                 ' /100',
                 style: TextStyle(
                   fontSize: 12,
@@ -370,8 +539,8 @@ class HomePage extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              'GRADE: PREMIUM',
-              style: TextStyle(
+              'GRADE: ${summary.averageGrade.label.toUpperCase()}',
+              style: const TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: _tertiary,
@@ -441,7 +610,8 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Analisis biji yang terlihat pada satu foto\nsecara akurat dan objektif.',
+                'Analisis biji yang terlihat pada satu foto\n'
+                'secara akurat dan objektif.',
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),
                   fontSize: 13,
@@ -509,7 +679,7 @@ class HomePage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 2),
-                Icon(Icons.chevron_right, color: _secondary, size: 18),
+                const Icon(Icons.chevron_right, color: _secondary, size: 18),
               ],
             ),
           ),
@@ -521,11 +691,10 @@ class HomePage extends StatelessWidget {
   // ============================================================
   // RECENT ANALYSIS LIST
   // ============================================================
-  Widget _buildRecentAnalysisList(BuildContext context) {
-    // Sumber sama dengan tab Analisis agar judul/skor kartu cocok dengan isi
-    // Detail Inspeksi yang dibuka.
-    final items = mockAnalysisHistory.take(3).toList();
-
+  Widget _buildRecentAnalysisList(
+    BuildContext context,
+    List<HomeAnalysisSummary> items,
+  ) {
     return Column(
       children: [
         for (int i = 0; i < items.length; i++) ...[
@@ -536,7 +705,7 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAnalysisCard(BuildContext context, AnalysisHistoryItem item) {
+  Widget _buildAnalysisCard(BuildContext context, HomeAnalysisSummary item) {
     final gradeTokens =
         RoastmateColors.grade[item.grade.name] ??
         RoastmateColors.grade['standard']!;
@@ -545,10 +714,9 @@ class HomePage extends StatelessWidget {
       color: _cardWhite,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        onTap: () => context.push(
-          '/result/${Uri.encodeComponent(item.detail.batchLabel)}',
-          extra: item.detail,
-        ),
+        // Layar Detail Inspeksi masih memakai data mock; sampai bisa membaca
+        // SQLite, kartu mengarah ke tab Analisis.
+        onTap: () => context.go('/history'),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -561,7 +729,7 @@ class HomePage extends StatelessWidget {
                   color: _cardBg,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.coffee, color: _secondary),
+                child: const Icon(Icons.coffee, color: _secondary),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -573,7 +741,7 @@ class HomePage extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            item.batchName,
+                            item.name,
                             style: const TextStyle(
                               fontWeight: FontWeight.w700,
                               color: _primary,
@@ -593,7 +761,7 @@ class HomePage extends StatelessWidget {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            gradeShortLabel(item.grade),
+                            item.grade.label,
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,

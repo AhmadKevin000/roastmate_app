@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.0
+Versi: 1.1
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -113,6 +113,7 @@ Satu sesi analisis batch.
 CREATE TABLE analyses (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at            TEXT NOT NULL,
+  name                  TEXT,
   image_path            TEXT,
   annotated_image_path  TEXT,
   species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
@@ -130,6 +131,7 @@ CREATE TABLE analyses (
 ```
 
 Catatan:
+- `name` = label batch yang diisi pengguna pada form scan setup (D-20). Dipakai judul kartu Beranda & riwayat. Boleh `NULL` untuk baris lama; tampilan memakai "Batch tanpa nama".
 - `grade` **tidak ada** di sini — diturunkan dari `quality_profile` saat tampil.
 - `status` (`uncertain`) **tidak disimpan** — diturunkan dari `roast_confidence` vs ambang (lihat bagian 15).
 - `annotated_image_path` = gambar dengan overlay bounding box, dipakai sebagai bukti visual (PRD FR-04).
@@ -230,6 +232,13 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 - `onUpgrade` menerapkan migrasi bertingkat sesuai `schema_version`.
 - Perubahan skema **wajib** menambah migrasi + menaikkan `schema_version`.
 - Versi knowledge base disimpan terpisah di `meta.kb_version` (dapat diperbarui tanpa mengubah skema).
+
+Riwayat migrasi:
+
+| Dari | Ke | Perubahan |
+|---|---|---|
+| — | 1 | Skema awal (seluruh tabel bagian 4–9). |
+| 1 | 2 | `ALTER TABLE analyses ADD COLUMN name TEXT` (D-20). |
 
 ---
 
