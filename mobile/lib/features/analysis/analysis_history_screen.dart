@@ -3,6 +3,8 @@ import '../../core/roastmate_colors.dart';
 import '../../core/roastmate_text.dart';
 import '../../core/roastmate_spacing.dart';
 import '../../core/roastmate_radius.dart';
+import '../../core/database/app_database.dart';
+import '../../data/analysis_repository.dart';
 import '../../data/mock_analysis_history.dart';
 import '../../domain/analysis_history_item.dart';
 import 'inspection_detail_screen.dart';
@@ -14,32 +16,64 @@ import 'widgets/roastmate_bottom_nav.dart';
 
 /// Layar Riwayat Analisis (tab Analisis).
 ///
-/// Saat ini memakai data dummy ([mockAnalysisHistory]); pengambilan dari SQLite
-/// akan ditambahkan lewat repository/controller terpisah.
+/// Sumber data: SQLite lewat [AnalysisRepository]. Bila [items] diberikan
+/// (mis. dari test), nilainya dipakai apa adanya. Bila database kosong atau
+/// gagal dibuka, fallback ke [mockAnalysisHistory] agar UI tetap bisa
+/// didemokan sebelum pipeline analisis menyimpan data nyata.
 class AnalysisHistoryScreen extends StatefulWidget {
-  /// Daftar item riwayat. Bila null, memakai [mockAnalysisHistory].
+  /// Daftar item riwayat. Bila null, muat dari SQLite (fallback ke mock).
   final List<AnalysisHistoryItem>? items;
 
   /// Tampilkan bottom navigation. Nonaktifkan bila layar dipasang di dalam
   /// shell navigasi yang sudah punya bottom bar sendiri.
   final bool showBottomNav;
 
-  const AnalysisHistoryScreen({
-    Key? key,
-    this.items,
-    this.showBottomNav = true,
-  }) : super(key: key);
+  const AnalysisHistoryScreen({Key? key, this.items, this.showBottomNav = true})
+    : super(key: key);
 
   @override
   State<AnalysisHistoryScreen> createState() => _AnalysisHistoryScreenState();
 }
 
 class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
-  static const List<String> _filterOptions = ['Semua', 'Arabica', 'Robusta', 'Mixed'];
+  static const List<String> _filterOptions = [
+    'Semua',
+    'Arabica',
+    'Robusta',
+    'Mixed',
+  ];
 
   String _selectedFilter = 'Semua';
 
-  List<AnalysisHistoryItem> get _allItems => widget.items ?? mockAnalysisHistory;
+  List<AnalysisHistoryItem>? _loadedItems;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.items == null) _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() => _loading = true);
+    try {
+      final db = await AppDatabase.instance.database;
+      final history = await AnalysisRepository(db).getHistory();
+      if (!mounted) return;
+      setState(() => _loadedItems = history);
+    } catch (_) {
+      // Database belum siap (mis. di platform belum didukung) — pakai mock.
+      if (!mounted) return;
+      setState(() => _loadedItems = mockAnalysisHistory);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<AnalysisHistoryItem> get _allItems {
+    if (widget.items != null) return widget.items!;
+    return _loadedItems ?? mockAnalysisHistory;
+  }
 
   List<AnalysisHistoryItem> get _filteredItems {
     if (_selectedFilter == 'Semua') return _allItems;
@@ -66,7 +100,9 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
 
   void _onExportCsv() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ekspor CSV akan tersedia di versi berikutnya')),
+      const SnackBar(
+        content: Text('Ekspor CSV akan tersedia di versi berikutnya'),
+      ),
     );
   }
 
@@ -77,35 +113,42 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
     return Scaffold(
       backgroundColor: RoastmateColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const HistoryAppHeader(),
-              const SizedBox(height: RoastmateSpacing.xl),
-              _buildTitleRow(),
-              const SizedBox(height: RoastmateSpacing.lg),
-              HistoryFilterBar(
-                options: _filterOptions,
-                selected: _selectedFilter,
-                counts: _filterCounts,
-                onSelected: (value) => setState(() => _selectedFilter = value),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const HistoryAppHeader(),
+                    const SizedBox(height: RoastmateSpacing.xl),
+                    _buildTitleRow(),
+                    const SizedBox(height: RoastmateSpacing.lg),
+                    HistoryFilterBar(
+                      options: _filterOptions,
+                      selected: _selectedFilter,
+                      counts: _filterCounts,
+                      onSelected: (value) =>
+                          setState(() => _selectedFilter = value),
+                    ),
+                    const SizedBox(height: RoastmateSpacing.lg),
+                    if (items.isEmpty)
+                      _buildEmptyState()
+                    else
+                      for (int i = 0; i < items.length; i++) ...[
+                        HistoryCard(
+                          item: items[i],
+                          onTap: () => _openDetail(items[i]),
+                        ),
+                        if (i < items.length - 1)
+                          const SizedBox(height: RoastmateSpacing.md),
+                      ],
+                    const SizedBox(height: RoastmateSpacing.xl),
+                    HistoryExportCard(onExport: _onExportCsv),
+                    const SizedBox(height: RoastmateSpacing.xl),
+                  ],
+                ),
               ),
-              const SizedBox(height: RoastmateSpacing.lg),
-              if (items.isEmpty)
-                _buildEmptyState()
-              else
-                for (int i = 0; i < items.length; i++) ...[
-                  HistoryCard(item: items[i], onTap: () => _openDetail(items[i])),
-                  if (i < items.length - 1) const SizedBox(height: RoastmateSpacing.md),
-                ],
-              const SizedBox(height: RoastmateSpacing.xl),
-              HistoryExportCard(onExport: _onExportCsv),
-              const SizedBox(height: RoastmateSpacing.xl),
-            ],
-          ),
-        ),
       ),
       bottomNavigationBar: widget.showBottomNav
           ? RoastmateBottomNav(
@@ -130,12 +173,16 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
             children: [
               Text(
                 'Riwayat Analisis',
-                style: RoastmateText.headlineSm.copyWith(color: RoastmateColors.textPrimary),
+                style: RoastmateText.headlineSm.copyWith(
+                  color: RoastmateColors.textPrimary,
+                ),
               ),
               const SizedBox(height: RoastmateSpacing.xs),
               Text(
                 'Total ${_allItems.length} penilaian batch optik tersimpan',
-                style: RoastmateText.bodyMd.copyWith(color: RoastmateColors.textSecondary),
+                style: RoastmateText.bodyMd.copyWith(
+                  color: RoastmateColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -169,17 +216,25 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
       ),
       child: Column(
         children: [
-          const Icon(Icons.inbox_outlined, size: 40, color: RoastmateColors.iconMuted),
+          const Icon(
+            Icons.inbox_outlined,
+            size: 40,
+            color: RoastmateColors.iconMuted,
+          ),
           const SizedBox(height: RoastmateSpacing.md),
           Text(
             'Belum ada riwayat untuk filter ini',
-            style: RoastmateText.titleSm.copyWith(color: RoastmateColors.textPrimary),
+            style: RoastmateText.titleSm.copyWith(
+              color: RoastmateColors.textPrimary,
+            ),
           ),
           const SizedBox(height: RoastmateSpacing.xs),
           Text(
             'Coba pilih filter lain atau scan batch baru.',
             textAlign: TextAlign.center,
-            style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
+            style: RoastmateText.bodySm.copyWith(
+              color: RoastmateColors.textSecondary,
+            ),
           ),
         ],
       ),
