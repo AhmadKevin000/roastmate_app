@@ -9,7 +9,7 @@ library;
 /// Versi skema saat ini.
 ///
 /// v2: tambah `batch_label`, `batch_name`, `model_version` pada `analyses`
-/// (D-19). Lihat migrasi di `app_database.dart`.
+/// (D-20). Lihat migrasi di `app_database.dart`.
 const int kSchemaVersion = 2;
 
 /// Nama file database.

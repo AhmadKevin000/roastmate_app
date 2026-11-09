@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.1 (skema DB `schema_version` = 2 — D-19)
+Versi: 1.1 (skema DB `schema_version` = 2 — D-20)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -135,10 +135,10 @@ CREATE TABLE analyses (
 Catatan:
 - `grade` **tidak ada** di sini — diturunkan dari `quality_profile` saat tampil.
 - `status` (`uncertain`) **tidak disimpan** — diturunkan dari `roast_confidence` vs ambang (lihat bagian 15).
-- `annotated_image_path` = gambar dengan overlay bounding box, **boleh kosong**. Riwayat menampilkan foto asli (`image_path`) + rekap `analysis_defects`; overlay hanya pada layar hasil analisis langsung (D-19).
+- `annotated_image_path` = gambar dengan overlay bounding box, **boleh kosong**. Riwayat menampilkan foto asli (`image_path`) + rekap `analysis_defects`; overlay hanya pada layar hasil analisis langsung (D-20).
 - `batch_label` = label pendek batch (mis. `Batch #042`); `batch_name` = nama batch (mis. `Mandheling Honey Anaerob`).
 - `model_version` = versi model yang menghasilkan analisis (provenance, mis. `Model CV v2.4`).
-- Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-19).
+- Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-20).
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 

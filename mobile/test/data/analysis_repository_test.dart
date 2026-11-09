@@ -13,8 +13,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart'
     show databaseFactoryFfi, sqfliteFfiInit;
 
 import 'package:pbl_sem5/core/database/schema.dart';
-import 'package:pbl_sem5/data/analysis_repository.dart';
-import 'package:pbl_sem5/domain/inspection_result.dart';
+import 'package:pbl_sem5/features/analysis/data/sources/analysis_repository.dart';
+import 'package:pbl_sem5/shared/models/analysis_result.dart';
 
 void main() {
   setUpAll(() {
