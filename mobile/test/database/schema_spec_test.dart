@@ -52,9 +52,7 @@ Future<Map<String, Map<String, Object?>>> columnsOf(
   String table,
 ) async {
   final rows = await db.rawQuery('PRAGMA table_info($table)');
-  return {
-    for (final r in rows) r['name'] as String: r,
-  };
+  return {for (final r in rows) r['name'] as String: r};
 }
 
 /// Menyisipkan satu metode valid; mengembalikan method_id.
@@ -301,22 +299,14 @@ void main() {
 
     test('menolak is_default selain 0/1', () async {
       expect(
-        () => insertRecipe(
-          db,
-          methodId: 'M001',
-          overrides: {'is_default': 2},
-        ),
+        () => insertRecipe(db, methodId: 'M001', overrides: {'is_default': 2}),
         throwsA(isA<DatabaseException>()),
       );
     });
 
     test('source NOT NULL (§5)', () async {
       expect(
-        () => insertRecipe(
-          db,
-          methodId: 'M001',
-          overrides: {'source': null},
-        ),
+        () => insertRecipe(db, methodId: 'M001', overrides: {'source': null}),
         throwsA(isA<DatabaseException>()),
       );
     });
@@ -345,11 +335,10 @@ void main() {
     });
 
     test('menerima species/roast/quality_profile NULL (§6 nullable)', () async {
-      final id = await insertAnalysis(db, overrides: {
-        'species': null,
-        'roast': null,
-        'quality_profile': null,
-      });
+      final id = await insertAnalysis(
+        db,
+        overrides: {'species': null, 'roast': null, 'quality_profile': null},
+      );
       expect(id, greaterThan(0));
     });
   });
@@ -409,8 +398,7 @@ void main() {
         'brew_recipes',
         where: 'recipe_id = ?',
         whereArgs: ['R009'],
-      ))
-          .single;
+      )).single;
       expect(row['is_default'], 0);
     });
 
@@ -424,8 +412,7 @@ void main() {
         'analysis_defects',
         where: 'analysis_id = ?',
         whereArgs: [analysisId],
-      ))
-          .single;
+      )).single;
       expect(row['count'], 0);
     });
 
@@ -566,20 +553,29 @@ void main() {
   group('§6/§15 Nilai turunan tidak disimpan', () {
     test('analyses tidak memiliki kolom grade', () async {
       final cols = await columnsOf(db, 'analyses');
-      expect(cols.containsKey('grade'), isFalse,
-          reason: '§6: grade diturunkan dari quality_profile (D-02)');
+      expect(
+        cols.containsKey('grade'),
+        isFalse,
+        reason: '§6: grade diturunkan dari quality_profile (D-02)',
+      );
     });
 
     test('analyses tidak memiliki kolom status', () async {
       final cols = await columnsOf(db, 'analyses');
-      expect(cols.containsKey('status'), isFalse,
-          reason: '§6/§15: status uncertain diturunkan dari roast_confidence');
+      expect(
+        cols.containsKey('status'),
+        isFalse,
+        reason: '§6/§15: status uncertain diturunkan dari roast_confidence',
+      );
     });
 
     test('brew_recipes tidak menyimpan rasio', () async {
       final cols = await columnsOf(db, 'brew_recipes');
-      expect(cols.containsKey('ratio'), isFalse,
-          reason: '§5: rasio dihitung water_volume_ml / dose_g');
+      expect(
+        cols.containsKey('ratio'),
+        isFalse,
+        reason: '§5: rasio dihitung water_volume_ml / dose_g',
+      );
     });
   });
 
@@ -590,20 +586,26 @@ void main() {
     test('knowledge base memakai PK TEXT', () async {
       final methods = await columnsOf(db, 'brew_methods');
       expect(methods['method_id']!['pk'], 1);
-      expect((methods['method_id']!['type'] as String).toUpperCase(),
-          contains('TEXT'));
+      expect(
+        (methods['method_id']!['type'] as String).toUpperCase(),
+        contains('TEXT'),
+      );
 
       final recipes = await columnsOf(db, 'brew_recipes');
       expect(recipes['recipe_id']!['pk'], 1);
-      expect((recipes['recipe_id']!['type'] as String).toUpperCase(),
-          contains('TEXT'));
+      expect(
+        (recipes['recipe_id']!['type'] as String).toUpperCase(),
+        contains('TEXT'),
+      );
     });
 
     test('riwayat memakai PK INTEGER AUTOINCREMENT', () async {
       final analyses = await columnsOf(db, 'analyses');
       expect(analyses['id']!['pk'], 1);
-      expect((analyses['id']!['type'] as String).toUpperCase(),
-          contains('INTEGER'));
+      expect(
+        (analyses['id']!['type'] as String).toUpperCase(),
+        contains('INTEGER'),
+      );
     });
   });
 
@@ -618,6 +620,9 @@ void main() {
         'created_at',
         'image_path',
         'annotated_image_path',
+        'batch_label',
+        'batch_name',
+        'model_version',
         'species',
         'roast',
         'roast_confidence',

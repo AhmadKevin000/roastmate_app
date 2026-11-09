@@ -262,6 +262,18 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 
 ---
 
+## D-20 — Riwayat tanpa overlay per-biji & alternatif rekomendasi tunggal
+
+**Konteks:** Penyelarasan skema dengan fitur Riwayat Analisis: mock riwayat menyimpan deteksi per-biji (bounding box + confidence) dan daftar alternatif rekomendasi (N item), sementara skema tidak menampung keduanya. Konfirmasi UI (Ghazwan): riwayat cukup menampilkan foto asli + rekap jumlah per kelas defect.
+
+**Keputusan:**
+- **Deteksi per-biji TIDAK disimpan** (tabel `analysis_detections` tidak dibuat). Overlay interaktif hanya ada pada layar hasil analisis langsung; Riwayat menampilkan foto asli (`image_path`) + rekap dari `analysis_defects`.
+- Menyempurnakan D-14: `annotated_image_path` tetap ada di skema namun **boleh kosong**; bukti visual riwayat cukup `image_path`.
+- **Rekomendasi alternatif maksimal 1** — skema `recommendations` (satu `alternative_method_id`) tidak berubah; UI membatasi satu alternatif.
+- Tambah kolom `analyses`: **`batch_label`** (label pendek, mis. `Batch #042`), **`batch_name`** (nama batch, mis. `Mandheling Honey Anaerob`), **`model_version`** (provenance model, mis. `Model CV v2.4`). Skema naik ke **versi 2** dengan migrasi `ALTER TABLE`.
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan).
