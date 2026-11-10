@@ -67,7 +67,7 @@ Otoritatif. Pemilik seluruh parameter seduh.
 CREATE TABLE brew_recipes (
   recipe_id        TEXT PRIMARY KEY,
   method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
-  species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Mixed')),
+  species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
   quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
   roast_context    TEXT NOT NULL CHECK (roast_context IN
                      ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
@@ -88,7 +88,7 @@ CREATE TABLE brew_recipes (
 |---|---|---|
 | `recipe_id` | TEXT | PK, mis. `R001` |
 | `method_id` | TEXT | FK → `brew_methods` |
-| `species` | TEXT | `Arabica` · `Robusta` · `Mixed` |
+| `species` | TEXT | `Arabica` · `Robusta` · `Liberika` · `Mixed` |
 | `quality_profile` | TEXT | `High` · `Medium` · `Low` |
 | `roast_context` | TEXT | Lihat bagian 11 |
 | `dose_g` | REAL | Berat kopi bubuk (gram) |
@@ -115,7 +115,7 @@ CREATE TABLE analyses (
   created_at            TEXT NOT NULL,
   image_path            TEXT,
   annotated_image_path  TEXT,
-  species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
+  species               TEXT CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
   roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
   roast_confidence      REAL,
   roast_distribution    TEXT,
@@ -133,7 +133,7 @@ Catatan:
 - `grade` **tidak ada** di sini — diturunkan dari `quality_profile` saat tampil.
 - `status` (`uncertain`) **tidak disimpan** — diturunkan dari `roast_confidence` vs ambang (lihat bagian 15).
 - `annotated_image_path` = gambar dengan overlay bounding box, dipakai sebagai bukti visual (PRD FR-04).
-- `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
+- `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Liberika`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 
 ---
@@ -146,12 +146,13 @@ Rincian defect per analisis.
 CREATE TABLE analysis_defects (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   analysis_id   INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
-  defect_class  TEXT NOT NULL CHECK (defect_class IN
-                  ('Healthy','Broken','Insect Damage','Quaker','Scorched','Foreign Matter')),
+  defect_class  TEXT NOT NULL CHECK (defect_class IN ('Normal','Quaker','Broken','Severe')),
   count         INTEGER NOT NULL DEFAULT 0,
   UNIQUE (analysis_id, defect_class)
 );
 ```
+
+> Defect terdiri dari **4 kelas** (`Normal` / `Quaker` / `Broken` / `Severe`) — sesuai taksonomi final hasil training (ML_PBL). Sub-jenis parah (`under`, `burnt`, `insectOrMold`) digabung ke `Severe` saat training karena sampel terlalu sedikit; pembedanya direkonstruksi sebagai narasi turunan (`underdeveloped` / `overroasted` / `contamination`) dari kombinasi `Severe` + `roast` (lihat bagian 15). Benda asing / bukan biji (Foreign Matter) ditangani oleh detector, bukan classifier.
 
 ---
 
@@ -210,14 +211,14 @@ CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
 
 | Domain | Nilai |
 |---|---|
-| `species` | `Arabica` · `Robusta` · `Mixed` |
+| `species` | `Arabica` · `Robusta` · `Liberika` · `Mixed` |
 | `status` | `OK` · `Uncertain` |
 | `roast` | `Green` · `Light` · `Medium` · `Dark` |
 | `quality_profile` | `High` · `Medium` · `Low` |
 | `roast_context` | `Green` · `Light` · `Medium` · `Dark` · `Light/Medium` · `Medium/Dark` |
 | `grind_size` | `Espresso` · `Fine` · `Medium-Fine` · `Medium` · `Medium-Coarse` · `Coarse` |
 | `method_type` | `pour_over` · `immersion` · `hybrid` · `pressure` · `espresso` |
-| `defect_class` | `Healthy` · `Broken` · `Insect Damage` · `Quaker` · `Scorched` · `Foreign Matter` |
+| `defect_class` | `Normal` · `Quaker` · `Broken` · `Severe` |
 
 Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case). Nilai di JSON seed harus mengikuti ini. `status` adalah nilai **turunan/tampilan** (tidak disimpan, tidak masuk seed). Kolom enum ditegakkan dengan **`CHECK` constraint** pada DDL (bukan hanya konvensi).
 
@@ -230,6 +231,14 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 - `onUpgrade` menerapkan migrasi bertingkat sesuai `schema_version`.
 - Perubahan skema **wajib** menambah migrasi + menaikkan `schema_version`.
 - Versi knowledge base disimpan terpisah di `meta.kb_version` (dapat diperbarui tanpa mengubah skema).
+
+### Migrasi tercatat
+
+| Dari | Ke | Perubahan | Status |
+|---|---|---|---|
+| — | — | belum ada migrasi | `kSchemaVersion` = 1 |
+
+> Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
 ---
 
@@ -285,5 +294,6 @@ Alur seed: `JSON → BrewingDataSource → BrewingRepository → SQLite`. Setela
 | `grade` | `quality_profile` (pemetaan D-02) | Tidak |
 | Rasio | `water_volume_ml / dose_g` | Tidak |
 | `status` (`uncertain`) | `roast_confidence` vs ambang | Tidak |
+| `defect_interpretation` | `counts.Severe` + `analyses.roast` (`underdeveloped`/`overroasted`/`contamination`) | Tidak — diturunkan saat render |
 | `defect_rate` | hitung saat analisis (snapshot) | Ya |
 | `roast_distribution` | agregasi batch saat analisis | Ya (JSON) |

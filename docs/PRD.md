@@ -14,12 +14,14 @@ Yang dihasilkan:
 
 | Output | Sumber |
 |---|---|
-| Jenis kopi (Arabica / Robusta / Mixed) | Model visi (YOLOv8n-Cls) |
-| Tingkat roast (Green / Light / Medium / Dark) | Model visi (YOLOv8n-Cls) |
-| Defect per biji (6 kelas) | Model visi (YOLOv8n-Cls) |
+| Jenis kopi (Arabica / Robusta / Liberika / Mixed) | Model visi (Species classifier, 3 kelas) |
+| Tingkat roast (Green / Light / Medium / Dark) | Model visi (Roast classifier, 4 kelas) |
+| Defect per biji (Normal / Quaker / Broken / Severe) | Model visi (Defect classifier, 4 kelas) |
 | Bentuk & keseragaman batch | OpenCV (bukan ML) |
-| Quality Score 0–100 + profile | Rule engine (bukan ML) |
+| Quality Score 0–100 + profile | Rule engine — dari defect only (bukan ML) |
 | Rekomendasi metode seduh + parameter awal | Knowledge base + rules (bukan ML) |
+
+> `Green` adalah **kelas roast** (salah satu dari 4), bukan gerbang terpisah. Bila roast terdeteksi `Green`, aplikasi menampilkan bahwa roasting diperlukan dan tidak memberikan parameter seduh normal (lihat FR-08).
 
 Prinsip inti: **ML hanya untuk visual (deteksi + klasifikasi). Quality score dan parameter seduh dihitung oleh rule engine + knowledge base, bukan diprediksi langsung oleh model gambar.**
 
@@ -66,13 +68,13 @@ Aplikasi memiliki 3 tab utama.
 
 ### Tab Beranda
 - Sapaan & ringkasan.
-- Komposisi jenis biji (Arabica / Robusta / Mixed) dari seluruh riwayat.
+- Komposisi jenis biji (Arabica / Robusta / Liberika / Mixed) dari seluruh riwayat.
 - Statistik: total analisis, rata-rata skor.
 - Kartu CTA "Scan Batch Baru" → kamera.
 - Daftar analisis terakhir (ringkas).
 
 ### Tab Analisis
-- Riwayat analisis (daftar + filter Semua / Arabica / Robusta / Mixed).
+- Riwayat analisis (daftar + filter Semua / Arabica / Robusta / Liberika / Mixed).
 - Setiap item: nama, tanggal, jenis, jumlah biji terlihat, jumlah defect, skor, grade.
 - Buka detail inspeksi (hasil analisis lengkap).
 - Ekspor CSV.
@@ -127,8 +129,8 @@ Seduh
 - Tidak melanjutkan inference bila kualitas tidak memadai.
 
 ### FR-03 Inference On-Device
-- Deteksi biji (YOLOv8n Detection) → crop per biji.
-- Klasifikasi species, roast, defect per biji (YOLOv8n-Cls).
+- Deteksi biji (Detector YOLOv8n) → crop per biji (padding ~10%, resize 224 bilinear).
+- Klasifikasi species, roast (4 kelas), defect (4 kelas) per biji.
 - Analisis bentuk per biji (OpenCV).
 - Semua proses lokal di perangkat.
 
@@ -139,7 +141,8 @@ Seduh
 - Rekomendasi seduh terkalibrasi (metode utama + parameter).
 - Metode alternatif.
 - Bukti visual klasifikasi (bounding box berlabel + zoom).
-- Rincian komposisi **defect** per kelas (jumlah + persentase). Species ditampilkan sebagai satu jenis biji saja.
+- Rincian komposisi **defect** 4 kelas: `Normal`, `Quaker`, `Broken`, `Severe` (jumlah + persentase). Species ditampilkan sebagai satu jenis biji saja.
+- Narasi sub-jenis parah: `Severe` + roast dijabarkan menjadi `underdeveloped` (Green/Light), `overroasted` (Dark), atau `contamination` (Medium).
 - Disclaimer: penilaian indikatif, bukan sertifikasi laboratorium.
 
 ### FR-05 Riwayat Analisis
@@ -161,11 +164,13 @@ Seduh
 - Tidak ada timer interaktif.
 
 ### FR-08 Green Bean Handling
+- `Green` dideteksi sebagai **kelas roast** oleh model roast 4 kelas (`Green` / `Light` / `Medium` / `Dark`).
 - Bila roast terdeteksi `Green`: tampilkan bahwa roasting diperlukan, dan **tidak** berikan parameter seduh normal.
+- `Green` tetap eksis sebagai nilai `roast_context` di knowledge base sehingga resep/penanganan khusus bisa ditandai.
 
 ### FR-09 Confidence & Mixed Batch
-- Bila confidence di bawah threshold → tandai `uncertain`.
-- Bila distribusi species terlalu dekat → species `Mixed`; bila distribusi roast terlalu dekat → status `uncertain`.
+- Bila confidence species di bawah ambang (0.70) → species `Mixed`.
+- Bila confidence roast di bawah ambang (0.45) → status `uncertain`.
 - Tidak memaksakan satu kelas.
 
 ---
@@ -178,7 +183,7 @@ Seduh
 | Mode operasi | On-device, offline (tanpa internet) |
 | Latensi inference | < ~1 detik per foto |
 | Penggunaan RAM | < ~120 MB |
-| Ukuran model total | ≤ ~4 MB (perlu dikaji ulang) |
+| Ukuran model total | ~17 MB (detector fp16 6.1 + 3× classifier fp32) |
 | Privasi | Foto tidak pernah dikirim ke server |
 | Riwayat | Tersimpan lokal (SQLite) |
 | Bahasa UI | Indonesia |
@@ -189,18 +194,41 @@ Seduh
 ## 8. Taksonomi & Definisi
 
 ### Species
-`Arabica` · `Robusta` · `Mixed`
+`Arabica` · `Robusta` · `Liberika` · `Mixed`
 
 > `Mixed` menandai batch campuran/ambigu. Status `uncertain` (confidence di bawah ambang) adalah **status tampilan**, bukan nilai species — lihat FR-09.
 
 ### Roast
 `Green` · `Light` · `Medium` · `Dark`
 
-### Defect (6 kelas final)
-`Healthy` · `Broken` · `Insect Damage` · `Quaker` · `Scorched` · `Foreign Matter`
+> `Green` adalah **kelas roast ke-4** (biji mentah), bukan gerbang terpisah. Lihat FR-08.
+
+### Defect (4 kelas final)
+`Normal` · `Quaker` · `Broken` · `Severe`
+
+> `Severe` menggabungkan `under`, `burnt`, dan `insectOrMold` (sampel terlalu sedikit untuk dilatih terpisah); pembedanya direkonstruksi dari kombinasi dengan roast (`underdeveloped` / `overroasted` / `contamination`). Benda asing / bukan biji (Foreign Matter) ditangani oleh **detector**, bukan classifier defect.
+
+Bobot keparahan (dipakai untuk defect rate & quality score):
+
+| Kelas | Bobot |
+|---|---|
+| Normal | 0.0 |
+| Quaker | 0.7 |
+| Broken | 0.3 |
+| Severe | 1.0 |
 
 ### Quality Profile (kanonik, 3 level)
 `High` · `Medium` · `Low`
+
+Quality score dihitung dari **defect only** (bukan multicomponent):
+
+```
+defect_rate   = Σ(count[c] × weight[c]) / n_crop   (soft: expected weight per biji)
+quality_score = round(100 × (1 − defect_rate))
+profile: High ≥ 90 (dr ≤ 0.10) · Medium ≥ 70 (dr ≤ 0.30) · Low < 70
+```
+
+Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** masuk rumus score.
 
 ### Indicative Grade (pemetaan default)
 | Quality Profile | Score | Grade |
@@ -234,7 +262,7 @@ Seduh
 |---|---|
 | AC-01 | Satu foto batch menghasilkan skor + profil + rekomendasi dalam < ~1 detik. |
 | AC-02 | Semua proses berjalan tanpa koneksi internet. |
-| AC-03 | Defect rate = total biji defect / total biji terlihat. |
+| AC-03 | Defect rate = rata-rata skor severity terbobot tiap biji (`Σ count[c]×weight[c] / n`). |
 | AC-04 | Biji `Green` tidak menerima parameter seduh normal. |
 | AC-05 | Confidence rendah menghasilkan status `uncertain`, bukan kelas paksa. |
 | AC-06 | Parameter grind/air/suhu/waktu selalu berasal dari resep di knowledge base (bukan prediksi model). |
@@ -251,7 +279,7 @@ Seduh
 |---|---|
 | Batch | Sekumpulan biji kopi dalam satu foto |
 | Visible bean | Biji yang terlihat di permukaan foto |
-| Defect rate | Rasio biji defect terhadap total biji terlihat |
+| Defect rate | Skor severity terbobot per biji (Normal 0 · Quaker 0.7 · Broken 0.3 · Severe 1.0) |
 | Quality Score | Skor 0–100 dari rule engine |
 | Quality Profile | Kategori skor (High/Medium/Low) |
 | Indicative Grade | Label grade tampilan (Specialty…Off Grade) |

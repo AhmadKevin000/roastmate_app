@@ -71,12 +71,10 @@ colors:
   status-error-container: '#F9DEDC'
   status-info: '#496574'
   status-info-container: '#DCE8ED'
-  defect-healthy: '#5E6B4A'
-  defect-broken: '#9B6A3D'
-  defect-insect: '#B54A43'
+  defect-normal: '#5E6B4A'
   defect-quaker: '#C49038'
-  defect-scorched: '#6B3F34'
-  defect-foreign: '#6D5A86'
+  defect-broken: '#9B6A3D'
+  defect-severe: '#B54A43'
   grade-specialty: '#3F6B4A'
   grade-specialty-container: '#E0EADF'
   grade-premium: '#496574'
@@ -201,7 +199,8 @@ The color system builds upon calibrated roast chemistry, botanical greens, and u
 
 ### Semantic Tiers and Defect Mapping
 Color is never used in isolation for status communication. All defect indicators and quality grades must bundle a minimum 4.5:1 text contrast ratio, clear icon indicators, and unambiguous text copy:
-- **Defects:** Healthy (`#5E6B4A`), Broken (`#9B6A3D`), Insect Damage (`#B54A43`), Quaker (`#C49038`), Scorched (`#6B3F34`), Foreign Matter (`#6D5A86`).
+- **Defects (4 kelas):** Normal (`#5E6B4A`), Quaker (`#C49038`), Broken (`#9B6A3D`), Severe (`#B54A43`).
+  > Model Defect memakai **4 kelas** (`Normal`/`Quaker`/`Broken`/`Severe`, hasil `ML_PBL`). `Severe` menggabungkan `under`/`burnt`/`insectOrMold`; pembedanya direkonstruksi dari kombinasi dengan roast (`underdeveloped`/`overroasted`/`contamination`). Benda asing (Foreign Matter) ditangani detector, bukan ditampilkan sebagai kelas defect.
 - **Indicative Grades:** Specialty (`#3F6B4A`), Premium (`#496574`), Standard (`#8B5E00`), Below Standard (`#A85E32`), Off Grade (`#B3261E`).
 
 ### Quality Profile → Indicative Grade Mapping
@@ -271,7 +270,7 @@ The design system uses a rounded corner geometry (`roundedness: 2`) that balance
 - **Ghost / Tertiary Buttons:** Transparent fill, `48px` minimum touch target, text set in `text.primary` (`#211A17`) with active underline or tonal container highlight on hover/tap.
 
 ### Chips & Badges
-- **Defect Chips:** Pill-shaped (`radius.full`), padding `4px 12px`, featuring an icon, short defect title, and frequency count (e.g., `[!] Quaker (3)`). Background set to corresponding container color (e.g., `#F8E5B5` for quaker) with strong contrasting label (`#8B5E00`).
+- **Defect Chips:** Pill-shaped (`radius.full`), padding `4px 12px`, featuring an icon, short defect title, and frequency count (e.g., `[!] Broken (3)`). Background set to the corresponding container color (e.g., `#F8D7D4` for severe) with strong contrasting label (`#8F2C26`). Kelas defect 4 kelas: `Normal` / `Quaker` / `Broken` / `Severe`.
 - **Filter Chips:** Inactive state uses `surface.container` (`#F2ECE6`) with `border.default` (`#D9CDC4`). Active state uses `brand.espressoSoft` (`#F0DED4`) with an active stroke and bold `brand.espresso` text.
 
 ### Cards

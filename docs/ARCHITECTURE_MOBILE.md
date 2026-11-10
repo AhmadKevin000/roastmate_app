@@ -23,7 +23,7 @@ Fokus: peta & keputusan arsitektur (bukan tutorial kode).
 | Arsitektur presentasi | MVVM (View + ViewModel + Riverpod) |
 | State & DI | Riverpod |
 | Navigasi | GoRouter |
-| Inference | `tflite_flutter` (model INT8) |
+| Inference | `tflite_flutter` (classifier fp32 + detector fp16) |
 | Kamera | `camera` |
 | Computer vision (shape) | OpenCV (via FFI/binding) |
 | Penyimpanan lokal | `sqflite` (SQLite) |
@@ -148,10 +148,12 @@ Model assets (`assets/models/`):
 
 | File | Fungsi | Format |
 |---|---|---|
-| `bean_detection.tflite` | Deteksi biji | INT8 |
-| `species_classifier.tflite` | Species | INT8 |
-| `roast_classifier.tflite` | Roast | INT8 |
-| `defect_classifier.tflite` | Defect | INT8 |
+| `bean_detection.tflite` | Deteksi biji (YOLOv8n) | fp16 (default; tersedia fp32/int8) |
+| `species_classifier.tflite` | Species (Arabica / Liberika / Robusta) | fp32 |
+| `roast_classifier.tflite` | Roast (Green / Light / Medium / Dark) | fp32 |
+| `defect_classifier.tflite` | Defect (Normal / Quaker / Broken / Severe) | fp32 |
+
+> Classifier hanya diexport **fp32** (INT8 ditolak — agreement < 1.0). Hanya detector yang punya varian fp16/int8. `Green` bukan model terpisah: ia adalah salah satu kelas roast.
 
 Service inference: `BeanDetectionService`, `SpeciesInferenceService`, `RoastInferenceService`, `DefectInferenceService`.
 
@@ -167,9 +169,9 @@ Captured Image
 Image Quality Check
   ├─ gagal → peringatan, berhenti
   └─ lolos ↓
-Bean Detection (YOLOv8n) → Bean Crops
+Bean Detection (YOLOv8n) → Bean Crops (pad ~10% → resize 224 bilinear)
       ↓
-Species / Roast / Defect Inference
+Species / Roast / Defect Inference (3 / 4 / 4 kelas)
       ↓
 Shape Analysis (OpenCV)
       ↓
@@ -185,6 +187,7 @@ AnalysisResult → simpan → ResultView
 Catatan:
 - Jalankan inference di **isolate** agar UI tetap responsif.
 - Proses model **satu per satu** untuk menekan puncak RAM.
+- Species: kolom `Liberika` dibuang saat inference → A/R direnormalisasi; confidence < 0.70 → `Mixed`.
 - Tidak ada timer interaktif di alur mana pun.
 
 ---
@@ -278,15 +281,20 @@ AnalysisResult
 ├── BatchAnalysis      { visibleBeans, defectDistribution, shapeUniformity,
 │                        sizeUniformity, roastUniformity }
 ├── QualityResult      { score, profile }
-└── BrewingRecommendation
-    ├── primaryMethod, alternativeMethod
-    ├── doseG, grindSize, waterVolume, temperature, brewingTime
-    └── reason
+├── BrewingRecommendation
+│   ├── primaryMethod, alternativeMethod
+│   ├── doseG, grindSize, waterVolume, temperature, brewingTime
+│   └── reason
+└── summaryText        (derived at display; not stored)
 ```
 
 Parameter seduh pada `BrewingRecommendation` berasal dari `brew_recipes` terpilih, bukan dari model.
 
 `status` (`OK`/`Uncertain`) diturunkan dari `roast_confidence`, bukan kelas paksa. `annotated_image_path` disimpan terpisah untuk bukti visual.
+
+`defectDistribution` memakai **4 kelas** (`Normal`/`Quaker`/`Broken`/`Severe`). Narasi sub-jenis parah (`underdeveloped`/`overroasted`/`contamination`) adalah **nilai turunan** `defect_interpretation` dari `Severe` + `roast` — tidak disimpan (lihat `DATABASE_SCHEMA.md` §15).
+
+`summaryText` **diturunkan saat tampil** dari angka hasil (template lokal, D-21) — tidak ada kolom DB. `reason` disimpan di `recommendations.reason`.
 
 ---
 
@@ -357,7 +365,7 @@ Flutter App
 |---|---|
 | Latensi inference | < ~1 detik |
 | RAM | < ~120 MB |
-| Ukuran model total | ≤ ~4 MB (perlu dikaji ulang) |
+| Ukuran model total | ~17 MB (detector fp16 6.1 + 3× classifier fp32) |
 | Respons UI | Tetap mulus saat inference (isolate) |
 
 ---
