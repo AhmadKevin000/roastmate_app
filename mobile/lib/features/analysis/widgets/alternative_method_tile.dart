@@ -8,7 +8,8 @@ import '../../../domain/inspection_result.dart';
 class AlternativeMethodTile extends StatelessWidget {
   final AlternativeMethod method;
 
-  const AlternativeMethodTile({Key? key, required this.method}) : super(key: key);
+  const AlternativeMethodTile({Key? key, required this.method})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,9 @@ class AlternativeMethodTile extends StatelessWidget {
         showModalBottomSheet(
           context: context,
           shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(RoastmateRadius.large)),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(RoastmateRadius.large),
+            ),
           ),
           builder: (context) {
             return Container(
@@ -37,12 +40,16 @@ class AlternativeMethodTile extends StatelessWidget {
                         backgroundColor: RoastmateColors.primary,
                         foregroundColor: RoastmateColors.surface,
                         minimumSize: const Size(0, 48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(RoastmateRadius.small)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            RoastmateRadius.small,
+                          ),
+                        ),
                       ),
                       onPressed: () => Navigator.pop(context),
                       child: Text("Tutup", style: RoastmateText.labelLg),
                     ),
-                  )
+                  ),
                 ],
               ),
             );
@@ -65,17 +72,25 @@ class AlternativeMethodTile extends StatelessWidget {
                 children: [
                   Text(
                     method.title,
-                    style: RoastmateText.titleSm.copyWith(color: RoastmateColors.textPrimary),
+                    style: RoastmateText.titleSm.copyWith(
+                      color: RoastmateColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     method.description,
-                    style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
+                    style: RoastmateText.bodySm.copyWith(
+                      color: RoastmateColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: RoastmateColors.iconDefault, size: 20),
+            const Icon(
+              Icons.chevron_right,
+              color: RoastmateColors.iconDefault,
+              size: 20,
+            ),
           ],
         ),
       ),

@@ -26,6 +26,9 @@ class RoastmateColors {
   
   static const statusInfo = Color(0xFF496574);
   static const statusInfoContainer = Color(0xFFDCE8ED);
+  static const statusSuccess = Color(0xFF3F6B4A);
+  static const statusWarning = Color(0xFFC49038);
+  static const statusError = Color(0xFFB3261E);
 
   static const Map<String, Color> defect = {
     'healthy': Color(0xFF5E6B4A),

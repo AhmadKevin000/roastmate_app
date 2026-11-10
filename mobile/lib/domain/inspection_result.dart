@@ -5,9 +5,12 @@ enum QualityProfile { high, medium, low }
 enum IndicativeGrade { specialty, premium, standard, belowStandard, offGrade }
 
 class InspectionResult {
+  final int? id;
   final String batchLabel;
   final String batchName;
   final String analyzedAgo;
+  final DateTime? createdAt;
+  final String? imagePath;
   final int qualityScore;
   final int visibleBeans;
   final Map<DefectClass, int> defectCounts;
@@ -20,9 +23,12 @@ class InspectionResult {
   final String modelVersion;
 
   InspectionResult({
+    this.id,
     required this.batchLabel,
     required this.batchName,
     required this.analyzedAgo,
+    this.createdAt,
+    this.imagePath,
     required this.qualityScore,
     required this.visibleBeans,
     required this.defectCounts,
@@ -34,6 +40,44 @@ class InspectionResult {
     required this.detections,
     required this.modelVersion,
   });
+
+  InspectionResult copyWith({
+    int? id,
+    String? batchLabel,
+    String? batchName,
+    String? analyzedAgo,
+    DateTime? createdAt,
+    String? imagePath,
+    int? qualityScore,
+    int? visibleBeans,
+    Map<DefectClass, int>? defectCounts,
+    String? species,
+    String? roast,
+    String? summaryText,
+    BrewRecommendation? recommendation,
+    List<AlternativeMethod>? alternatives,
+    List<BeanDetection>? detections,
+    String? modelVersion,
+  }) {
+    return InspectionResult(
+      id: id ?? this.id,
+      batchLabel: batchLabel ?? this.batchLabel,
+      batchName: batchName ?? this.batchName,
+      analyzedAgo: analyzedAgo ?? this.analyzedAgo,
+      createdAt: createdAt ?? this.createdAt,
+      imagePath: imagePath ?? this.imagePath,
+      qualityScore: qualityScore ?? this.qualityScore,
+      visibleBeans: visibleBeans ?? this.visibleBeans,
+      defectCounts: defectCounts ?? this.defectCounts,
+      species: species ?? this.species,
+      roast: roast ?? this.roast,
+      summaryText: summaryText ?? this.summaryText,
+      recommendation: recommendation ?? this.recommendation,
+      alternatives: alternatives ?? this.alternatives,
+      detections: detections ?? this.detections,
+      modelVersion: modelVersion ?? this.modelVersion,
+    );
+  }
 
   int get healthyCount => defectCounts[DefectClass.healthy] ?? 0;
 
