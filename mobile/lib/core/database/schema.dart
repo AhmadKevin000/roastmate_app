@@ -7,7 +7,10 @@
 library;
 
 /// Versi skema saat ini.
-const int kSchemaVersion = 1;
+///
+/// v2: tambah `batch_label`, `batch_name`, `model_version` pada `analyses`
+/// (D-20). Lihat migrasi di `app_database.dart`.
+const int kSchemaVersion = 2;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -59,6 +62,9 @@ const List<String> kCreateTableStatements = <String>[
     created_at            TEXT NOT NULL,
     image_path            TEXT,
     annotated_image_path  TEXT,
+    batch_label           TEXT,
+    batch_name            TEXT,
+    model_version         TEXT,
     species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
     roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
     roast_confidence      REAL,

@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.0
+Versi: 1.1 (skema DB `schema_version` = 2 — D-20)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -17,14 +17,14 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 
 ## 2. Daftar Tabel
 
-| Tabel | Kelompok | Keterangan |
-|---|---|---|
-| `brew_methods` | Knowledge Base | Metadata metode |
-| `brew_recipes` | Knowledge Base | Parameter seduh + provenance |
-| `analyses` | Riwayat | Satu sesi analisis batch |
-| `analysis_defects` | Riwayat | Rincian defect per analisis |
-| `recommendations` | Riwayat | Rekomendasi per analisis |
-| `meta` | Internal | `schema_version`, `kb_version` |
+| Tabel              | Kelompok       | Keterangan                     |
+| ------------------ | -------------- | ------------------------------ |
+| `brew_methods`     | Knowledge Base | Metadata metode                |
+| `brew_recipes`     | Knowledge Base | Parameter seduh + provenance   |
+| `analyses`         | Riwayat        | Satu sesi analisis batch       |
+| `analysis_defects` | Riwayat        | Rincian defect per analisis    |
+| `recommendations`  | Riwayat        | Rekomendasi per analisis       |
+| `meta`             | Internal       | `schema_version`, `kb_version` |
 
 ---
 
@@ -84,22 +84,22 @@ CREATE TABLE brew_recipes (
 );
 ```
 
-| Kolom | Tipe | Arti |
-|---|---|---|
-| `recipe_id` | TEXT | PK, mis. `R001` |
-| `method_id` | TEXT | FK → `brew_methods` |
-| `species` | TEXT | `Arabica` · `Robusta` · `Liberika` · `Mixed` |
-| `quality_profile` | TEXT | `High` · `Medium` · `Low` |
-| `roast_context` | TEXT | Lihat bagian 11 |
-| `dose_g` | REAL | Berat kopi bubuk (gram) |
-| `water_volume_ml` | INTEGER | Volume air (ml) |
-| `grind_size` | TEXT | Kategori: `Espresso` · `Fine` · `Medium-Fine` · `Medium` · `Medium-Coarse` · `Coarse` |
-| `temperature_c` | INTEGER | Suhu air (°C) |
-| `brewing_time_s` | INTEGER | Target waktu seduh (detik) |
-| `source` | TEXT | Kode provenance (BR001–BR004) |
-| `is_default` | INTEGER | `1` = resep umum katalog metode |
-| `steps` | TEXT | JSON langkah; tiap item punya `phase`: `prep` \| `brew` |
-| `notes` | TEXT | Tips kalibrasi rasa & catatan resep |
+| Kolom             | Tipe    | Arti                                                                                  |
+| ----------------- | ------- | ------------------------------------------------------------------------------------- |
+| `recipe_id`       | TEXT    | PK, mis. `R001`                                                                       |
+| `method_id`       | TEXT    | FK → `brew_methods`                                                                   |
+| `species`         | TEXT    | `Arabica` · `Robusta` · `Liberika` · `Mixed`                                          |
+| `quality_profile` | TEXT    | `High` · `Medium` · `Low`                                                             |
+| `roast_context`   | TEXT    | Lihat bagian 11                                                                       |
+| `dose_g`          | REAL    | Berat kopi bubuk (gram)                                                               |
+| `water_volume_ml` | INTEGER | Volume air (ml)                                                                       |
+| `grind_size`      | TEXT    | Kategori: `Espresso` · `Fine` · `Medium-Fine` · `Medium` · `Medium-Coarse` · `Coarse` |
+| `temperature_c`   | INTEGER | Suhu air (°C)                                                                         |
+| `brewing_time_s`  | INTEGER | Target waktu seduh (detik)                                                            |
+| `source`          | TEXT    | Kode provenance (BR001–BR004)                                                         |
+| `is_default`      | INTEGER | `1` = resep umum katalog metode                                                       |
+| `steps`           | TEXT    | JSON langkah; tiap item punya `phase`: `prep` \| `brew`                               |
+| `notes`           | TEXT    | Tips kalibrasi rasa & catatan resep                                                   |
 
 Rasio **tidak disimpan**; dihitung `water_volume_ml / dose_g`.
 
@@ -115,7 +115,10 @@ CREATE TABLE analyses (
   created_at            TEXT NOT NULL,
   image_path            TEXT,
   annotated_image_path  TEXT,
-  species               TEXT CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
+  batch_label           TEXT,
+  batch_name            TEXT,
+  model_version         TEXT,
+  species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
   roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
   roast_confidence      REAL,
   roast_distribution    TEXT,
@@ -130,9 +133,13 @@ CREATE TABLE analyses (
 ```
 
 Catatan:
+
 - `grade` **tidak ada** di sini — diturunkan dari `quality_profile` saat tampil.
 - `status` (`uncertain`) **tidak disimpan** — diturunkan dari `roast_confidence` vs ambang (lihat bagian 15).
-- `annotated_image_path` = gambar dengan overlay bounding box, dipakai sebagai bukti visual (PRD FR-04).
+- `annotated_image_path` = gambar dengan overlay bounding box, **boleh kosong**. Riwayat menampilkan foto asli (`image_path`) + rekap `analysis_defects`; overlay hanya pada layar hasil analisis langsung (D-20).
+- `batch_label` = label pendek batch (mis. `Batch #042`); `batch_name` = nama batch (mis. `Mandheling Honey Anaerob`).
+- `model_version` = versi model yang menghasilkan analisis (provenance, mis. `Model CV v2.4`).
+- Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-20).
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Liberika`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 
@@ -197,28 +204,28 @@ CREATE INDEX idx_defects_analysis      ON analysis_defects(analysis_id);
 CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
 ```
 
-| Index | Tujuan |
-|---|---|
-| `idx_recipes_method` | Join method → resep |
-| `idx_recipes_lookup` | Filter katalog/rekomendasi per species & roast |
-| `idx_analyses_created` | Urut riwayat berdasarkan waktu |
-| `idx_defects_analysis` | Ambil defect per analisis |
-| `idx_recommendations_analysis` | Ambil rekomendasi per analisis |
+| Index                          | Tujuan                                         |
+| ------------------------------ | ---------------------------------------------- |
+| `idx_recipes_method`           | Join method → resep                            |
+| `idx_recipes_lookup`           | Filter katalog/rekomendasi per species & roast |
+| `idx_analyses_created`         | Urut riwayat berdasarkan waktu                 |
+| `idx_defects_analysis`         | Ambil defect per analisis                      |
+| `idx_recommendations_analysis` | Ambil rekomendasi per analisis                 |
 
 ---
 
 ## 11. Enum & Nilai Sah
 
-| Domain | Nilai |
-|---|---|
-| `species` | `Arabica` · `Robusta` · `Liberika` · `Mixed` |
-| `status` | `OK` · `Uncertain` |
-| `roast` | `Green` · `Light` · `Medium` · `Dark` |
-| `quality_profile` | `High` · `Medium` · `Low` |
-| `roast_context` | `Green` · `Light` · `Medium` · `Dark` · `Light/Medium` · `Medium/Dark` |
-| `grind_size` | `Espresso` · `Fine` · `Medium-Fine` · `Medium` · `Medium-Coarse` · `Coarse` |
-| `method_type` | `pour_over` · `immersion` · `hybrid` · `pressure` · `espresso` |
-| `defect_class` | `Normal` · `Quaker` · `Broken` · `Severe` |
+| Domain            | Nilai                                                                       |
+| ----------------- | --------------------------------------------------------------------------- |
+| `species`         | `Arabica` · `Robusta` · `Liberika` · `Mixed`                                |
+| `status`          | `OK` · `Uncertain`                                                          |
+| `roast`           | `Green` · `Light` · `Medium` · `Dark`                                       |
+| `quality_profile` | `High` · `Medium` · `Low`                                                   |
+| `roast_context`   | `Green` · `Light` · `Medium` · `Dark` · `Light/Medium` · `Medium/Dark`      |
+| `grind_size`      | `Espresso` · `Fine` · `Medium-Fine` · `Medium` · `Medium-Coarse` · `Coarse` |
+| `method_type`     | `pour_over` · `immersion` · `hybrid` · `pressure` · `espresso`              |
+| `defect_class`    | `Normal` · `Quaker` · `Broken` · `Severe`                                   |
 
 Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case). Nilai di JSON seed harus mengikuti ini. `status` adalah nilai **turunan/tampilan** (tidak disimpan, tidak masuk seed). Kolom enum ditegakkan dengan **`CHECK` constraint** pada DDL (bukan hanya konvensi).
 
@@ -234,9 +241,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 
 ### Migrasi tercatat
 
-| Dari | Ke | Perubahan | Status |
-|---|---|---|---|
-| — | — | belum ada migrasi | `kSchemaVersion` = 1 |
+| Dari | Ke  | Perubahan         | Status               |
+| ---- | --- | ----------------- | -------------------- |
+| —    | —   | belum ada migrasi | `kSchemaVersion` = 1 |
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
@@ -250,23 +257,45 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 {
   "kb_version": "1.0",
   "methods": [
-    { "method_id": "M001", "method_name": "V60",
-      "method_type": "pour_over", "description": "..." }
+    {
+      "method_id": "M001",
+      "method_name": "V60",
+      "method_type": "pour_over",
+      "description": "..."
+    }
   ],
   "recipes": [
-    { "recipe_id": "R001", "method_id": "M001",
-      "species": "Arabica", "quality_profile": "High",
-      "roast_context": "Light/Medium", "dose_g": 15,
-      "water_volume_ml": 225, "grind_size": "Medium-Fine",
-      "temperature_c": 92, "brewing_time_s": 165,
-      "source": "BR001", "is_default": 1,
+    {
+      "recipe_id": "R001",
+      "method_id": "M001",
+      "species": "Arabica",
+      "quality_profile": "High",
+      "roast_context": "Light/Medium",
+      "dose_g": 15,
+      "water_volume_ml": 225,
+      "grind_size": "Medium-Fine",
+      "temperature_c": 92,
+      "brewing_time_s": 165,
+      "source": "BR001",
+      "is_default": 1,
       "notes": "Sesuaikan grind bila seduhan terlalu pahit.",
       "steps": [
-        { "step_no": 1, "phase": "prep", "title": "Rinsing filter",
-          "description": "...", "target_time": null },
-        { "step_no": 2, "phase": "brew", "title": "Bloom",
-          "description": "...", "target_time": "00:00–00:45" }
-      ] }
+        {
+          "step_no": 1,
+          "phase": "prep",
+          "title": "Rinsing filter",
+          "description": "...",
+          "target_time": null
+        },
+        {
+          "step_no": 2,
+          "phase": "brew",
+          "title": "Bloom",
+          "description": "...",
+          "target_time": "00:00–00:45"
+        }
+      ]
+    }
   ]
 }
 ```
@@ -289,11 +318,11 @@ Alur seed: `JSON → BrewingDataSource → BrewingRepository → SQLite`. Setela
 
 ## 15. Nilai Turunan & Nilai Dihitung
 
-| Nilai | Asal | Disimpan? |
-|---|---|---|
-| `grade` | `quality_profile` (pemetaan D-02) | Tidak |
-| Rasio | `water_volume_ml / dose_g` | Tidak |
-| `status` (`uncertain`) | `roast_confidence` vs ambang | Tidak |
+| Nilai                   | Asal                                                                                | Disimpan?                      |
+| ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------ |
+| `grade`                 | `quality_profile` (pemetaan D-02)                                                   | Tidak                          |
+| Rasio                   | `water_volume_ml / dose_g`                                                          | Tidak                          |
+| `status` (`uncertain`)  | `roast_confidence` vs ambang                                                        | Tidak                          |
 | `defect_interpretation` | `counts.Severe` + `analyses.roast` (`underdeveloped`/`overroasted`/`contamination`) | Tidak — diturunkan saat render |
-| `defect_rate` | hitung saat analisis (snapshot) | Ya |
-| `roast_distribution` | agregasi batch saat analisis | Ya (JSON) |
+| `defect_rate`           | hitung saat analisis (snapshot)                                                     | Ya                             |
+| `roast_distribution`    | agregasi batch saat analisis                                                        | Ya (JSON)                      |

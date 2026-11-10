@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/widgets/roastmate_app_header.dart';
 import '../../data/sources/mock_analysis_history.dart';
+import '../../data/sources/analysis_repository.dart';
 import '../../domain/entities/analysis_history_item.dart';
 import '../widgets/history_filter_bar.dart';
 import '../widgets/history_card.dart';
 import '../widgets/history_export_card.dart';
-import '../../../../core/widgets/roastmate_app_header.dart';
 
 /// Layar Riwayat Analisis (tab Analisis).
 ///
-/// Saat ini memakai data dummy ([mockAnalysisHistory]); pengambilan dari SQLite
-/// akan ditambahkan lewat repository/controller terpisah.
+/// Sumber data: SQLite lewat [AnalysisRepository]. Bila [items] diberikan
+/// (mis. dari test), nilainya dipakai apa adanya. Bila database kosong atau
+/// gagal dibuka, fallback ke [mockAnalysisHistory] agar UI tetap bisa
+/// didemokan sebelum pipeline analisis menyimpan data nyata.
 class AnalysisHistoryScreen extends StatefulWidget {
-  /// Daftar item riwayat. Bila null, memakai [mockAnalysisHistory].
+  /// Daftar item riwayat. Bila null, muat dari SQLite (fallback ke mock).
   final List<AnalysisHistoryItem>? items;
 
   const AnalysisHistoryScreen({super.key, this.items});
@@ -35,8 +39,35 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
 
   String _selectedFilter = 'Semua';
 
-  List<AnalysisHistoryItem> get _allItems =>
-      widget.items ?? mockAnalysisHistory;
+  List<AnalysisHistoryItem>? _loadedItems;
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.items == null) _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() => _loading = true);
+    try {
+      final db = await AppDatabase.instance.database;
+      final history = await AnalysisRepository(db).getHistory();
+      if (!mounted) return;
+      setState(() => _loadedItems = history);
+    } catch (_) {
+      // Database belum siap (mis. di platform belum didukung) — pakai mock.
+      if (!mounted) return;
+      setState(() => _loadedItems = mockAnalysisHistory);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<AnalysisHistoryItem> get _allItems {
+    if (widget.items != null) return widget.items!;
+    return _loadedItems ?? mockAnalysisHistory;
+  }
 
   List<AnalysisHistoryItem> get _filteredItems {
     if (_selectedFilter == 'Semua') return _allItems;
@@ -75,34 +106,40 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
     return Scaffold(
       backgroundColor: RoastmateColors.background,
       appBar: const RoastmateAppHeader(subtitle: 'Analisis'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildTitleRow(),
-            const SizedBox(height: RoastmateSpacing.lg),
-            HistoryFilterBar(
-              options: _filterOptions,
-              selected: _selectedFilter,
-              counts: _filterCounts,
-              onSelected: (value) => setState(() => _selectedFilter = value),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildTitleRow(),
+                  const SizedBox(height: RoastmateSpacing.lg),
+                  HistoryFilterBar(
+                    options: _filterOptions,
+                    selected: _selectedFilter,
+                    counts: _filterCounts,
+                    onSelected: (value) =>
+                        setState(() => _selectedFilter = value),
+                  ),
+                  const SizedBox(height: RoastmateSpacing.lg),
+                  if (items.isEmpty)
+                    _buildEmptyState()
+                  else
+                    for (int i = 0; i < items.length; i++) ...[
+                      HistoryCard(
+                        item: items[i],
+                        onTap: () => _openDetail(items[i]),
+                      ),
+                      if (i < items.length - 1)
+                        const SizedBox(height: RoastmateSpacing.md),
+                    ],
+                  const SizedBox(height: RoastmateSpacing.xl),
+                  HistoryExportCard(onExport: _onExportCsv),
+                  const SizedBox(height: RoastmateSpacing.xl),
+                ],
+              ),
             ),
-            const SizedBox(height: RoastmateSpacing.lg),
-            if (items.isEmpty)
-              _buildEmptyState()
-            else
-              for (int i = 0; i < items.length; i++) ...[
-                HistoryCard(item: items[i], onTap: () => _openDetail(items[i])),
-                if (i < items.length - 1)
-                  const SizedBox(height: RoastmateSpacing.md),
-              ],
-            const SizedBox(height: RoastmateSpacing.xl),
-            HistoryExportCard(onExport: _onExportCsv),
-            const SizedBox(height: RoastmateSpacing.xl),
-          ],
-        ),
-      ),
     );
   }
 

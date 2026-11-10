@@ -10,11 +10,13 @@ Tujuan: mencatat keputusan & penyelesaian kontradiksi antar dokumen, agar tidak 
 **Konteks:** `architecture_ml.md` §38/§40 menyatakan "Interactive brewing timer OUT OF SCOPE", tetapi mockup `Detail Resep.png` menampilkan HUD timer langkah-per-langkah dan `DESIGN.md` memuat komponen "Extraction Timer HUD".
 
 **Keputusan:**
+
 - **Timer seduh interaktif** (countdown, start/stop, sinkronisasi waktu) = **OUT OF SCOPE**.
 - Halaman **Detail Resep tetap ada** sebagai **panduan langkah statis** (persiapan, blooming, penuangan, penyajian).
 - Label target waktu (mis. `00:00–00:45`) adalah **informasi tekstual statis**, bukan timer berjalan.
 
 **Dampak:**
+
 - `DESIGN.md`: komponen "Extraction Timer HUD" dihapus → diganti "Brewing Step Guide".
 - `PRD.md`: "panduan langkah seduh (statis)" in-scope; "timer interaktif" out-of-scope.
 - `ARCHITECTURE_MOBILE.md`: tidak ada modul timer di `lib/`.
@@ -26,17 +28,18 @@ Tujuan: mencatat keputusan & penyelesaian kontradiksi antar dokumen, agar tidak 
 **Konteks:** Dokumen ML memakai `High/Medium/Low` (§19), contoh JSON memakai `medium_high` (§29), UI memakai grade `Specialty/Premium/Standard/Below Standard/Off Grade`.
 
 **Keputusan:**
+
 - **Quality Profile kanonik = 3 level: `High` · `Medium` · `Low`** (Title Case; lihat D-12).
 - Contoh JSON diperbaiki dari `medium_high` → `High`.
 - Grade tampilan dipetakan eksplisit dari profile:
 
-| Quality Profile | Score | Indicative Grade |
-|---|---|---|
-| High | 85–100 | Specialty |
-| High | 75–84 | Premium |
-| Medium | 60–74 | Standard |
-| Low | 40–59 | Below Standard |
-| Low | 0–39 | Off Grade |
+| Quality Profile | Score  | Indicative Grade |
+| --------------- | ------ | ---------------- |
+| High            | 85–100 | Specialty        |
+| High            | 75–84  | Premium          |
+| Medium          | 60–74  | Standard         |
+| Low             | 40–59  | Below Standard   |
+| Low             | 0–39   | Off Grade        |
 
 Ambang grade = parameter sistem, dapat dikonfigurasi.
 
@@ -84,11 +87,11 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Keputusan:** Gunakan bobot default berikut sebagai **parameter awal yang dapat dikonfigurasi** (bukan nilai final):
 
 | Komponen | Bobot |
-|---|---|
-| defect | 0.40 |
-| shape | 0.20 |
-| size | 0.20 |
-| roast | 0.20 |
+| -------- | ----- |
+| defect   | 0.40  |
+| shape    | 0.20  |
+| size     | 0.20  |
+| roast    | 0.20  |
 
 ---
 
@@ -97,6 +100,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** `prd.md` identik dengan `architecture_ml.md`; `architecture_mobile.md` kosong; tidak ada PRD sungguhan.
 
 **Keputusan:**
+
 - Dokumen baru ditempatkan di `roastmate_app/docs/`.
 - Dokumen lama di root (`prd.md`, `architecture_ml.md`, `architecture_mobile.md`, `DESIGN.md`) **tetap utuh sebagai backup**.
 - Gaya dokumen arsitektur: flat, dominan tabel, maksimal 2 level, tanpa pengulangan.
@@ -108,6 +112,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Versi compact `ARCHITECTURE_ML.md` menghilangkan URL dataset demi kerapian, padahal aturan provenance mewajibkan pencatatan sumber.
 
 **Keputusan:**
+
 - URL sumber dataset & brewing masuk ke **Lampiran A & B `ARCHITECTURE_ML.md`** (Opsi A).
 - `PRD.md` tetap tanpa URL (hanya menyebut dataset secara kategoris).
 - Jangka panjang, `dataset_registry.csv` menjadi sumber kebenaran tunggal URL mentah; lampiran cukup merujuk padanya (jalur Opsi B/C).
@@ -119,6 +124,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Tiga versi skema saling bertabrakan. `ARCHITECTURE_ML.md` §10 menaruh `grind_size`, `water_volume_ml`, `temperature_c`, `brewing_time_s`, `source` di tabel metode **dan** resep. `ARCHITECTURE_MOBILE.md` §8 memakai `parameter` (blob) dan menaruh `rasio/waktu/grind/suhu` di metode.
 
 **Keputusan:**
+
 - Parameter seduh dimiliki **satu tabel saja: `brew_recipes`**. Tidak diduplikasi di `brew_methods`.
 - `brew_methods` bersifat **deskriptif** (`method_id`, `method_name`, `method_type`, `description`).
 - `brew_recipes` menyimpan `dose_g`, `water_volume_ml`, `grind_size`, `temperature_c`, `brewing_time_s`, `source`, `is_default`, `steps` (JSON).
@@ -134,6 +140,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** `ARCHITECTURE_MOBILE.md` §7 menyebut KB sebagai asset (JSON/SQLite), §8 menyebut SQLite — berpotensi duplikasi.
 
 **Keputusan:**
+
 - KB disimpan di **SQLite** dan di-seed sekali saat pertama dijalankan.
 - Seed berasal dari bundel `assets/knowledge/brewing_knowledge.json` (JSON → SQLite), bukan file `.db` siap-pakai.
 - Tidak ada KB berbentuk asset JSON yang dibaca saat runtime (JSON hanya dipakai sekali saat seeding).
@@ -146,6 +153,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Skema tabel tersebar sebagai prosa di `ARCHITECTURE_ML.md` §10 dan `ARCHITECTURE_MOBILE.md` §9, tanpa tipe data, constraint, index, atau DDL — berpotensi tidak konsisten.
 
 **Keputusan:**
+
 - Dibuat **`DATABASE_SCHEMA.md`** sebagai sumber kanonik: DDL, tipe, constraint, index, ER, enum, migrasi, dan format seed.
 - `ARCHITECTURE_ML.md` §10 dan `ARCHITECTURE_MOBILE.md` §9 diringkas menjadi rujukan ke `DATABASE_SCHEMA.md`.
 - **Strategi PK:** `TEXT` berkode (`M001`, `R001`) untuk knowledge base; `INTEGER AUTOINCREMENT` untuk tabel riwayat.
@@ -161,7 +169,8 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Audit Fokus A menemukan: (a) label defect di `ARCHITECTURE_ML.md` §3/§15 memakai snake_case (`insect_damage`) sementara enum DB/PRD memakai Title Case (`Insect Damage`); (b) `PRD.md` §8 menulis species `Mixed / Uncertain` sementara `DATABASE_SCHEMA.md` hanya mengizinkan `Mixed`.
 
 **Keputusan:**
-- **Dua lapisan casing yang sah:** label target *training* = snake_case; enum yang disimpan di DB dan ditampilkan di UI = **Title Case**. Pemetaan eksplisit dicatat di `ARCHITECTURE_ML.md` §3.
+
+- **Dua lapisan casing yang sah:** label target _training_ = snake_case; enum yang disimpan di DB dan ditampilkan di UI = **Title Case**. Pemetaan eksplisit dicatat di `ARCHITECTURE_ML.md` §3.
 - Result object (`ARCHITECTURE_ML.md` §15) memakai **Title Case** agar langsung cocok dengan `analysis_defects.defect_class`.
 - **Species kanonik = `Arabica` · `Robusta` · `Mixed`.** `uncertain` adalah **status tampilan** (diturunkan dari confidence, lihat FR-09), bukan nilai species.
 - Contoh metode diseragamkan di `ARCHITECTURE_ML.md` §10 & `DATABASE_SCHEMA.md` §4, termasuk `M005 Kopi Tubruk immersion`.
@@ -173,6 +182,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Audit Fokus B menemukan gap antara PRD/MOBILE dan skema: status `uncertain` tak punya tempat, bukti visual tak disimpan, komposisi Beranda tak punya sumber, `size_uniformity`/`dose_g`/distribusi tak ada di kontrak hasil, `meta` tak disebut di MOBILE, target ukuran model tak ada di NFR.
 
 **Keputusan:**
+
 - **`status` (`OK`/`Uncertain`)** diturunkan saat tampil dari `roast_confidence` vs ambang; **tidak disimpan** (lihat D-15).
 - **Bukti visual:** `analyses` menyimpan `annotated_image_path` (overlay bounding box dibakar saat analisis). Zoom = zoom gambar.
 - **Komposisi Beranda:** `analyses` menyimpan `roast_distribution` (JSON agregat batch), sejalan dengan ML §7. Komposisi species dihitung dari `species` dominan per analisis (lihat D-15).
@@ -188,6 +198,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** `analyses` menyimpan `species_distribution` (JSON sebaran per biji) dan `species_confidence`; UI menampilkan rincian sebaran jenis biji yang tidak diperlukan. Permintaan: cukup jenis biji kopi saja.
 
 **Keputusan:**
+
 - `analyses` **hanya** menyimpan `species` = **satu jenis biji dominan** (`Arabica` · `Robusta` · `Mixed`).
 - Kolom **`species_distribution`** dan **`species_confidence`** **dihapus**.
 - Tidak ada tampilan persentase sebaran jenis biji di UI.
@@ -203,6 +214,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Audit konsistensi menemukan satu metrik yang sama ditulis tiga ragam: `visible_bean_count` (`ARCHITECTURE_ML.md` §7), `visible_beans` (result object §15 & kolom DB), `visibleBeanCount` (`ARCHITECTURE_MOBILE.md` §12).
 
 **Keputusan:**
+
 - Nama kanonik = **`visible_beans`** (snake_case di DB & result object).
 - `ARCHITECTURE_ML.md` §7 dan `ARCHITECTURE_MOBILE.md` §12 mengikuti.
 - Penamaan domain Dart boleh camelCase (`visibleBeans`).
@@ -214,6 +226,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Audit menutup dua gap terakhir: (a) `CHECK` constraint hanya ada di `brew_recipes`, sehingga kolom enum riwayat tidak ditegakkan; (b) filter riwayat di PRD §4 hanya "Semua / Arabica / Robusta" padahal `Mixed` adalah species sah.
 
 **Keputusan:**
+
 - Tambah **`CHECK`** pada seluruh kolom enum yang disimpan:
   - `brew_recipes`: `species`, `quality_profile`, `roast_context`, `grind_size`.
   - `analyses`: `species`, `roast`, `quality_profile`.
@@ -227,6 +240,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** Penelusuran sumber KB (BR001 andmos/Coffee, BR002 BrewSpec, BR003 Coffee Master, BR004 afrians19) menunjukkan field yang tersedia pada resep namun belum tertampung di skema.
 
 **Keputusan:**
+
 - Tambah kolom **`notes`** (`brew_recipes`) untuk tips kalibrasi rasa & catatan resep (mendukung PRD FR-07).
 - Setiap item `steps` JSON diberi **`phase`**: `prep` (persiapan & alat) atau `brew` (langkah seduh) — mengikuti pemisahan "Preparation" vs "Step-by-step" pada BR003.
 - **`method_type`** ditambah `espresso` → `pour_over` · `immersion` · `hybrid` · `pressure` · `espresso`.
@@ -235,7 +249,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 - **Di luar cakupan:**
   - `variant_name` — fokus pada **resep umum** per metode; peran ini diwakili `is_default = 1`.
   - `author` — atribusi cukup melalui **`source`** (BR001–BR004).
-  - `result`/`ratings` (BrewSpec) dan seluruh log **Dial-in** (BR004) — itu hasil *penyeduhan* pengguna (brew logger), bukan bagian grading biji. Tidak disimpan.
+  - `result`/`ratings` (BrewSpec) dan seluruh log **Dial-in** (BR004) — itu hasil _penyeduhan_ pengguna (brew logger), bukan bagian grading biji. Tidak disimpan.
 
 ---
 
@@ -249,6 +263,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 (e) model Defect §5 mencampur biji **mentah** (DS008/DS009) dan **sangrai** (DS004/DS007).
 
 **Keputusan:**
+
 - **Model Defect difokuskan biji SANGRAI (roasted-only): DS004 + DS007.** DS008/DS009 tidak dipakai untuk classifier Defect → menghapus mismatch domain (e). `insect_damage` tetap valid karena kerusakan struktural (lubang) tetap terlihat setelah disangrai.
 - **DS004 diperbaiki** (menggantikan daftar kelas yang keliru di §2/§3): `normal`→`healthy`, `quaker`→`quaker`, `frag`→`broken`, `insect` (⊂ `insectOrMold`)→`insect_damage`; `mold`, `burnt`, `under`→EXCLUDED.
 - **`Foreign Matter` dikecualikan** dari training (tidak ada sumber roasted). Enum DB tetap 6 nilai.
@@ -258,6 +273,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 - **Tidak ada perubahan skema DB:** enum `defect_class` tetap 6 nilai. → **DIREVISI oleh D-22** (defect menjadi biner; ada perubahan skema v1→v2).
 
 **Dampak:**
+
 - `ARCHITECTURE_ML.md` §2 (tabel + catatan bias), §3 (mapping + inventaris 17 kelas + kandidat fitur), §5 (Defect roasted-only), Lampiran A (snapshot verifikasi).
 
 ---
@@ -267,6 +283,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** `ARCHITECTURE_MOBILE.md` menetapkan struktur target (GoRouter, `app/`, `engines/`, `inference/`, `shared/`, `features/<f>/{presentation,domain,data}`, `features/scan/`), sementara kode masih memakai `MainPage` + `Navigator.push` dan `lib/pages/`. Selisih ini adalah **utang refactor**, bukan inkonsistensi dokumen.
 
 **Keputusan:**
+
 - Dokumen (`ARCHITECTURE_MOBILE.md`) adalah **arsitektur target**; kode akan direfaktor menyesuaikan, bukan sebaliknya.
 - Target: GoRouter (bukan `MainPage`/`Navigator.push`); folder `app/`, `engines/`, `inference/`, `shared/`, `features/<f>/{presentation,domain,data}`; `features/scan/` (bukan `camera/`); `lib/pages/` legacy dihapus.
 
@@ -281,6 +298,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** PRD FR-04 mewajibkan "narasi ringkas hasil", tetapi tidak ada komponen yang ditunjuk untuk menghasilkannya; `summaryText` di kode masih hardcoded di mock. Pertanyaan: apakah narasi berasal dari brewing knowledge base?
 
 **Keputusan:**
+
 - Narasi (`summaryText`, `reason`) dihasilkan **template lokal dari angka hasil** — **bukan** brewing knowledge base, **bukan** LLM.
 - **`summaryText` tidak disimpan** (diturunkan saat tampil, seperti `grade`/`status`). `reason` tetap disimpan di `recommendations.reason`.
 - Definisi di `ARCHITECTURE_ML.md` §16 "Narrative Generation" (satu seksi menangani keduanya).
@@ -295,11 +313,12 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 
 **Konteks:** D-19 menetapkan taksonomi Defect 6 kelas, tetapi setelah penelusuran sumber roasted-only (DS004 + DS007):
 (a) DS004 (setelah perbaikan D-19) hanya menyediakan `healthy`, `quaker`, `broken`, `insect_damage` — `scorched`/`foreign_matter` tanpa sumber roasted;
-(b) `Foreign Matter` (benda asing) secara definisi **bukan biji**, sehingga tidak masuk akal sebagai kelas *classifier per biji*;
+(b) `Foreign Matter` (benda asing) secara definisi **bukan biji**, sehingga tidak masuk akal sebagai kelas _classifier per biji_;
 (c) sub-jenis defect pada satu foto batch (biji tampak dari atas) sulit dipisahkan secara andal dan tidak menambah nilai produk (yang dibutuhkan hanyalah **defect rate** dan kontribusinya ke quality score);
 (d) distribusi DS004 setelah perbaikan hampir seimbang (`healthy` 1.311 vs total defect 1.475), sehingga masalah ketidakseimbangan kelas hilang.
 
 **Keputusan:**
+
 - Model Defect = **biner**: **`Healthy` · `Defect`**.
 - Semua penyimpangan pada biji sangrai (pecah, serangan serangga, quaker, gosong, dll.) → **`Defect`**.
 - **`Foreign Matter` ditangani oleh detector**, bukan classifier defect (bukan biji → tidak diprediksi per biji).
@@ -316,10 +335,11 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 **Konteks:** PRD FR-08 memperlakukan `Green` sebagai **status** ("roasting diperlukan, tanpa parameter seduh normal"), bukan tingkat roast. Secara empiris batas tersulit adalah **Light↔Medium** (DS011: recall `Medium` = 0.0000 pada EXP-005). Menjadikan `Green` kelas ke-4 roast classifier memperbesar ruang keputusan dan menggeser fokus dari batas tersulit.
 
 **Keputusan:**
+
 - `Green` = **status/gerbang (G0)** yang dievaluasi **sebelum** roast classifier dijalankan.
 - Model Roast = **3 kelas**: **`Light` · `Medium` · `Dark`**.
 - Implementasi: **B2 — shared backbone multi-head** (head "Green vs roasted" + head roast 3 kelas) sebagai opsi utama; **B3 — aturan warna (hue)** sebagai fallback 0 MB.
-- `analyses.roast` **tetap** boleh menyimpan nilai `Green` (nilai *state*), sehingga skema kolom ini tidak berubah.
+- `analyses.roast` **tetap** boleh menyimpan nilai `Green` (nilai _state_), sehingga skema kolom ini tidak berubah.
 - FR-08 diperbarui: gate Green dijelaskan sebagai tahap sebelum klasifikasi roast.
 
 **Dampak:** `PRD.md` §1, §8, FR-03, FR-08; `ARCHITECTURE_ML.md` §2, §3, §5.
@@ -330,6 +350,7 @@ Catatan: daftar kelas DS004 disempurnakan di **D-19** — `normal`→`healthy`; 
 
 **Konteks:** audit F1 (2026-10-15) menemukan dua bentuk kebocoran yang tidak
 tertangkap oleh split acak:
+
 1. **DS003** — 403 grup duplikat persis; **semua 400 gambar test punya kembar
    persis di train**. Akurasi 1,0 pada split bawaan adalah artefak.
 2. **DS004** — kelas ditentukan penuh oleh **11 seri sumber**
@@ -339,6 +360,7 @@ tertangkap oleh split acak:
    Ini juga menjelaskan G-DATA-3 DS004 (latar-saja 0,6935 vs baseline 0,5294).
 
 **Keputusan:**
+
 - Split **wajib grup-aware** pada dua level: `group_id` (near-dup) **dan**
   `source_group` (seri sumber semantik), mana yang lebih kasar.
 - Manifest kanonik menambah kolom **`source_group`** (gabungan kolom metadata
@@ -369,6 +391,7 @@ training berjalan di Kaggle (runtime terpisah). Kedelapan sumber Roboflow kini
 sudah **di-fork ke workspace `ghazwan-ababil`** sehingga ter-host permanen.
 
 **Keputusan:**
+
 - **Sumber kebenaran dataset = Roboflow** (fork di workspace `ghazwan-ababil`)
   dan/atau Kaggle Dataset. Fork permanen → gambar selalu dapat diekspor ulang.
 - **Tidak ada salinan gambar/anotasi lokal sebagai sumber pipeline.**
@@ -393,11 +416,12 @@ sudah **di-fork ke workspace `ghazwan-ababil`** sehingga ter-host permanen.
 ## D-26 — Latar BUKAN batasan ketat pada evaluasi deteksi
 
 **Konteks (2026-10-15):** G-DET-3 dievaluasi di DS011 yang latarnya biru, sehingga
-muncul pertanyaan apakah latar perlu dikontrol/di-*gate*.
+muncul pertanyaan apakah latar perlu dikontrol/di-_gate_.
 
 **Keputusan:**
+
 - Untuk **deteksi (M1)**, latar **tidak** dijadikan variabel yang dikontrol atau
-  di-*gate*. Evaluasi memakai **frame alami apa adanya** — ini justru merepresentasikan
+  di-_gate_. Evaluasi memakai **frame alami apa adanya** — ini justru merepresentasikan
   kondisi deploy (meja, tangan, kantong, dsb).
 - **Tidak ada ablasi latar** untuk detektor.
 - Kontrak crop (`mask_bg` → kanvas abu) **tidak berlaku untuk detektor**: masking
@@ -449,6 +473,19 @@ YOLOv8n-cls.
 **Dampak:** `PRD.md` §1/§6/§8/§9/NFR; `ARCHITECTURE_ML.md` §1–§5/§7–§9/§12–§15;
 `DATABASE_SCHEMA.md` §5–§7/§11/§12/§15; `ARCHITECTURE_MOBILE.md` §2/§7/§8/§12/§16;
 `DESIGN.md` (token & pemetaan defect).
+
+---
+
+## D-20 — Riwayat tanpa overlay per-biji & alternatif rekomendasi tunggal
+
+**Konteks:** Penyelarasan skema dengan fitur Riwayat Analisis: mock riwayat menyimpan deteksi per-biji (bounding box + confidence) dan daftar alternatif rekomendasi (N item), sementara skema tidak menampung keduanya. Konfirmasi UI (Ghazwan): riwayat cukup menampilkan foto asli + rekap jumlah per kelas defect.
+
+**Keputusan:**
+
+- **Deteksi per-biji TIDAK disimpan** (tabel `analysis_detections` tidak dibuat). Overlay interaktif hanya ada pada layar hasil analisis langsung; Riwayat menampilkan foto asli (`image_path`) + rekap dari `analysis_defects`.
+- Menyempurnakan D-14: `annotated_image_path` tetap ada di skema namun **boleh kosong**; bukti visual riwayat cukup `image_path`.
+- **Rekomendasi alternatif maksimal 1** — skema `recommendations` (satu `alternative_method_id`) tidak berubah; UI membatasi satu alternatif.
+- Tambah kolom `analyses`: **`batch_label`** (label pendek, mis. `Batch #042`), **`batch_name`** (nama batch, mis. `Mandheling Honey Anaerob`), **`model_version`** (provenance model, mis. `Model CV v2.4`). Skema naik ke **versi 2** dengan migrasi `ALTER TABLE`.
 
 ---
 
