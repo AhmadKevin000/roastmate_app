@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-import 'package:pbl_sem5/main.dart';
-import 'package:pbl_sem5/features/analysis/inspection_detail_screen.dart';
+import 'package:pbl_sem5/app/app.dart';
+import 'package:pbl_sem5/app/main_shell.dart';
 
 void main() {
   setUpAll(() {
@@ -19,7 +19,7 @@ void main() {
       ),
     );
 
-    // Verify that the app displays its detail screen.
-    expect(find.byType(InspectionDetailScreen), findsOneWidget);
+    // Verify that the app displays its home page.
+    expect(find.byType(MainShell), findsOneWidget);
   });
 }
