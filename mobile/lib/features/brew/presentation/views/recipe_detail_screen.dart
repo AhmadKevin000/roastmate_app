@@ -88,7 +88,10 @@ class RecipeDetailScreen extends ConsumerWidget {
               children: [
                 RecipeSummaryCard(method: method, recipe: recipe),
                 const SizedBox(height: RoastmateSpacing.xl),
-                PreparationList(steps: recipe.prepSteps),
+                PreparationList(
+                  steps: recipe.prepSteps,
+                  tools: method.tools,
+                ),
                 const SizedBox(height: RoastmateSpacing.xl),
                 BrewingStepList(steps: recipe.brewSteps),
                 const SizedBox(height: RoastmateSpacing.xl),

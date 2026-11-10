@@ -7,10 +7,55 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:pbl_sem5/features/brew/data/sources/mock_brewing_source.dart';
+import 'package:pbl_sem5/features/brew/domain/entities/brew_recipe.dart';
+import 'package:pbl_sem5/features/brew/domain/entities/brew_tool.dart';
+import 'package:pbl_sem5/features/brew/domain/repositories/brewing_repository.dart';
+import 'package:pbl_sem5/features/brew/presentation/viewmodels/brew_view_model.dart';
 import 'package:pbl_sem5/features/brew/presentation/views/brew_catalog_screen.dart';
 import 'package:pbl_sem5/features/brew/presentation/views/recipe_detail_screen.dart';
 
-Widget _app() => ProviderScope(
+class _FakeBrewingRepository implements BrewingRepository {
+  @override
+  Future<List<BrewMethod>> getMethods() async => mockBrewMethods;
+
+  @override
+  Future<BrewMethod?> getMethodById(String methodId) async {
+    for (final m in mockBrewMethods) {
+      if (m.methodId == methodId) return m;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BrewRecipe>> getRecipesForMethod(String methodId) async {
+    return mockBrewRecipes.where((r) => r.methodId == methodId).toList();
+  }
+
+  @override
+  Future<BrewRecipe?> getRecipeById(String recipeId) async {
+    for (final r in mockBrewRecipes) {
+      if (r.recipeId == recipeId) return r;
+    }
+    return null;
+  }
+
+  @override
+  Future<BrewRecipe?> getDefaultRecipe(String methodId) async {
+    for (final r in mockBrewRecipes) {
+      if (r.methodId == methodId && r.isDefault) return r;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BrewTool>> getAllTools() async => const [];
+}
+
+Widget _app({BrewingRepository? repo}) => ProviderScope(
+      overrides: [
+        brewingRepositoryProvider.overrideWithValue(repo ?? _FakeBrewingRepository()),
+      ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
           initialLocation: '/brewing',

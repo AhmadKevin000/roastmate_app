@@ -138,9 +138,11 @@ void main() {
   // §2 Daftar Tabel
   // ==========================================================================
   group('§2 Daftar tabel', () {
-    test('berisi tepat 6 tabel sesuai dokumen', () async {
+    test('berisi tepat 8 tabel sesuai dokumen', () async {
       const expected = {
         'brew_methods',
+        'brew_tools',
+        'brew_method_tools',
         'brew_recipes',
         'analyses',
         'analysis_defects',
@@ -155,10 +157,11 @@ void main() {
   // §10 Index
   // ==========================================================================
   group('§10 Index', () {
-    test('berisi tepat 5 index dengan nama kanonik', () async {
+    test('berisi tepat 6 index dengan nama kanonik', () async {
       const expected = {
         'idx_recipes_method',
         'idx_recipes_lookup',
+        'idx_method_tools_tool',
         'idx_analyses_created',
         'idx_defects_analysis',
         'idx_recommendations_analysis',
@@ -199,7 +202,7 @@ void main() {
       await insertMethod(db);
     });
 
-    for (final species in const ['Arabica', 'Robusta', 'Mixed']) {
+    for (final species in const ['Arabica', 'Robusta', 'Liberika', 'Mixed']) {
       test('menerima species "$species"', () async {
         await insertRecipe(
           db,
@@ -214,7 +217,7 @@ void main() {
         () => insertRecipe(
           db,
           methodId: 'M001',
-          overrides: {'species': 'Liberica'},
+          overrides: {'species': 'Excelsa'},
         ),
         throwsA(isA<DatabaseException>()),
       );
@@ -315,7 +318,7 @@ void main() {
   group('§6/§11 CHECK analyses', () {
     test('menolak species di luar daftar', () async {
       expect(
-        () => insertAnalysis(db, overrides: {'species': 'Liberica'}),
+        () => insertAnalysis(db, overrides: {'species': 'Excelsa'}),
         throwsA(isA<DatabaseException>()),
       );
     });
@@ -357,6 +360,8 @@ void main() {
       'Quaker',
       'Scorched',
       'Foreign Matter',
+      'Normal',
+      'Severe',
     ]) {
       test('menerima defect_class "$cls"', () async {
         await db.insert('analysis_defects', {
@@ -367,7 +372,7 @@ void main() {
       });
     }
 
-    test('menolak defect_class di luar 6 kelas final', () async {
+    test('menolak defect_class di luar daftar', () async {
       expect(
         () => db.insert('analysis_defects', {
           'analysis_id': analysisId,
@@ -375,7 +380,6 @@ void main() {
           'count': 1,
         }),
         throwsA(isA<DatabaseException>()),
-        reason: 'D-03: burnt/mold/under EXCLUDED dari taxonomy final',
       );
     });
   });
@@ -406,7 +410,7 @@ void main() {
       final analysisId = await insertAnalysis(db);
       await db.insert('analysis_defects', {
         'analysis_id': analysisId,
-        'defect_class': 'Healthy',
+        'defect_class': 'Normal',
       });
       final row = (await db.query(
         'analysis_defects',
@@ -471,7 +475,7 @@ void main() {
       final analysisId = await insertAnalysis(db);
       await db.insert('analysis_defects', {
         'analysis_id': analysisId,
-        'defect_class': 'Healthy',
+        'defect_class': 'Normal',
         'count': 3,
       });
 

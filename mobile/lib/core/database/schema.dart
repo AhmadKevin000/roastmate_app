@@ -8,9 +8,10 @@ library;
 
 /// Versi skema saat ini.
 ///
-/// v2: tambah `batch_label`, `batch_name`, `model_version` pada `analyses`
-/// (D-20). Lihat migrasi di `app_database.dart`.
-const int kSchemaVersion = 2;
+/// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
+/// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
+/// dan defect 4-kelas.
+const int kSchemaVersion = 3;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -31,7 +32,29 @@ const List<String> kCreateTableStatements = <String>[
     method_name  TEXT NOT NULL,
     method_type  TEXT NOT NULL
                    CHECK (method_type IN ('pour_over','immersion','hybrid','pressure','espresso')),
+    subtitle     TEXT,
+    image_asset  TEXT,
     description  TEXT
+  )
+  ''',
+  // §4.1 brew_tools
+  '''
+  CREATE TABLE brew_tools (
+    tool_id      TEXT PRIMARY KEY,
+    tool_name    TEXT NOT NULL,
+    category     TEXT,
+    image_asset  TEXT,
+    description  TEXT
+  )
+  ''',
+  // §4.2 brew_method_tools
+  '''
+  CREATE TABLE brew_method_tools (
+    method_id    TEXT NOT NULL REFERENCES brew_methods(method_id) ON DELETE CASCADE,
+    tool_id      TEXT NOT NULL REFERENCES brew_tools(tool_id) ON DELETE CASCADE,
+    is_required  INTEGER NOT NULL DEFAULT 1 CHECK (is_required IN (0,1)),
+    notes        TEXT,
+    PRIMARY KEY (method_id, tool_id)
   )
   ''',
   // §5 brew_recipes
@@ -39,7 +62,7 @@ const List<String> kCreateTableStatements = <String>[
   CREATE TABLE brew_recipes (
     recipe_id        TEXT PRIMARY KEY,
     method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
-    species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Mixed')),
+    species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
     quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
     roast_context    TEXT NOT NULL CHECK (roast_context IN
                        ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
@@ -65,7 +88,7 @@ const List<String> kCreateTableStatements = <String>[
     batch_label           TEXT,
     batch_name            TEXT,
     model_version         TEXT,
-    species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
+    species               TEXT CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
     roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
     roast_confidence      REAL,
     roast_distribution    TEXT,
@@ -84,7 +107,8 @@ const List<String> kCreateTableStatements = <String>[
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     analysis_id   INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
     defect_class  TEXT NOT NULL CHECK (defect_class IN
-                    ('Healthy','Broken','Insect Damage','Quaker','Scorched','Foreign Matter')),
+                    ('Healthy','Broken','Insect Damage','Quaker','Scorched','Foreign Matter',
+                     'Normal','Severe')),
     count         INTEGER NOT NULL DEFAULT 0,
     UNIQUE (analysis_id, defect_class)
   )
@@ -114,6 +138,7 @@ const List<String> kCreateTableStatements = <String>[
 const List<String> kCreateIndexStatements = <String>[
   'CREATE INDEX idx_recipes_method ON brew_recipes(method_id)',
   'CREATE INDEX idx_recipes_lookup ON brew_recipes(species, roast_context, is_default)',
+  'CREATE INDEX idx_method_tools_tool ON brew_method_tools(tool_id)',
   'CREATE INDEX idx_analyses_created ON analyses(created_at)',
   'CREATE INDEX idx_defects_analysis ON analysis_defects(analysis_id)',
   'CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id)',

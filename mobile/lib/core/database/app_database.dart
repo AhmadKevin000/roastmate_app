@@ -60,8 +60,37 @@ class AppDatabase {
       batch.execute('ALTER TABLE analyses ADD COLUMN model_version TEXT');
     }
 
-    // Tambahkan migrasi v2 → v3 di sini saat kSchemaVersion dinaikkan lagi.
+    // v2 → v3: tabel brew_tools, brew_method_tools, kolom visual di brew_methods.
+    if (oldVersion < 3) {
+      batch.execute('ALTER TABLE brew_methods ADD COLUMN subtitle TEXT');
+      batch.execute('ALTER TABLE brew_methods ADD COLUMN image_asset TEXT');
+      batch.execute('''
+        CREATE TABLE IF NOT EXISTS brew_tools (
+          tool_id      TEXT PRIMARY KEY,
+          tool_name    TEXT NOT NULL,
+          category     TEXT,
+          image_asset  TEXT,
+          description  TEXT
+        )
+      ''');
+      batch.execute('''
+        CREATE TABLE IF NOT EXISTS brew_method_tools (
+          method_id    TEXT NOT NULL REFERENCES brew_methods(method_id) ON DELETE CASCADE,
+          tool_id      TEXT NOT NULL REFERENCES brew_tools(tool_id) ON DELETE CASCADE,
+          is_required  INTEGER NOT NULL DEFAULT 1 CHECK (is_required IN (0,1)),
+          notes        TEXT,
+          PRIMARY KEY (method_id, tool_id)
+        )
+      ''');
+      batch.execute('CREATE INDEX IF NOT EXISTS idx_method_tools_tool ON brew_method_tools(tool_id)');
+    }
+
     await batch.commit(noResult: true);
+
+    // Reseed knowledge base jika naik ke v3 agar tools & gambar terisi.
+    if (oldVersion < 3) {
+      await KnowledgeBaseSeeder(db).reseed();
+    }
 
     await db.update(
       'meta',

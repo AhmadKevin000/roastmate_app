@@ -60,10 +60,12 @@ void main() {
       await AppDatabase.instance.close();
     });
 
-    test('onCreate membentuk tepat 6 tabel (§2)', () async {
+    test('onCreate membentuk tepat 8 tabel (§2)', () async {
       final db = await AppDatabase.instance.database;
       expect(await tableNames(db), {
         'brew_methods',
+        'brew_tools',
+        'brew_method_tools',
         'brew_recipes',
         'analyses',
         'analysis_defects',
@@ -72,11 +74,12 @@ void main() {
       });
     });
 
-    test('onCreate membentuk tepat 5 index (§10)', () async {
+    test('onCreate membentuk tepat 6 index (§10)', () async {
       final db = await AppDatabase.instance.database;
       expect(await indexNames(db), {
         'idx_recipes_method',
         'idx_recipes_lookup',
+        'idx_method_tools_tool',
         'idx_analyses_created',
         'idx_defects_analysis',
         'idx_recommendations_analysis',

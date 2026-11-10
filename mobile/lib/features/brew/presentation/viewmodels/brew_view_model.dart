@@ -1,8 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/sources/mock_brewing_source.dart';
+import '../../data/repositories/brewing_repository_impl.dart';
 import '../../domain/entities/brew_recipe.dart';
+import '../../domain/repositories/brewing_repository.dart';
+
+/// Provider instance repository brewing.
+final brewingRepositoryProvider = Provider<BrewingRepository>((ref) {
+  return BrewingRepositoryImpl();
+});
 
 /// State katalog seduh (metode + resep).
 @immutable
@@ -42,25 +48,43 @@ class BrewCatalogState {
 
 /// ViewModel katalog seduh (MVVM).
 ///
-/// Saat ini memuat data mock. Nanti diisi lewat `BrewingRepository` (SQLite)
-/// tanpa mengubah UI (lihat `docs/ARCHITECTURE_MOBILE.md` §5 & §11).
+/// Memuat data dari SQLite via [BrewingRepository].
 class BrewViewModel extends StateNotifier<BrewCatalogState> {
-  BrewViewModel() : super(const BrewCatalogState(isLoading: true)) {
-    _load();
+  final BrewingRepository _repository;
+
+  BrewViewModel(this._repository) : super(const BrewCatalogState(isLoading: true)) {
+    load();
   }
 
-  void _load() {
-    state = BrewCatalogState(
-      methods: mockBrewMethods,
-      recipes: mockBrewRecipes,
-    );
+  Future<void> load() async {
+    state = const BrewCatalogState(isLoading: true);
+    try {
+      final methods = await _repository.getMethods();
+      final List<BrewRecipe> allRecipes = [];
+      for (final m in methods) {
+        final recipes = await _repository.getRecipesForMethod(m.methodId);
+        allRecipes.addAll(recipes);
+      }
+
+      state = BrewCatalogState(
+        isLoading: false,
+        methods: methods,
+        recipes: allRecipes,
+      );
+    } catch (e) {
+      state = BrewCatalogState(
+        isLoading: false,
+        errorMessage: 'Gagal memuat katalog seduh: $e',
+      );
+    }
   }
 }
 
 /// Provider katalog seduh.
 final brewCatalogProvider =
     StateNotifierProvider<BrewViewModel, BrewCatalogState>((ref) {
-  return BrewViewModel();
+  final repo = ref.watch(brewingRepositoryProvider);
+  return BrewViewModel(repo);
 });
 
 /// Metode berdasarkan id (untuk Detail Resep).

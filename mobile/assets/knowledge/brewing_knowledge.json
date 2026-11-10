@@ -1,5 +1,320 @@
 {
-  "kb_version": "1.0",
-  "methods": [],
-  "recipes": []
+  "kb_version": "1.1",
+  "tools": [
+    {
+      "tool_id": "T001",
+      "tool_name": "Dripper V60",
+      "category": "dripper",
+      "image_asset": "assets/images/tools/dripper_v60.png",
+      "description": "Dripper kerucut bersudut 60 derajat dengan ulir spiral untuk mengontrol laju air."
+    },
+    {
+      "tool_id": "T002",
+      "tool_name": "Paper Filter V60",
+      "category": "filter",
+      "image_asset": "assets/images/tools/paper_filter.png",
+      "description": "Kertas saring khusus V60 untuk menyaring minyak dan sedimen halus."
+    },
+    {
+      "tool_id": "T003",
+      "tool_name": "Teko Leher Angsa (Gooseneck Kettle)",
+      "category": "kettle",
+      "image_asset": "assets/images/tools/kettle_gooseneck.png",
+      "description": "Ceret leher angsa untuk kestabilan kucuran air dan presisi penuangan."
+    },
+    {
+      "tool_id": "T004",
+      "tool_name": "Timbangan Digital (Scale) & Timer",
+      "category": "scale",
+      "image_asset": "assets/images/tools/digital_scale.png",
+      "description": "Timbangan digital dengan akurasi 0.1 gram terintegrasi pencatat waktu."
+    },
+    {
+      "tool_id": "T005",
+      "tool_name": "Glass Coffee Server",
+      "category": "server",
+      "image_asset": "assets/images/tools/server_glass.png",
+      "description": "Wadah kaca penampung seduhan kopi tahan panas."
+    },
+    {
+      "tool_id": "T006",
+      "tool_name": "French Press Pot & Plunger",
+      "category": "press",
+      "image_asset": "assets/images/tools/french_press_pot.png",
+      "description": "Tabung kaca silinder dilengkapi mesh filter logam penekan."
+    },
+    {
+      "tool_id": "T007",
+      "tool_name": "Gelas Saji & Sendok Tubruk",
+      "category": "cup",
+      "image_asset": "assets/images/tools/cangkir_tubruk.png",
+      "description": "Cangkir saji tahan panas dan sendok stainless untuk mengaduk crust."
+    },
+    {
+      "tool_id": "T008",
+      "tool_name": "Coffee Grinder",
+      "category": "grinder",
+      "image_asset": "assets/images/tools/grinder.png",
+      "description": "Penggiling kopi manual atau elektrik dengan burr presisi."
+    }
+  ],
+  "methods": [
+    {
+      "method_id": "M001",
+      "method_name": "V60 / Pour Over",
+      "method_type": "pour_over",
+      "subtitle": "Metode Drip Perkusi Manual",
+      "image_asset": "assets/images/methods/v60.png",
+      "description": "Menonjolkan keasaman bersih, aroma buah tropis, dan sweetness halus.",
+      "tools": [
+        { "tool_id": "T001", "is_required": 1, "notes": "Ukuran 01 atau 02" },
+        { "tool_id": "T002", "is_required": 1, "notes": "Bilas air panas sebelum seduh" },
+        { "tool_id": "T003", "is_required": 1, "notes": "Suhu 90-93°C" },
+        { "tool_id": "T004", "is_required": 1, "notes": "Tare ke 0.0g" },
+        { "tool_id": "T005", "is_required": 0, "notes": "Opsional, bisa langsung ke mug" }
+      ]
+    },
+    {
+      "method_id": "M002",
+      "method_name": "French Press",
+      "method_type": "immersion",
+      "subtitle": "Ekstraksi Immersion Rendam Total",
+      "image_asset": "assets/images/methods/french_press.png",
+      "description": "Body tebal, rasa cokelat & earthy yang kaya, ekstraksi merata tanpa filter kertas.",
+      "tools": [
+        { "tool_id": "T006", "is_required": 1, "notes": "Kapasitas 350-600ml" },
+        { "tool_id": "T003", "is_required": 1, "notes": "Suhu 92-95°C" },
+        { "tool_id": "T004", "is_required": 1, "notes": "Gunakan timer 4 menit" }
+      ]
+    },
+    {
+      "method_id": "M003",
+      "method_name": "Kopi Tubruk Tradisional",
+      "method_type": "immersion",
+      "subtitle": "Warisan Seduh Nusantara",
+      "image_asset": "assets/images/methods/tubruk.png",
+      "description": "Intensitas bold, aromatik klasik Nusantara, sederhana dan autentik.",
+      "tools": [
+        { "tool_id": "T007", "is_required": 1, "notes": "Gelas kaca klasik 200-250ml" },
+        { "tool_id": "T003", "is_required": 1, "notes": "Suhu 94-96°C" },
+        { "tool_id": "T004", "is_required": 0, "notes": "Bisa diganti sendok takar" }
+      ]
+    }
+  ],
+  "recipes": [
+    {
+      "recipe_id": "R001",
+      "method_id": "M001",
+      "species": "Arabica",
+      "quality_profile": "High",
+      "roast_context": "Light/Medium",
+      "dose_g": 15.0,
+      "water_volume_ml": 225,
+      "grind_size": "Medium-Fine",
+      "temperature_c": 92,
+      "brewing_time_s": 165,
+      "source": "BR001",
+      "is_default": 1,
+      "notes": "Rasa kopi dipengaruhi oleh laju aliran dan ukuran gilingan: gilingan lebih halus menaikkan kepekatan, gilingan lebih kasar menonjolkan acidity.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Drifter V60 & Paper Filter",
+          "description": "Dibilas merata dengan air hangat, lalu buang air bilasan dari server."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 92°C siap mengalir dengan stabil dan presisi."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Rinsing",
+          "targetTime": "00:00",
+          "description": "Pasang kertas filter pada dripper, bilas dengan air panas untuk menghilangkan aroma kertas serta memanaskan server, lalu buang air bilasan. Masukkan 15g bubuk kopi gilingan medium-fine dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Blooming",
+          "targetTime": "00:00 – 00:45",
+          "description": "Tuang 45ml air suhu 92°C secara melingkar perlahan dari tengah ke luar. Diamkan selama 45 detik untuk degassing (pelepasan gas CO2) agar ekstraksi rasa manis dan keasaman kopi terbuka optimal.",
+          "callout": "Target timbangan: 45 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Penuangan Pertama",
+          "targetTime": "00:45 – 01:30",
+          "description": "Lanjutkan penuangan kedua sebesar +105ml air dengan aliran stabil dan konsisten (pola spiral dari tengah ke tepi tanpa mengenai dinding kertas filter) hingga timbangan menyentuh 150ml.",
+          "callout": "Aliran stabil spiral • Target timbangan: 150 ml"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penuangan Kedua",
+          "targetTime": "01:30 – 02:15",
+          "description": "Tuang +75ml air. Pertahankan ketinggian air di dalam dripper tetap tenang dan konsisten untuk memastikan ekstraksi rasa yang seimbang dan merata.",
+          "callout": "Target total akhir: 225 ml"
+        },
+        {
+          "stepNo": 5,
+          "phase": "brew",
+          "title": "Penirisan & Penyajian",
+          "targetTime": "02:15 – 02:45",
+          "description": "Beri sedikit putaran lembut (gentle swirl) pada dripper agar ampas kopi turun merata (flat coffee bed). Biarkan air menetes habis hingga waktu menunjukkan sekitar 02:45. Angkat dripper, aduk cangkir/server, dan nikmati secangkir kopi segar!",
+          "callout": "Aduk (swirl) server 3-5 putaran sebelum dituang ke cangkir"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R002",
+      "method_id": "M002",
+      "species": "Arabica",
+      "quality_profile": "Medium",
+      "roast_context": "Medium/Dark",
+      "dose_g": 18.0,
+      "water_volume_ml": 252,
+      "grind_size": "Coarse",
+      "temperature_c": 94,
+      "brewing_time_s": 240,
+      "source": "BR001",
+      "is_default": 1,
+      "notes": "Rasa kopi dipengaruhi oleh durasi perendaman dan ukuran gilingan: perendaman 4 menit memberi body optimal tanpa over-extraction.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "French Press & Filter Mesh",
+          "description": "Bilas plunger dan tabung dengan air panas agar suhu seduh lebih stabil."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 94°C siap mengalir dengan stabil dan presisi."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Pemanasan",
+          "targetTime": "00:00",
+          "description": "Bilas French Press dengan air panas, lalu buang airnya. Masukkan 18g bubuk kopi gilingan coarse dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Awal",
+          "targetTime": "00:00 – 00:30",
+          "description": "Tuang seluruh 252ml air suhu 94°C secara perlahan, pastikan seluruh bubuk kopi terbasahi merata.",
+          "callout": "Target timbangan: 252 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman (Steeping)",
+          "targetTime": "00:30 – 03:30",
+          "description": "Tutup French Press dan diamkan selama 3 menit agar ekstraksi merata dan body tebal terbentuk.",
+          "callout": "Aduk perlahan permukaan (crust) satu kali"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penekanan (Press)",
+          "targetTime": "03:30 – 04:00",
+          "description": "Tekan plunger perlahan dan konsisten hingga dasar untuk memisahkan ampas dari seduhan.",
+          "callout": "Tekan dengan kecepatan tetap"
+        },
+        {
+          "stepNo": 5,
+          "phase": "brew",
+          "title": "Penyajian",
+          "targetTime": "04:00",
+          "description": "Segera tuang seluruh kopi ke server/cangkir agar ekstraksi tidak berlanjut dan rasa tetap seimbang.",
+          "callout": "Jangan biarkan kopi lama di dalam press"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R003",
+      "method_id": "M003",
+      "species": "Robusta",
+      "quality_profile": "Medium",
+      "roast_context": "Dark",
+      "dose_g": 15.0,
+      "water_volume_ml": 180,
+      "grind_size": "Fine",
+      "temperature_c": 95,
+      "brewing_time_s": 240,
+      "source": "BR003",
+      "is_default": 1,
+      "notes": "Rasa kopi dipengaruhi oleh durasi rendam dan ukuran gilingan: gilingan halus memberi ekstraksi pekat khas kopi Nusantara.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Gelas Saji & Sendok",
+          "description": "Gelas tahan panas dibersihkan dan sendok disiapkan untuk mengaduk seduhan."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Ketel Air Panas",
+          "description": "Air panas suhu 95°C siap dituang dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale)",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g sebelum menakar kopi."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Penakaran & Penempatan",
+          "targetTime": "00:00",
+          "description": "Masukkan 15g bubuk kopi gilingan fine ke dalam gelas saji secara merata di dasar gelas."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Air",
+          "targetTime": "00:00 – 00:20",
+          "description": "Tuang 180ml air panas suhu 95°C perlahan hingga seluruh permukaan kopi terendam.",
+          "callout": "Target timbangan: 180 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman",
+          "targetTime": "00:20 – 03:30",
+          "description": "Diamkan selama kurang lebih 3 menit agar ampas mengendap dan ekstraksi terbentuk sempurna.",
+          "callout": "Tutup gelas agar suhu stabil"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Pengadukan & Penyajian",
+          "targetTime": "03:30 – 04:00",
+          "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
+          "callout": "Aduk searah 3-5 putaran"
+        }
+      ]
+    }
+  ]
 }

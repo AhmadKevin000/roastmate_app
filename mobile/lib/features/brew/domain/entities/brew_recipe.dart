@@ -5,6 +5,8 @@
 /// diganti oleh `BrewingRepository` (SQLite) nanti, UI tidak perlu berubah.
 library;
 
+import 'brew_tool.dart';
+
 /// Fase langkah seduh (D-18): persiapan/alat vs langkah seduh.
 enum BrewStepPhase { prep, brew }
 
@@ -14,15 +16,39 @@ class BrewMethod {
   final String methodName;
   final String methodType;
   final String subtitle;
+  final String? imageAsset;
   final String description;
+  final List<BrewTool> tools;
 
   const BrewMethod({
     required this.methodId,
     required this.methodName,
     required this.methodType,
     required this.subtitle,
+    this.imageAsset,
     required this.description,
+    this.tools = const [],
   });
+
+  BrewMethod copyWith({
+    String? methodId,
+    String? methodName,
+    String? methodType,
+    String? subtitle,
+    String? imageAsset,
+    String? description,
+    List<BrewTool>? tools,
+  }) {
+    return BrewMethod(
+      methodId: methodId ?? this.methodId,
+      methodName: methodName ?? this.methodName,
+      methodType: methodType ?? this.methodType,
+      subtitle: subtitle ?? this.subtitle,
+      imageAsset: imageAsset ?? this.imageAsset,
+      description: description ?? this.description,
+      tools: tools ?? this.tools,
+    );
+  }
 }
 
 /// Satu langkah seduh (item kolom JSON `steps`).

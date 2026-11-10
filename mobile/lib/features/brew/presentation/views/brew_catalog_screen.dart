@@ -38,6 +38,28 @@ class BrewCatalogScreen extends ConsumerWidget {
                   ),
                 ),
               )
+            else if (state.errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: RoastmateSpacing.xl),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        state.errorMessage!,
+                        style: RoastmateText.bodyMd.copyWith(
+                          color: RoastmateColors.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: RoastmateSpacing.md),
+                      OutlinedButton(
+                        onPressed: () => ref.read(brewCatalogProvider.notifier).load(),
+                        child: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
             else if (state.isEmpty)
               _buildEmpty(context)
             else

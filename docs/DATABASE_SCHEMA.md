@@ -20,6 +20,8 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 | Tabel              | Kelompok       | Keterangan                     |
 | ------------------ | -------------- | ------------------------------ |
 | `brew_methods`     | Knowledge Base | Metadata metode                |
+| `brew_tools`       | Knowledge Base | Master alat seduh              |
+| `brew_method_tools`| Knowledge Base | Relasi metode ↔ alat seduh     |
 | `brew_recipes`     | Knowledge Base | Parameter seduh + provenance   |
 | `analyses`         | Riwayat        | Satu sesi analisis batch       |
 | `analysis_defects` | Riwayat        | Rincian defect per analisis    |
@@ -31,12 +33,12 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 ## 3. Diagram Relasi
 
 ```
-brew_methods 1 ──── N brew_recipes
-                          ↑
-analyses 1 ── N analysis_defects
-    │
-    └── 1 ── 1 recommendations ──→ brew_methods (primary/alternative)
-                              └──→ brew_recipes (primary_recipe_id)
+brew_tools 1 ──── N brew_method_tools N ──── 1 brew_methods 1 ──── N brew_recipes
+                                                                         ↑
+analyses 1 ── N analysis_defects                                         │
+    │                                                                    │
+    └── 1 ── 1 recommendations ──→ brew_methods (primary/alternative)    │
+                              └──→ brew_recipes (primary_recipe_id) ─────┘
 ```
 
 ---
@@ -51,11 +53,47 @@ CREATE TABLE brew_methods (
   method_name  TEXT NOT NULL,
   method_type  TEXT NOT NULL
                  CHECK (method_type IN ('pour_over','immersion','hybrid','pressure','espresso')),
+  subtitle     TEXT,
+  image_asset  TEXT,
   description  TEXT
 );
 ```
 
 Contoh: `M001 V60 pour_over` · `M002 French Press immersion` · `M003 AeroPress hybrid` · `M004 Moka Pot pressure` · `M005 Kopi Tubruk immersion`.
+
+---
+
+## 4.1 Tabel `brew_tools`
+
+Master data alat seduh (reusable antar metode).
+
+```sql
+CREATE TABLE brew_tools (
+  tool_id      TEXT PRIMARY KEY,
+  tool_name    TEXT NOT NULL,
+  category     TEXT,
+  image_asset  TEXT,
+  description  TEXT
+);
+```
+
+Contoh: `T001 Dripper V60` · `T002 Paper Filter` · `T003 Gooseneck Kettle` · `T004 Digital Scale`.
+
+---
+
+## 4.2 Tabel `brew_method_tools`
+
+Relasi banyak-ke-banyak (N:M) antara metode seduh dan alat yang dibutuhkan.
+
+```sql
+CREATE TABLE brew_method_tools (
+  method_id    TEXT NOT NULL REFERENCES brew_methods(method_id) ON DELETE CASCADE,
+  tool_id      TEXT NOT NULL REFERENCES brew_tools(tool_id) ON DELETE CASCADE,
+  is_required  INTEGER NOT NULL DEFAULT 1 CHECK (is_required IN (0,1)),
+  notes        TEXT,
+  PRIMARY KEY (method_id, tool_id)
+);
+```
 
 ---
 

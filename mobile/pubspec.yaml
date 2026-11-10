@@ -68,6 +68,8 @@ flutter:
     - assets/images/logo.png
     - assets/knowledge/
     - assets/images/sample_batch.jpg
+    - assets/images/methods/
+    - assets/images/tools/
 
   fonts:
     - family: Inter
