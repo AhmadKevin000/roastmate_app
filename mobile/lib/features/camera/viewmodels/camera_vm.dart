@@ -1,6 +1,9 @@
+import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/database/app_database.dart';
 
 /// State immutable untuk fitur Kamera.
 @immutable
@@ -18,10 +21,16 @@ class CameraState {
   final double minZoom;
   
   /// File foto yang berhasil diambil oleh kamera.
-  /// CATATAN UNTUK TIM MACHINE LEARNING:
-  /// Gunakan `capturedImage?.path` untuk mendapatkan path file lokal gambar
-  /// hasil jepretan kamera yang siap di-input ke dalam model YOLOv8-Nano.
   final XFile? capturedImage;
+
+  /// Nama jenis biji kopi yang diinputkan pengguna.
+  final String coffeeName;
+
+  /// Menandakan proses penyimpanan ke database SQLite sedang berjalan.
+  final bool isSaving;
+
+  /// ID baris record analisis yang baru saja berhasil disimpan ke SQLite.
+  final int? lastSavedAnalysisId;
 
   const CameraState({
     this.isInitialized = false,
@@ -36,6 +45,9 @@ class CameraState {
     this.maxZoom = 1.0,
     this.minZoom = 1.0,
     this.capturedImage,
+    this.coffeeName = '',
+    this.isSaving = false,
+    this.lastSavedAnalysisId,
   });
 
   CameraState copyWith({
@@ -51,6 +63,9 @@ class CameraState {
     double? maxZoom,
     double? minZoom,
     XFile? capturedImage,
+    String? coffeeName,
+    bool? isSaving,
+    int? lastSavedAnalysisId,
   }) {
     return CameraState(
       isInitialized: isInitialized ?? this.isInitialized,
@@ -65,6 +80,9 @@ class CameraState {
       maxZoom: maxZoom ?? this.maxZoom,
       minZoom: minZoom ?? this.minZoom,
       capturedImage: capturedImage ?? this.capturedImage,
+      coffeeName: coffeeName ?? this.coffeeName,
+      isSaving: isSaving ?? this.isSaving,
+      lastSavedAnalysisId: lastSavedAnalysisId ?? this.lastSavedAnalysisId,
     );
   }
 }
@@ -218,12 +236,85 @@ class CameraViewModel extends StateNotifier<CameraState> {
     }
   }
 
+  /// Mengatur nama kopi yang akan disimpan.
+  void setCoffeeName(String name) {
+    state = state.copyWith(coffeeName: name);
+  }
+
+  /// Menyimpan hasil foto dan nama kopi ke database SQLite lokal via [AppDatabase].
+  ///
+  /// Menggunakan tabel `analyses` yang telah dikonfigurasikan di database backend.
+  Future<int?> saveCapturedAnalysis({
+    required String imagePath,
+    String? customName,
+  }) async {
+    final name = (customName != null && customName.trim().isNotEmpty)
+        ? customName.trim()
+        : (state.coffeeName.trim().isNotEmpty ? state.coffeeName.trim() : 'Kopi Tanpa Nama');
+
+    try {
+      state = state.copyWith(isSaving: true, errorMessage: null);
+
+      // Membuka database SQLite melalui instance singleton yang sudah disiapkan rekan
+      final db = await AppDatabase.instance.database;
+
+      // Klasifikasi jenis spesies dasar berdasarkan teks nama kopi yang diinputkan
+      String species = 'Mixed';
+      final lower = name.toLowerCase();
+      if (lower.contains('arabica') || lower.contains('arabika')) {
+        species = 'Arabica';
+      } else if (lower.contains('robusta')) {
+        species = 'Robusta';
+      }
+
+      final row = <String, Object?>{
+        'created_at': DateTime.now().toIso8601String(),
+        'image_path': imagePath,
+        'species': species,
+        'roast': 'Medium',
+        'roast_confidence': 1.0,
+        'roast_distribution': jsonEncode({
+          'coffee_name': name,
+          'saved_from': 'camera_scan',
+        }),
+        'visible_beans': 0,
+        'defect_rate': 0.0,
+        'quality_score': 85,
+        'quality_profile': 'High',
+      };
+
+      final insertedId = await db.insert('analyses', row);
+
+      state = state.copyWith(
+        isSaving: false,
+        lastSavedAnalysisId: insertedId,
+      );
+
+      debugPrint('=== DATABASE INSERT SUCCESS ===');
+      debugPrint('Berhasil menyimpan record analisis ke SQLite!');
+      debugPrint('ID: $insertedId | Nama: $name | Path: $imagePath');
+      debugPrint('===============================');
+
+      return insertedId;
+    } catch (e) {
+      debugPrint('Gagal menyimpan record ke SQLite: $e');
+      state = state.copyWith(
+        isSaving: false,
+        errorMessage: 'Gagal menyimpan ke database: ${e.toString()}',
+      );
+      return null;
+    }
+  }
+
   @override
   void dispose() {
     state.controller?.dispose();
     super.dispose();
   }
 }
+
+/// Provider state untuk nama kopi yang diinputkan pengguna sebelum membuka kamera.
+final coffeeNameProvider = StateProvider<String>((ref) => '');
 
 /// Riverpod StateNotifierProvider untuk ViewModel Kamera.
 final cameraViewModelProvider =

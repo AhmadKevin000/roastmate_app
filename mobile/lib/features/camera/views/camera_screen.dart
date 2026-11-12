@@ -9,7 +9,8 @@ import '../viewmodels/camera_vm.dart';
 /// Screen UI untuk "Scan Kamera" pada aplikasi Roastmate.
 /// Terintegrasi dengan Riverpod 2.x & CameraController (MVVM Architecture).
 class CameraScreen extends ConsumerStatefulWidget {
-  const CameraScreen({super.key});
+  final String? coffeeName;
+  const CameraScreen({super.key, this.coffeeName});
 
   @override
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
@@ -306,16 +307,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                   onShutterPressed: () async {
                     final image = await cameraVM.takePicture();
                     if (image != null && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: const Color(0xFF5A382C),
-                          content: Text(
-                            'Foto berhasil diambil!\nPath: ${image.path}',
-                            style: GoogleFonts.inter(color: Colors.white),
-                          ),
-                          duration: const Duration(seconds: 3),
-                        ),
+                      // Ambil nama kopi dari widget atau Riverpod state
+                      final currentCoffeeName = widget.coffeeName?.isNotEmpty == true
+                          ? widget.coffeeName!
+                          : (ref.read(coffeeNameProvider).isNotEmpty
+                              ? ref.read(coffeeNameProvider)
+                              : (cameraState.coffeeName.isNotEmpty
+                                  ? cameraState.coffeeName
+                                  : 'Kopi Tanpa Nama'));
+
+                      // Simpan path foto dan nama kopi ke SQLite via AppDatabase
+                      final savedId = await cameraVM.saveCapturedAnalysis(
+                        imagePath: image.path,
+                        customName: currentCoffeeName,
                       );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: const Color(0xFF5A382C),
+                            content: Text(
+                              savedId != null
+                                  ? 'Data "$currentCoffeeName" berhasil disimpan ke database SQLite!\nID: #$savedId'
+                                  : 'Foto berhasil diambil: ${image.path}',
+                              style: GoogleFonts.inter(color: Colors.white),
+                            ),
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                      }
                     }
                   },
                 ),
