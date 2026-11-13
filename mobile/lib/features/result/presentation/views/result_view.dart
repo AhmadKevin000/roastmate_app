@@ -20,10 +20,10 @@ class InspectionDetailScreen extends StatefulWidget {
   final ViewState initialState;
 
   const InspectionDetailScreen({
-    Key? key,
+    super.key,
     this.result,
     this.initialState = ViewState.content,
-  }) : super(key: key);
+  });
 
   @override
   State<InspectionDetailScreen> createState() => _InspectionDetailScreenState();
