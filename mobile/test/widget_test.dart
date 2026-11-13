@@ -1,21 +1,46 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Smoke test aplikasi: shell navigasi tampil dan Beranda membaca data
+// lewat provider (repository di-fake agar test tidak menyentuh SQLite).
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pbl_sem5/app/app.dart';
 import 'package:pbl_sem5/app/main_shell.dart';
+import 'package:pbl_sem5/features/home/data/repositories/home_repository.dart';
+import 'package:pbl_sem5/features/home/data/sources/analysis_summary_source.dart';
+import 'package:pbl_sem5/features/home/presentation/viewmodels/home_view_model.dart';
+
+class _EmptySummarySource implements AnalysisSummarySource {
+  @override
+  Future<AnalysisSummarySnapshot> fetchSummary({
+    int recentLimit = kHomeRecentLimit,
+  }) async {
+    return const AnalysisSummarySnapshot(
+      totalAnalyses: 0,
+      averageScore: null,
+      speciesCounts: <String, int>{},
+      recentRows: <Map<String, Object?>>[],
+    );
+  }
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const RoastmateApp());
+  testWidgets('Aplikasi menampilkan shell navigasi dan Beranda', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          homeRepositoryProvider.overrideWithValue(
+            HomeRepository(_EmptySummarySource()),
+          ),
+        ],
+        child: const RoastmateApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
 
-    // Verify that the app displays its home page.
     expect(find.byType(MainShell), findsOneWidget);
+    expect(find.text('Belum ada analisis tersimpan'), findsOneWidget);
   });
 }

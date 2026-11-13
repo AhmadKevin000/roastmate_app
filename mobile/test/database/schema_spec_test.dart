@@ -622,6 +622,7 @@ void main() {
       expect(cols, {
         'id',
         'created_at',
+        'name',
         'image_path',
         'annotated_image_path',
         'batch_label',

@@ -55,6 +55,7 @@ class AppDatabase {
 
     // v1 → v2: kolom identitas batch & provenance model (D-19).
     if (oldVersion < 2) {
+      await db.execute('ALTER TABLE analyses ADD COLUMN name TEXT');
       batch.execute('ALTER TABLE analyses ADD COLUMN batch_label TEXT');
       batch.execute('ALTER TABLE analyses ADD COLUMN batch_name TEXT');
       batch.execute('ALTER TABLE analyses ADD COLUMN model_version TEXT');
@@ -82,7 +83,9 @@ class AppDatabase {
           PRIMARY KEY (method_id, tool_id)
         )
       ''');
-      batch.execute('CREATE INDEX IF NOT EXISTS idx_method_tools_tool ON brew_method_tools(tool_id)');
+      batch.execute(
+        'CREATE INDEX IF NOT EXISTS idx_method_tools_tool ON brew_method_tools(tool_id)',
+      );
     }
 
     await batch.commit(noResult: true);

@@ -17,16 +17,16 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 
 ## 2. Daftar Tabel
 
-| Tabel              | Kelompok       | Keterangan                     |
-| ------------------ | -------------- | ------------------------------ |
-| `brew_methods`     | Knowledge Base | Metadata metode                |
-| `brew_tools`       | Knowledge Base | Master alat seduh              |
-| `brew_method_tools`| Knowledge Base | Relasi metode ↔ alat seduh     |
-| `brew_recipes`     | Knowledge Base | Parameter seduh + provenance   |
-| `analyses`         | Riwayat        | Satu sesi analisis batch       |
-| `analysis_defects` | Riwayat        | Rincian defect per analisis    |
-| `recommendations`  | Riwayat        | Rekomendasi per analisis       |
-| `meta`             | Internal       | `schema_version`, `kb_version` |
+| Tabel               | Kelompok       | Keterangan                     |
+| ------------------- | -------------- | ------------------------------ |
+| `brew_methods`      | Knowledge Base | Metadata metode                |
+| `brew_tools`        | Knowledge Base | Master alat seduh              |
+| `brew_method_tools` | Knowledge Base | Relasi metode ↔ alat seduh     |
+| `brew_recipes`      | Knowledge Base | Parameter seduh + provenance   |
+| `analyses`          | Riwayat        | Satu sesi analisis batch       |
+| `analysis_defects`  | Riwayat        | Rincian defect per analisis    |
+| `recommendations`   | Riwayat        | Rekomendasi per analisis       |
+| `meta`              | Internal       | `schema_version`, `kb_version` |
 
 ---
 
@@ -151,6 +151,7 @@ Satu sesi analisis batch.
 CREATE TABLE analyses (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at            TEXT NOT NULL,
+  name                  TEXT,
   image_path            TEXT,
   annotated_image_path  TEXT,
   batch_label           TEXT,

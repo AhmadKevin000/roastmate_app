@@ -83,6 +83,7 @@ const List<String> kCreateTableStatements = <String>[
   CREATE TABLE analyses (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     created_at            TEXT NOT NULL,
+    name                  TEXT,
     image_path            TEXT,
     annotated_image_path  TEXT,
     batch_label           TEXT,

@@ -121,5 +121,56 @@ void main() {
 
       expect(after, before);
     });
+
+    test('migrasi v1 → v2 menambah kolom analyses.name (D-20)', () async {
+      final path = p.join(await getDatabasesPath(), kDatabaseName);
+
+      // Bangun database skema v1 (tanpa kolom `name`) seperti instalasi lama.
+      final v1 = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (db, version) async {
+            await db.execute('''
+              CREATE TABLE analyses (
+                id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at            TEXT NOT NULL,
+                image_path            TEXT,
+                annotated_image_path  TEXT,
+                species               TEXT,
+                roast                 TEXT,
+                roast_confidence      REAL,
+                roast_distribution    TEXT,
+                visible_beans         INTEGER,
+                defect_rate           REAL,
+                shape_uniformity      REAL,
+                size_uniformity       REAL,
+                roast_uniformity      REAL,
+                quality_score         INTEGER,
+                quality_profile       TEXT
+              )
+            ''');
+            await db.execute('''CREATE TABLE meta (
+              key   TEXT PRIMARY KEY,
+              value TEXT NOT NULL
+            )''');
+            await db.insert('meta', {
+              'key': kMetaSchemaVersion,
+              'value': '1',
+            });
+          },
+        ),
+      );
+      await v1.close();
+
+      // Buka dengan versi skema terkini: onUpgrade harus menjalankan migrasi.
+      final db = await AppDatabase.instance.database;
+      final columns = (await db.rawQuery('PRAGMA table_info(analyses)'))
+          .map((row) => row['name'] as String)
+          .toSet();
+
+      expect(columns, contains('name'));
+      expect((await metaValues(db))[kMetaSchemaVersion], kSchemaVersion.toString());
+    });
   });
 }
