@@ -187,7 +187,7 @@ AnalysisResult → simpan → ResultView
 Catatan:
 - Jalankan inference di **isolate** agar UI tetap responsif.
 - Proses model **satu per satu** untuk menekan puncak RAM.
-- Species: kolom `Liberika` dibuang saat inference → A/R direnormalisasi; confidence < 0.70 → `Mixed`.
+- Species: kelas output mengikuti taksonomi ML_PBL — `Arabica`/`Liberika`/`Robusta` dipertahankan (D-27); confidence < 0.70 → `Mixed`.
 - Tidak ada timer interaktif di alur mana pun.
 
 ---
@@ -244,15 +244,16 @@ Setelah itu SQLite menjadi satu-satunya sumber query saat runtime. Tidak ada KB 
 
 ## 11. Repository & Providers
 
-Repository:
+Repository (yang sudah ada di kode):
 
 ```
-ScanRepository
-HistoryRepository
-BrewingRepository
-SettingsRepository
+AnalysisRepository   (riwayat: analyses + analysis_defects)
+BrewingRepository    (katalog: brew_methods + brew_tools + brew_recipes)
+HomeRepository       (ringkasan Beranda dari analyses)
 ```
 
+`ScanRepository` / `HistoryRepository` / `SettingsRepository` belum ada; penulisan
+riwayat scan sementara dilakukan langsung oleh `scan_view_model` (best-effort capture).
 `BrewingRepository` adalah satu-satunya akses ke `brew_methods` + `brew_recipes`. **Katalog dan Recommendation Engine memakai repository & data yang sama** — tidak boleh ada data brewing terpisah.
 
 ```
@@ -268,8 +269,11 @@ cameraServiceProvider      mlServiceProvider
 analysisPipelineProvider   qualityEngineProvider
 brewingRepositoryProvider  brewingCatalogProvider
 brewingRecommendationProvider
-scanRepositoryProvider     historyRepositoryProvider
+homeRepositoryProvider
 ```
+
+`AnalysisRepository` saat ini dibangun langsung dari `AppDatabase` di layar
+riwayat (belum ada provider tersendiri).
 
 ---
 

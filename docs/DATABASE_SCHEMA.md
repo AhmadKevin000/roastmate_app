@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.1 (skema DB `schema_version` = 2 — D-20)
+Versi: 1.2 (skema DB `schema_version` = 3 — D-19/D-20 + tools)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -157,7 +157,7 @@ CREATE TABLE analyses (
   batch_label           TEXT,
   batch_name            TEXT,
   model_version         TEXT,
-  species               TEXT CHECK (species IN ('Arabica','Robusta','Mixed')),
+  species               TEXT CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
   roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
   roast_confidence      REAL,
   roast_distribution    TEXT,
@@ -238,6 +238,7 @@ Isi awal: `schema_version`, `kb_version`.
 ```sql
 CREATE INDEX idx_recipes_method        ON brew_recipes(method_id);
 CREATE INDEX idx_recipes_lookup        ON brew_recipes(species, roast_context, is_default);
+CREATE INDEX idx_method_tools_tool     ON brew_method_tools(tool_id);
 CREATE INDEX idx_analyses_created      ON analyses(created_at);
 CREATE INDEX idx_defects_analysis      ON analysis_defects(analysis_id);
 CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
@@ -247,6 +248,7 @@ CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
 | ------------------------------ | ---------------------------------------------- |
 | `idx_recipes_method`           | Join method → resep                            |
 | `idx_recipes_lookup`           | Filter katalog/rekomendasi per species & roast |
+| `idx_method_tools_tool`        | Ambil alat untuk suatu metode (join terbalik)  |
 | `idx_analyses_created`         | Urut riwayat berdasarkan waktu                 |
 | `idx_defects_analysis`         | Ambil defect per analisis                      |
 | `idx_recommendations_analysis` | Ambil rekomendasi per analisis                 |
@@ -282,7 +284,10 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 
 | Dari | Ke  | Perubahan         | Status               |
 | ---- | --- | ----------------- | -------------------- |
-| —    | —   | belum ada migrasi | `kSchemaVersion` = 1 |
+| v1   | v2  | Kolom `analyses`: `name`, `batch_label`, `batch_name`, `model_version` (D-19/D-20) | Tercatat |
+| v2   | v3  | Tabel `brew_tools`, `brew_method_tools`; kolom `brew_methods.subtitle`/`image_asset`; reseed KB (tools & gambar) | Tercatat |
+
+`kSchemaVersion` terkini = **3**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
@@ -294,13 +299,27 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 
 ```json
 {
-  "kb_version": "1.0",
+  "kb_version": "1.1",
+  "tools": [
+    {
+      "tool_id": "T001",
+      "tool_name": "Dripper V60",
+      "category": "dripper",
+      "image_asset": "assets/images/tools/dripper_v60.png",
+      "description": "..."
+    }
+  ],
   "methods": [
     {
       "method_id": "M001",
       "method_name": "V60",
       "method_type": "pour_over",
-      "description": "..."
+      "subtitle": "Clean & Bright",
+      "image_asset": "assets/images/methods/v60.png",
+      "description": "...",
+      "tools": [
+        { "tool_id": "T001", "is_required": 1, "notes": "Ukuran 01 atau 02" }
+      ]
     }
   ],
   "recipes": [
@@ -320,18 +339,16 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
       "notes": "Sesuaikan grind bila seduhan terlalu pahit.",
       "steps": [
         {
-          "step_no": 1,
+          "stepNo": 1,
           "phase": "prep",
           "title": "Rinsing filter",
-          "description": "...",
-          "target_time": null
+          "description": "..."
         },
         {
-          "step_no": 2,
+          "stepNo": 2,
           "phase": "brew",
           "title": "Bloom",
-          "description": "...",
-          "target_time": "00:00–00:45"
+          "description": "..."
         }
       ]
     }
@@ -339,7 +356,7 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 }
 ```
 
-Alur seed: `JSON → BrewingDataSource → BrewingRepository → SQLite`. Setelah itu SQLite menjadi satu-satunya sumber query runtime.
+Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bila `brew_methods` masih kosong (idempoten); naik skema ke v3 menjalankan reseed agar `brew_tools`/`brew_method_tools` terisi. Setelah itu SQLite menjadi satu-satunya sumber query runtime.
 
 ---
 
