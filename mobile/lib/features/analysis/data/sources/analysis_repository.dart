@@ -62,7 +62,7 @@ class AnalysisRepository {
 
       final batch = txn.batch();
       for (final entry in result.defectCounts.entries) {
-        if (entry.value == 0 && entry.key == DefectClass.healthy) continue;
+        if (entry.value == 0 && entry.key == DefectClass.normal) continue;
         batch.insert('analysis_defects', {
           'analysis_id': id,
           'defect_class': _defectClassName(entry.key),
@@ -191,18 +191,14 @@ String _profileName(QualityProfile profile) {
 
 String _defectClassName(DefectClass cls) {
   switch (cls) {
-    case DefectClass.healthy:
-      return 'Healthy';
-    case DefectClass.broken:
-      return 'Broken';
-    case DefectClass.insectDamage:
-      return 'Insect Damage';
+    case DefectClass.normal:
+      return 'Normal';
     case DefectClass.quaker:
       return 'Quaker';
-    case DefectClass.scorched:
-      return 'Scorched';
-    case DefectClass.foreignMatter:
-      return 'Foreign Matter';
+    case DefectClass.broken:
+      return 'Broken';
+    case DefectClass.severe:
+      return 'Severe';
   }
 }
 

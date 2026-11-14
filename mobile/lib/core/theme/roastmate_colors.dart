@@ -33,12 +33,10 @@ class RoastmateColors {
   static const statusWarning = Color(0xFFC49038);
 
   static const Map<String, Color> defect = {
-    'healthy': Color(0xFF5E6B4A),
-    'broken': Color(0xFF9B6A3D),
-    'insect': Color(0xFFB54A43),
+    'normal': Color(0xFF5E6B4A),
     'quaker': Color(0xFFC49038),
-    'scorched': Color(0xFF6B3F34),
-    'foreign': Color(0xFF6D5A86),
+    'broken': Color(0xFF9B6A3D),
+    'severe': Color(0xFFB54A43),
   };
 
   static const Map<String, Map<String, Color>> grade = {

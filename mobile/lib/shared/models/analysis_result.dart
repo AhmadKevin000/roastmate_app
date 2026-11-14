@@ -75,10 +75,10 @@ class InspectionResult {
     );
   }
 
-  int get healthyCount => defectCounts[DefectClass.healthy] ?? 0;
+  int get normalCount => defectCounts[DefectClass.normal] ?? 0;
 
   double get defectRate =>
-      visibleBeans > 0 ? (visibleBeans - healthyCount) / visibleBeans : 0.0;
+      visibleBeans > 0 ? (visibleBeans - normalCount) / visibleBeans : 0.0;
 
   QualityProfile get qualityProfile {
     if (qualityScore >= 75) return QualityProfile.high;

@@ -4,5 +4,5 @@
 /// (`docs/DATABASE_SCHEMA.md` §11); label Dart memakai camelCase.
 library;
 
-enum DefectClass { healthy, broken, insectDamage, quaker, scorched, foreignMatter }
+enum DefectClass { normal, quaker, broken, severe }
 

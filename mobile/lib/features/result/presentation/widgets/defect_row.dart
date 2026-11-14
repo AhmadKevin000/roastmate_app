@@ -26,8 +26,7 @@ class DefectRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isEmpty = count == 0;
-    final colorName = defectClass.name == 'insectDamage' ? 'insect' : (defectClass.name == 'foreignMatter' ? 'foreign' : defectClass.name);
-    final color = RoastmateColors.defect[colorName] ?? RoastmateColors.primary;
+    final color = RoastmateColors.defect[defectClass.name] ?? RoastmateColors.primary;
     final containerColor = color.withOpacity(0.15);
 
     return Opacity(

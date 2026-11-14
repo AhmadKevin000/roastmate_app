@@ -33,12 +33,9 @@ void main() {
     qualityScore: 86,
     visibleBeans: 28,
     defectCounts: const {
-      DefectClass.healthy: 26,
-      DefectClass.broken: 1,
+      DefectClass.normal: 26,
       DefectClass.quaker: 1,
-      DefectClass.insectDamage: 0,
-      DefectClass.scorched: 0,
-      DefectClass.foreignMatter: 0,
+      DefectClass.broken: 1,
     },
     species: 'Arabica',
     roast: 'Light',
@@ -96,12 +93,10 @@ void main() {
       expect(item.detail.modelVersion, 'Model CV v2.4');
 
       // Rekap defect: kelas bernilai 0 tetap terbaca sebagai 0.
-      expect(item.defectCounts[DefectClass.healthy], 26);
-      expect(item.defectCounts[DefectClass.broken], 1);
+      expect(item.defectCounts[DefectClass.normal], 26);
       expect(item.defectCounts[DefectClass.quaker], 1);
-      expect(item.defectCounts[DefectClass.insectDamage], 0);
-      expect(item.defectCounts[DefectClass.scorched], 0);
-      expect(item.defectCounts[DefectClass.foreignMatter], 0);
+      expect(item.defectCounts[DefectClass.broken], 1);
+      expect(item.defectCounts[DefectClass.severe], 0);
 
       // Turunan konsisten dengan entity (D-02): grade & defectRate dihitung.
       expect(item.detail.grade, IndicativeGrade.specialty);
@@ -121,7 +116,7 @@ void main() {
           analyzedAgo: '-',
           qualityScore: 90,
           visibleBeans: 34,
-          defectCounts: const {DefectClass.healthy: 33, DefectClass.broken: 1},
+          defectCounts: const {DefectClass.normal: 33, DefectClass.broken: 1},
           species: 'Arabica',
           roast: 'Light',
           summaryText: '',
@@ -139,9 +134,8 @@ void main() {
           qualityScore: 82,
           visibleBeans: 30,
           defectCounts: const {
-            DefectClass.healthy: 26,
-            DefectClass.insectDamage: 2,
-            DefectClass.scorched: 2,
+            DefectClass.normal: 26,
+            DefectClass.severe: 4,
           },
           species: 'Robusta',
           roast: 'Dark',

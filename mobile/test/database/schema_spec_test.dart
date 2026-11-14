@@ -354,13 +354,9 @@ void main() {
     });
 
     for (final cls in const [
-      'Healthy',
-      'Broken',
-      'Insect Damage',
-      'Quaker',
-      'Scorched',
-      'Foreign Matter',
       'Normal',
+      'Quaker',
+      'Broken',
       'Severe',
     ]) {
       test('menerima defect_class "$cls"', () async {

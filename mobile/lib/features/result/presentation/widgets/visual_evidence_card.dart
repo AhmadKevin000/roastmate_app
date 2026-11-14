@@ -106,19 +106,16 @@ class VisualEvidenceCard extends StatelessWidget {
 
   List<Widget> _buildLegend() {
     final Map<DefectClass, String> labels = {
-      DefectClass.healthy: "Healthy",
-      DefectClass.broken: "Broken",
-      DefectClass.insectDamage: "Insect Damage",
+      DefectClass.normal: "Normal",
       DefectClass.quaker: "Quaker",
-      DefectClass.scorched: "Scorched",
-      DefectClass.foreignMatter: "Foreign Matter",
+      DefectClass.broken: "Broken",
+      DefectClass.severe: "Severe",
     };
 
     return result.defectCounts.entries
         .where((e) => e.value > 0)
         .map((e) {
-      final colorName = e.key.name == 'insectDamage' ? 'insect' : (e.key.name == 'foreignMatter' ? 'foreign' : e.key.name);
-      final color = RoastmateColors.defect[colorName] ?? RoastmateColors.primary;
+      final color = RoastmateColors.defect[e.key.name] ?? RoastmateColors.primary;
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
