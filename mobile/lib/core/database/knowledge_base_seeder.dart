@@ -34,6 +34,7 @@ class KnowledgeBaseSeeder {
   }
 
   Future<void> _seed() async {
+
     final raw = await rootBundle.loadString(kKnowledgeSeedAsset);
     final Map<String, dynamic> data =
         jsonDecode(raw) as Map<String, dynamic>;
@@ -131,3 +132,4 @@ class KnowledgeBaseSeeder {
         'notes': r['notes'],
       };
 }
+

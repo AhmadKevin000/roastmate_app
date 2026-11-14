@@ -150,6 +150,34 @@ void main() {
                 quality_profile       TEXT
               )
             ''');
+            // Instalasi v1 lama juga punya tabel knowledge base; dibutuhkan
+            // agar migrasi v2 → v3 (ALTER brew_methods + reseed) berjalan.
+            await db.execute('''
+              CREATE TABLE brew_methods (
+                method_id    TEXT PRIMARY KEY,
+                method_name  TEXT NOT NULL,
+                method_type  TEXT NOT NULL,
+                description  TEXT
+              )
+            ''');
+            await db.execute('''
+              CREATE TABLE brew_recipes (
+                recipe_id        TEXT PRIMARY KEY,
+                method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+                species          TEXT NOT NULL,
+                quality_profile  TEXT NOT NULL,
+                roast_context    TEXT NOT NULL,
+                dose_g           REAL,
+                water_volume_ml  INTEGER,
+                grind_size       TEXT,
+                temperature_c    INTEGER,
+                brewing_time_s   INTEGER,
+                source           TEXT NOT NULL,
+                is_default       INTEGER NOT NULL DEFAULT 0,
+                steps            TEXT,
+                notes            TEXT
+              )
+            ''');
             await db.execute('''CREATE TABLE meta (
               key   TEXT PRIMARY KEY,
               value TEXT NOT NULL

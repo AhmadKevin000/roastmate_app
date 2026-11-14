@@ -108,8 +108,7 @@ const List<String> kCreateTableStatements = <String>[
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     analysis_id   INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
     defect_class  TEXT NOT NULL CHECK (defect_class IN
-                    ('Healthy','Broken','Insect Damage','Quaker','Scorched','Foreign Matter',
-                     'Normal','Severe')),
+                    ('Normal','Quaker','Broken','Severe')),
     count         INTEGER NOT NULL DEFAULT 0,
     UNIQUE (analysis_id, defect_class)
   )
@@ -144,3 +143,4 @@ const List<String> kCreateIndexStatements = <String>[
   'CREATE INDEX idx_defects_analysis ON analysis_defects(analysis_id)',
   'CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id)',
 ];
+
