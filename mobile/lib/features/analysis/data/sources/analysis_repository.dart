@@ -52,6 +52,7 @@ class AnalysisRepository {
         'created_at': createdAt.toIso8601String(),
         'image_path': imagePath,
         'annotated_image_path': annotatedImagePath,
+        'name': result.batchName,
         'batch_label': result.batchLabel,
         'batch_name': result.batchName,
         'model_version': result.modelVersion,
@@ -93,6 +94,25 @@ class AnalysisRepository {
       return id;
     });
   }
+
+  /// Label batch berikutnya gaya mockup: `Batch #001` (urut dari jumlah
+  /// baris `analyses` + 1, 3 digit).
+  Future<String> nextBatchLabel() async {
+    final count = Sqflite.firstIntValue(
+      await _db.rawQuery('SELECT COUNT(*) FROM analyses'),
+    ) ??
+        0;
+    return 'Batch #${(count + 1).toString().padLeft(3, '0')}';
+  }
+
+  /// Perbarui `image_path` setelah upload Cloudinary sukses (Plan 2).
+  Future<void> updateImagePath(int analysisId, String imageUrl) =>
+      _db.update(
+        'analyses',
+        {'image_path': imageUrl},
+        where: 'id = ?',
+        whereArgs: [analysisId],
+      );
 
   /// Daftar riwayat, terbaru dulu. Filter [species] opsional
   /// (`Arabica` / `Robusta` / `Mixed`).

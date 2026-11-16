@@ -123,6 +123,9 @@ Seduh
 - Kontrol zoom (0.5x / 1x / 2x), galeri, flash.
 - Tombol capture (target sentuh ≥ 48×48 dp).
 - Catatan: hanya biji yang terlihat pada permukaan foto yang dinilai.
+- Catatan: hasil analisis disimpan ke SQLite **dulu** (offline-first); upload foto
+  ke Cloudinary bersifat **best-effort** — gagal/offline tidak memblokir alur
+  inti (AC-02 aman).
 
 ### FR-02 Image Quality Check
 - Menolak/memperingatkan bila foto gelap, blur, atau tidak ada biji terdeteksi.

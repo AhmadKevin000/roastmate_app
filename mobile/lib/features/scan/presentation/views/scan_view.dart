@@ -1,13 +1,21 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/database/app_database.dart';
+import '../../../../core/network/cloudinary_service.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/widgets/roastmate_app_bar.dart';
-import '../../../result/data/sources/mock_inspection_source.dart';
+import '../../../analysis/data/sources/analysis_repository.dart';
+import '../../../analysis/data/sources/analysis_template_source.dart';
+import '../../../analysis/data/sources/reason_template_source.dart';
+import '../../../analysis/data/sources/recommendation_resolver.dart';
+import '../../../analysis/domain/analysis_result_builder.dart';
+import '../../../brew/data/repositories/brewing_repository_impl.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
 import '../widgets/analyzing_overlay.dart';
@@ -340,44 +348,82 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  /// Menjalankan alur shutter: simpan capture ke riwayat lokal (best-effort),
-  /// lalu simulasi analisis (delay ±2 dtk) dan membuka Detail Inspeksi.
-  ///
-  /// Pipeline ML belum tersedia; hasil memakai data mock dengan `batchName`
-  /// ditimpa nama jenis biji yang diisi pada form setup.
+  /// Menjalankan alur shutter: pilih template analisis acak (pengganti
+  /// sementara pipeline ML), simpan data lengkap ke SQLite **dulu**
+  /// (offline-first, AC-02), lalu upload foto ke Cloudinary best-effort
+  /// dan membuka Detail Inspeksi.
   Future<void> _analyzeAndOpenResult() async {
     final cameraVM = ref.read(cameraViewModelProvider.notifier);
     final image = await cameraVM.takePicture();
     if (!mounted) return;
 
-    if (image != null) {
-      // Simpan capture ke riwayat lokal; nilai ML menyusul saat pipeline
-      // inference nyata tersambung (AC-01/AC-03).
-      final batchName = ref.read(scanBatchNameProvider).trim();
-      await cameraVM.saveCapturedAnalysis(
-        imagePath: image.path,
-        customName: batchName,
+    // 1) Template acak + identitas batch dari form setup.
+    final templateSource = ref.read(analysisTemplateSourceProvider);
+    final template = templateSource.pick(
+      await templateSource.loadAll(),
+      math.Random(),
+    );
+    final batchName = ref.read(scanBatchNameProvider).trim();
+    final displayName = batchName.isEmpty ? 'Kopi Tanpa Nama' : batchName;
+
+    // 2) DB dulu: analyses + analysis_defects + recommendations satu
+    //    transaksi (AC-01/AC-03). Gagal (mis. device rusak) → snackbar,
+    //    layar hasil tetap terbuka dari data in-memory (AC-04).
+    String batchLabel = '';
+    int? analysisId;
+    try {
+      final db = await AppDatabase.instance.database;
+      final analysisRepo = AnalysisRepository(db);
+      batchLabel = await analysisRepo.nextBatchLabel();
+      final recommendation = await RecommendationResolver(
+        BrewingRepositoryImpl(database: db),
+        const ReasonTemplateSource(),
+      ).resolve(species: template.species, roast: template.roast);
+      analysisId = await analysisRepo.insertResult(
+        buildResultFromTemplate(template, displayName, batchLabel),
+        createdAt: DateTime.now(),
+        imagePath: image?.path,
+        recommendation: recommendation,
       );
-      debugPrint('=== ML PIPELINE READY ===');
-      debugPrint('Path File Foto untuk YOLOv8-Nano: ${image.path}');
+    } catch (e) {
+      debugPrint('[Scan] Gagal menyimpan analisis ke SQLite: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text('Gagal menyimpan ke riwayat')));
+      }
     }
 
+    // 3) Overlay analisis menutup latensi: pratinjau kamera berhenti,
+    //    upload berjalan paralel dengan jeda minimal 2 detik.
     setState(() => _isAnalyzing = true);
-    // Hentikan pratinjau kamera selama analisis berjalan.
     await cameraVM.stopPreview();
-    await Future.delayed(const Duration(seconds: 2));
+
+    final minimumDelay = Future<void>.delayed(const Duration(seconds: 2));
+    final uploadFuture = image != null
+        ? ref.read(cloudinaryServiceProvider).uploadImage(File(image.path))
+        : Future<String?>.value(null);
+    final uploadUrl = await uploadFuture;
+    await minimumDelay;
     if (!mounted) return;
 
-    final batchName = ref.read(scanBatchNameProvider).trim();
-    final result = mockInspectionResult.copyWith(
-      batchName: batchName.isEmpty ? mockInspectionResult.batchName : batchName,
-    );
+    // 4) Upload sukses → perbarui `image_path` ke URL Cloudinary.
+    //    Gagal/offline → `image_path` tetap path lokal (tanpa error UI).
+    if (uploadUrl != null && analysisId != null) {
+      try {
+        final db = await AppDatabase.instance.database;
+        await AnalysisRepository(db).updateImagePath(analysisId, uploadUrl);
+      } catch (e) {
+        debugPrint('[Scan] Gagal memperbarui image_path: $e');
+      }
+    }
 
     setState(() => _isAnalyzing = false);
     // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
+    // `analysisId` null (DB gagal) → segmen `draft` (fallback extra, Plan 3).
     context.pushReplacement(
-      '/result/scan-${DateTime.now().millisecondsSinceEpoch}',
-      extra: result,
+      '/result/${analysisId ?? 'draft'}',
+      extra: buildResultFromTemplate(template, displayName, batchLabel),
     );
   }
 }

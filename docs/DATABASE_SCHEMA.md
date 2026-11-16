@@ -178,6 +178,7 @@ Catatan:
 - `annotated_image_path` = gambar dengan overlay bounding box, **boleh kosong**. Riwayat menampilkan foto asli (`image_path`) + rekap `analysis_defects`; overlay hanya pada layar hasil analisis langsung (D-20).
 - `batch_label` = label pendek batch (mis. `Batch #042`); `batch_name` = nama batch (mis. `Mandheling Honey Anaerob`).
 - `model_version` = versi model yang menghasilkan analisis (provenance, mis. `Model CV v2.4`).
+- `image_path` = path foto **di perangkat** atau Cloudinary `secure_url` — di-UPDATE ke URL setelah upload sukses (best-effort, offline-first: gagal/offline tetap path lokal).
 - Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-20).
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Liberika`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
