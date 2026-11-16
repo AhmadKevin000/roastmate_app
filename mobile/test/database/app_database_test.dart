@@ -122,6 +122,28 @@ void main() {
       expect(after, before);
     });
 
+    test('reseed KB saat kb_version asset naik (§13)', () async {
+      final db = await AppDatabase.instance.database;
+
+      // Simulasikan DB dev lama: `meta.kb_version` masih 1.1 (era 3 resep),
+      // padahal asset sekarang 1.2 (14 resep).
+      await db.update(
+        'meta',
+        <String, Object?>{'value': '1.1'},
+        where: 'key = ?',
+        whereArgs: <Object?>[kMetaKbVersion],
+      );
+
+      await AppDatabase.instance.close();
+      final db2 = await AppDatabase.instance.database;
+
+      final recipeCount = Sqflite.firstIntValue(
+        await db2.rawQuery('SELECT COUNT(*) FROM brew_recipes'),
+      );
+      expect(recipeCount, 14);
+      expect((await metaValues(db2))[kMetaKbVersion], '1.2');
+    });
+
     test('migrasi v1 → v2 menambah kolom analyses.name (D-20)', () async {
       final path = p.join(await getDatabasesPath(), kDatabaseName);
 

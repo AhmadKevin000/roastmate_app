@@ -50,6 +50,21 @@ class _FakeBrewingRepository implements BrewingRepository {
 
   @override
   Future<List<BrewTool>> getAllTools() async => const [];
+
+  @override
+  Future<BrewRecipe?> findDefaultRecipe({
+    required String species,
+    required String roastContext,
+  }) async {
+    for (final r in mockBrewRecipes) {
+      if (r.species == species &&
+          r.roastContext == roastContext &&
+          r.isDefault) {
+        return r;
+      }
+    }
+    return null;
+  }
 }
 
 Widget _app({BrewingRepository? repo}) => ProviderScope(
