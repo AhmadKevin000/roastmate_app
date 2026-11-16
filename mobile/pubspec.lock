@@ -81,6 +81,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.1.2"
+  cloudinary:
+    dependency: "direct main"
+    description:
+      name: cloudinary
+      sha256: "00911fbdb7bd5383f025e07349189085cac211b50ff8cadb2cc410eccdaf7af6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.1"
   code_assets:
     dependency: transitive
     description:
@@ -150,6 +158,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_dotenv:
+    dependency: "direct main"
+    description:
+      name: flutter_dotenv
+      sha256: "7f302212152f6a483c28b270d36f343496a981af4d05fb455bee40ea35de2170"
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.0.2"
   flutter_lints:
     dependency: "direct dev"
     description:
@@ -217,7 +233,7 @@ packages:
     source: hosted
     version: "2.0.2"
   http:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -622,5 +638,5 @@ packages:
     source: hosted
     version: "3.1.4"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.13.0 <4.0.0"
   flutter: ">=3.41.0"

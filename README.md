@@ -32,6 +32,7 @@ Pemrosesan dirancang berjalan di perangkat: model visi menganalisis gambar, Open
 | Analisis bentuk     | OpenCV                                                      |
 | Penyimpanan lokal   | SQLite melalui `sqflite`                                    |
 | State management    | Riverpod                                                    |
+| Upload foto         | Cloudinary (paket `cloudinary` + `flutter_dotenv`)          |
 
 Paket pendukung di atas merupakan stack rancangan; integrasi ML dan penyimpanan lokal akan ditambahkan sesuai tahap implementasi.
 
@@ -48,6 +49,14 @@ cd mobile
 flutter pub get
 flutter run
 ```
+
+> **Catatan setup — Cloudinary (`.env`):** foto analisis di-upload **best-effort**
+> ke Cloudinary; kredensial dibaca dari `mobile/.env` (gitignored) yang terdaftar
+> sebagai asset. Setelah clone, salin `mobile/.env.example` → `mobile/.env` lalu
+> isi `CLOUD_NAME`, `CLOUDINARY_API`, dan `CLOUDINARY_SECRET`. Tanpa file `.env`,
+> `flutter run`/build gagal (asset tidak ketemu); tanpa kredensial valid, upload
+> dinonaktifkan — alur inti (analisis + riwayat lokal) tetap berjalan penuh secara
+> offline (AC-02).
 
 ## Fitur
 
