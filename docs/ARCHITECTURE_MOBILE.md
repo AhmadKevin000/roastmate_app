@@ -252,8 +252,14 @@ BrewingRepository    (katalog: brew_methods + brew_tools + brew_recipes)
 HomeRepository       (ringkasan Beranda dari analyses)
 ```
 
-`ScanRepository` / `HistoryRepository` / `SettingsRepository` belum ada; penulisan
-riwayat scan sementara dilakukan langsung oleh `scan_view_model` (best-effort capture).
+`ScanRepository` / `HistoryRepository` / `SettingsRepository` belum ada; alur capture
+(`scan_view`) orkestrasi: template acak → `RecommendationResolver` →
+`AnalysisRepository.insertResult` (analyses + defects + recommendations, satu
+transaksi) → upload foto **best-effort** via `CloudinaryService` (sukses:
+`image_path` di-UPDATE ke `secure_url`; gagal/offline: tetap path lokal).
+`CloudinaryService` (`core/network`) membaca kredensial dari `.env` via
+`flutter_dotenv`; paket `cloudinary` (Dart) dipakai karena `cloudinary_flutter`
+(semu versi) hanya widget/URL-gen tanpa API upload.
 `BrewingRepository` adalah satu-satunya akses ke `brew_methods` + `brew_recipes`. **Katalog dan Recommendation Engine memakai repository & data yang sama** — tidak boleh ada data brewing terpisah.
 
 ```

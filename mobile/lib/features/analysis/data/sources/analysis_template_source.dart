@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/analysis_template.dart';
 
@@ -59,3 +60,9 @@ class AnalysisTemplateSource {
   AnalysisTemplate pick(List<AnalysisTemplate> all, Random rng) =>
       all[rng.nextInt(all.length)];
 }
+
+/// Instance sumber template analisis untuk injeksi dependensi alur scan
+/// (bisa di-override di widget test agar tanpa I/O asset).
+final analysisTemplateSourceProvider = Provider<AnalysisTemplateSource>(
+  (ref) => const AnalysisTemplateSource(),
+);
