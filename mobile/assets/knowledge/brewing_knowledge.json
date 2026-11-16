@@ -1,5 +1,5 @@
 {
-  "kb_version": "1.1",
+  "kb_version": "1.2",
   "tools": [
     {
       "tool_id": "T001",
@@ -311,6 +311,740 @@
           "phase": "brew",
           "title": "Pengadukan & Penyajian",
           "targetTime": "03:30 – 04:00",
+          "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
+          "callout": "Aduk searah 3-5 putaran"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R004",
+      "method_id": "M001",
+      "species": "Arabica",
+      "quality_profile": "High",
+      "roast_context": "Light",
+      "dose_g": 15.0,
+      "water_volume_ml": 240,
+      "grind_size": "Medium-Fine",
+      "temperature_c": 93,
+      "brewing_time_s": 170,
+      "source": "BR004",
+      "is_default": 1,
+      "notes": "Arabica Light menonjolkan keasaman buah dan aroma floral; suhu 93°C menjaga ekstraksi rasa terang tanpa getir.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Drifter V60 & Paper Filter",
+          "description": "Dibilas merata dengan air hangat, lalu buang air bilasan dari server."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 93°C siap mengalir dengan stabil dan presisi."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Rinsing",
+          "targetTime": "00:00",
+          "description": "Pasang kertas filter pada dripper, bilas dengan air panas untuk menghilangkan aroma kertas serta memanaskan server, lalu buang air bilasan. Masukkan 15g bubuk kopi gilingan medium-fine dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Blooming",
+          "targetTime": "00:00 – 00:45",
+          "description": "Tuang 45ml air suhu 93°C secara melingkar perlahan dari tengah ke luar. Diamkan selama 45 detik untuk degassing agar keasaman dan aroma buah terbuka optimal.",
+          "callout": "Target timbangan: 45 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Penuangan Utama",
+          "targetTime": "00:45 – 02:10",
+          "description": "Lanjutkan penuangan dengan aliran stabil (pola spiral dari tengah ke tepi tanpa mengenai dinding filter) hingga timbangan menyentuh 240ml.",
+          "callout": "Target total: 240 ml"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penirisan & Penyajian",
+          "targetTime": "02:10 – 02:50",
+          "description": "Beri sedikit putaran lembut agar bed kopi rata, biarkan air menetes habis hingga ±02:50. Angkat dripper, aduk server, dan sajikan cup yang terang dan bersih.",
+          "callout": "Aduk server 3-5 putaran sebelum dituang"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R005",
+      "method_id": "M001",
+      "species": "Arabica",
+      "quality_profile": "High",
+      "roast_context": "Medium",
+      "dose_g": 18.0,
+      "water_volume_ml": 270,
+      "grind_size": "Medium",
+      "temperature_c": 92,
+      "brewing_time_s": 160,
+      "source": "BR005",
+      "is_default": 1,
+      "notes": "Arabica Medium menyeimbangkan sweetness dan body; gilingan medium menjaga cup tetap bersih.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Drifter V60 & Paper Filter",
+          "description": "Dibilas merata dengan air hangat, lalu buang air bilasan dari server."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 92°C siap mengalir dengan stabil dan presisi."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Rinsing",
+          "targetTime": "00:00",
+          "description": "Pasang kertas filter pada dripper, bilas dengan air panas, lalu buang air bilasan. Masukkan 18g bubuk kopi gilingan medium dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Blooming",
+          "targetTime": "00:00 – 00:45",
+          "description": "Tuang 54ml air suhu 92°C secara melingkar perlahan dari tengah ke luar. Diamkan selama 45 detik untuk degassing.",
+          "callout": "Target timbangan: 54 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Penuangan Utama",
+          "targetTime": "00:45 – 02:00",
+          "description": "Lanjutkan penuangan dengan aliran stabil (pola spiral) hingga timbangan mencapai 270ml; pertahankan ketinggian air di dalam dripper tetap tenang.",
+          "callout": "Target total: 270 ml"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penirisan & Penyajian",
+          "targetTime": "02:00 – 02:40",
+          "description": "Beri sedikit putaran lembut agar bed rata, biarkan menetes habis hingga ±02:40. Angkat dripper dan sajikan cup yang seimbang.",
+          "callout": "Bed rata = cup seimbang"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R006",
+      "method_id": "M002",
+      "species": "Arabica",
+      "quality_profile": "Medium",
+      "roast_context": "Dark",
+      "dose_g": 20.0,
+      "water_volume_ml": 300,
+      "grind_size": "Coarse",
+      "temperature_c": 90,
+      "brewing_time_s": 240,
+      "source": "BR006",
+      "is_default": 1,
+      "notes": "Arabica Dark memberi rasa cokelat pekat; perendaman 4 menit dengan gilingan kasar menahan pahit berlebih.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "French Press & Filter Mesh",
+          "description": "Bilas plunger dan tabung dengan air panas agar suhu seduh lebih stabil."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 90°C siap mengalir dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Pemanasan",
+          "targetTime": "00:00",
+          "description": "Bilas French Press dengan air panas, lalu buang airnya. Masukkan 20g bubuk kopi gilingan coarse dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Awal",
+          "targetTime": "00:00 – 00:30",
+          "description": "Tuang seluruh 300ml air suhu 90°C secara perlahan, pastikan seluruh bubuk kopi terbasahi merata.",
+          "callout": "Target timbangan: 300 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman (Steeping)",
+          "targetTime": "00:30 – 03:30",
+          "description": "Tutup French Press dan diamkan selama 3 menit agar ekstraksi merata dan body tebal terbentuk; pecahkan crust sekali di pertengahan.",
+          "callout": "Aduk perlahan permukaan (crust) satu kali"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penekanan (Press)",
+          "targetTime": "03:30 – 04:00",
+          "description": "Tekan plunger perlahan dan konsisten hingga dasar untuk memisahkan ampas dari seduhan.",
+          "callout": "Tekan dengan kecepatan tetap"
+        },
+        {
+          "stepNo": 5,
+          "phase": "brew",
+          "title": "Penyajian",
+          "targetTime": "04:00",
+          "description": "Segera tuang seluruh kopi ke cangkir agar ekstraksi tidak berlanjut dan rasa cokelat tetap seimbang.",
+          "callout": "Jangan biarkan kopi lama di dalam press"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R007",
+      "method_id": "M002",
+      "species": "Robusta",
+      "quality_profile": "Medium",
+      "roast_context": "Light",
+      "dose_g": 18.0,
+      "water_volume_ml": 250,
+      "grind_size": "Medium-Coarse",
+      "temperature_c": 94,
+      "brewing_time_s": 200,
+      "source": "BR007",
+      "is_default": 1,
+      "notes": "Robusta Light butuh suhu tinggi 94°C agar body-nya terekstrak merata tanpa rasa mentah.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "French Press & Filter Mesh",
+          "description": "Bilas plunger dan tabung dengan air panas agar suhu seduh lebih stabil."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 94°C siap mengalir dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Pemanasan",
+          "targetTime": "00:00",
+          "description": "Bilas French Press dengan air panas, lalu buang airnya. Masukkan 18g bubuk kopi gilingan medium-coarse dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Awal",
+          "targetTime": "00:00 – 00:30",
+          "description": "Tuang seluruh 250ml air suhu 94°C secara perlahan, pastikan seluruh bubuk kopi terbasahi merata.",
+          "callout": "Target timbangan: 250 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman (Steeping)",
+          "targetTime": "00:30 – 03:00",
+          "description": "Tutup French Press dan diamkan sekitar 2 menit 30 detik; pecahkan crust sekali agar ekstraksi body merata.",
+          "callout": "Aduk perlahan permukaan (crust) satu kali"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penekanan & Penyajian",
+          "targetTime": "03:00 – 03:20",
+          "description": "Tekan plunger perlahan hingga dasar, lalu segera tuang seluruh kopi ke cangkir agar body robusta tetap utuh.",
+          "callout": "Tekan dengan kecepatan tetap"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R008",
+      "method_id": "M003",
+      "species": "Robusta",
+      "quality_profile": "Medium",
+      "roast_context": "Medium",
+      "dose_g": 8.0,
+      "water_volume_ml": 150,
+      "grind_size": "Fine",
+      "temperature_c": 95,
+      "brewing_time_s": 180,
+      "source": "BR008",
+      "is_default": 1,
+      "notes": "Tubruk porsi kecil dengan gilingan fine menghasilkan seduhan pekat khas robusta.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Gelas Saji & Sendok",
+          "description": "Gelas tahan panas dibersihkan dan sendok disiapkan untuk mengaduk seduhan."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Ketel Air Panas",
+          "description": "Air panas suhu 95°C siap dituang dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale)",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g sebelum menakar kopi."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Penakaran & Penempatan",
+          "targetTime": "00:00",
+          "description": "Masukkan 8g bubuk kopi gilingan fine ke dalam gelas saji secara merata di dasar gelas."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Air",
+          "targetTime": "00:00 – 00:20",
+          "description": "Tuang 150ml air panas suhu 95°C perlahan hingga seluruh permukaan kopi terendam.",
+          "callout": "Target timbangan: 150 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman",
+          "targetTime": "00:20 – 02:40",
+          "description": "Diamkan sekitar 2 menit 20 detik agar ampas mengendap dan ekstraksi terbentuk sempurna.",
+          "callout": "Tutup gelas agar suhu stabil"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Pengadukan & Penyajian",
+          "targetTime": "02:40 – 03:00",
+          "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
+          "callout": "Aduk searah 3-5 putaran"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R009",
+      "method_id": "M002",
+      "species": "Liberika",
+      "quality_profile": "Medium",
+      "roast_context": "Light",
+      "dose_g": 18.0,
+      "water_volume_ml": 250,
+      "grind_size": "Medium-Coarse",
+      "temperature_c": 94,
+      "brewing_time_s": 200,
+      "source": "BR009",
+      "is_default": 1,
+      "notes": "Karakter aromatik liberika toleran terhadap variasi seduh; french press menampilkan body dan aromanya penuh.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "French Press & Filter Mesh",
+          "description": "Bilas plunger dan tabung dengan air panas agar suhu seduh lebih stabil."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 94°C siap mengalir dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Pemanasan",
+          "targetTime": "00:00",
+          "description": "Bilas French Press dengan air panas, lalu buang airnya. Masukkan 18g bubuk kopi gilingan medium-coarse dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Awal",
+          "targetTime": "00:00 – 00:30",
+          "description": "Tuang seluruh 250ml air suhu 94°C secara perlahan, pastikan seluruh bubuk kopi terbasahi merata.",
+          "callout": "Target timbangan: 250 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman (Steeping)",
+          "targetTime": "00:30 – 03:00",
+          "description": "Tutup French Press dan diamkan sekitar 2 menit 30 detik; pecahkan crust sekali agar aroma khas liberika terbuka.",
+          "callout": "Aduk perlahan permukaan (crust) satu kali"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penekanan & Penyajian",
+          "targetTime": "03:00 – 03:20",
+          "description": "Tekan plunger perlahan hingga dasar, lalu segera tuang seluruh kopi ke cangkir.",
+          "callout": "Tekan dengan kecepatan tetap"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R010",
+      "method_id": "M003",
+      "species": "Liberika",
+      "quality_profile": "Low",
+      "roast_context": "Medium",
+      "dose_g": 8.0,
+      "water_volume_ml": 150,
+      "grind_size": "Fine",
+      "temperature_c": 95,
+      "brewing_time_s": 180,
+      "source": "BR010",
+      "is_default": 1,
+      "notes": "Liberika Medium berdefect cukup banyak; air melimpah membantu meratakan karakternya yang kuat.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Gelas Saji & Sendok",
+          "description": "Gelas tahan panas dibersihkan dan sendok disiapkan untuk mengaduk seduhan."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Ketel Air Panas",
+          "description": "Air panas suhu 95°C siap dituang dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale)",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g sebelum menakar kopi."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Penakaran & Penempatan",
+          "targetTime": "00:00",
+          "description": "Masukkan 8g bubuk kopi gilingan fine ke dalam gelas saji secara merata di dasar gelas."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Air",
+          "targetTime": "00:00 – 00:20",
+          "description": "Tuang 150ml air panas suhu 95°C perlahan hingga seluruh permukaan kopi terendam.",
+          "callout": "Target timbangan: 150 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman",
+          "targetTime": "00:20 – 02:40",
+          "description": "Diamkan sekitar 2 menit 20 detik agar ampas mengendap dan ekstraksi terbentuk sempurna.",
+          "callout": "Tutup gelas agar suhu stabil"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Pengadukan & Penyajian",
+          "targetTime": "02:40 – 03:00",
+          "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
+          "callout": "Aduk searah 3-5 putaran"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R011",
+      "method_id": "M003",
+      "species": "Liberika",
+      "quality_profile": "Low",
+      "roast_context": "Dark",
+      "dose_g": 9.0,
+      "water_volume_ml": 160,
+      "grind_size": "Fine",
+      "temperature_c": 93,
+      "brewing_time_s": 200,
+      "source": "BR011",
+      "is_default": 1,
+      "notes": "Liberika Dark kuat dan berkarakter; kurangi dosis bila cup terasa terlalu berat untuk lidah.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Gelas Saji & Sendok",
+          "description": "Gelas tahan panas dibersihkan dan sendok disiapkan untuk mengaduk seduhan."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Ketel Air Panas",
+          "description": "Air panas suhu 93°C siap dituang dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale)",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g sebelum menakar kopi."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Penakaran & Penempatan",
+          "targetTime": "00:00",
+          "description": "Masukkan 9g bubuk kopi gilingan fine ke dalam gelas saji secara merata di dasar gelas."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Air",
+          "targetTime": "00:00 – 00:20",
+          "description": "Tuang 160ml air panas suhu 93°C perlahan hingga seluruh permukaan kopi terendam.",
+          "callout": "Target timbangan: 160 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman",
+          "targetTime": "00:20 – 03:00",
+          "description": "Diamkan sekitar 2 menit 40 detik agar ampas mengendap dan ekstraksi terbentuk sempurna.",
+          "callout": "Tutup gelas agar suhu stabil"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Pengadukan & Penyajian",
+          "targetTime": "03:00 – 03:20",
+          "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
+          "callout": "Aduk searah 3-5 putaran"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R012",
+      "method_id": "M001",
+      "species": "Mixed",
+      "quality_profile": "High",
+      "roast_context": "Light",
+      "dose_g": 15.0,
+      "water_volume_ml": 240,
+      "grind_size": "Medium-Fine",
+      "temperature_c": 92,
+      "brewing_time_s": 165,
+      "source": "BR012",
+      "is_default": 1,
+      "notes": "Campuran biji Light diarahkan ke profil cerah yang bersih; V60 menonjolkan sisi terbaik tiap species.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Drifter V60 & Paper Filter",
+          "description": "Dibilas merata dengan air hangat, lalu buang air bilasan dari server."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 92°C siap mengalir dengan stabil dan presisi."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Rinsing",
+          "targetTime": "00:00",
+          "description": "Pasang kertas filter pada dripper, bilas dengan air panas, lalu buang air bilasan. Masukkan 15g bubuk kopi gilingan medium-fine dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Blooming",
+          "targetTime": "00:00 – 00:45",
+          "description": "Tuang 45ml air suhu 92°C secara melingkar perlahan dari tengah ke luar. Diamkan selama 45 detik untuk degassing.",
+          "callout": "Target timbangan: 45 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Penuangan Utama",
+          "targetTime": "00:45 – 02:05",
+          "description": "Lanjutkan penuangan dengan aliran stabil (pola spiral) hingga timbangan mencapai 240ml; pertahankan ketinggian air tetap tenang.",
+          "callout": "Target total: 240 ml"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penirisan & Penyajian",
+          "targetTime": "02:05 – 02:45",
+          "description": "Beri sedikit putaran lembut agar bed rata, biarkan menetes habis hingga ±02:45. Angkat dripper dan sajikan cup yang seimbang.",
+          "callout": "Bed rata = cup seimbang"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R013",
+      "method_id": "M002",
+      "species": "Mixed",
+      "quality_profile": "Medium",
+      "roast_context": "Medium",
+      "dose_g": 20.0,
+      "water_volume_ml": 300,
+      "grind_size": "Medium-Coarse",
+      "temperature_c": 92,
+      "brewing_time_s": 210,
+      "source": "BR013",
+      "is_default": 1,
+      "notes": "Campuran biji Medium paling aman dengan immersion: body merata dan toleran terhadap perbedaan antar biji.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "French Press & Filter Mesh",
+          "description": "Bilas plunger dan tabung dengan air panas agar suhu seduh lebih stabil."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Teko Leher Angsa (Gooseneck Kettle)",
+          "description": "Air panas suhu 92°C siap mengalir dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale) & Timer",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g setelah kopi masuk."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Persiapan & Pemanasan",
+          "targetTime": "00:00",
+          "description": "Bilas French Press dengan air panas, lalu buang airnya. Masukkan 20g bubuk kopi gilingan medium-coarse dan ratakan permukaannya."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Awal",
+          "targetTime": "00:00 – 00:30",
+          "description": "Tuang seluruh 300ml air suhu 92°C secara perlahan, pastikan seluruh bubuk kopi terbasahi merata.",
+          "callout": "Target timbangan: 300 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman (Steeping)",
+          "targetTime": "00:30 – 03:00",
+          "description": "Tutup French Press dan diamkan sekitar 2 menit 30 detik; pecahkan crust sekali agar ekstraksi merata antar biji.",
+          "callout": "Aduk perlahan permukaan (crust) satu kali"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Penekanan & Penyajian",
+          "targetTime": "03:00 – 03:30",
+          "description": "Tekan plunger perlahan hingga dasar, lalu segera tuang seluruh kopi ke cangkir agar body tetap seimbang.",
+          "callout": "Tekan dengan kecepatan tetap"
+        }
+      ]
+    },
+    {
+      "recipe_id": "R014",
+      "method_id": "M003",
+      "species": "Mixed",
+      "quality_profile": "Low",
+      "roast_context": "Dark",
+      "dose_g": 9.0,
+      "water_volume_ml": 160,
+      "grind_size": "Fine",
+      "temperature_c": 94,
+      "brewing_time_s": 190,
+      "source": "BR014",
+      "is_default": 1,
+      "notes": "Campuran biji Dark dengan kualitas rendah cocok untuk tubruk kuat; tambahkan gula atau susu bila perlu.",
+      "steps": [
+        {
+          "stepNo": 1,
+          "phase": "prep",
+          "title": "Gelas Saji & Sendok",
+          "description": "Gelas tahan panas dibersihkan dan sendok disiapkan untuk mengaduk seduhan."
+        },
+        {
+          "stepNo": 2,
+          "phase": "prep",
+          "title": "Ketel Air Panas",
+          "description": "Air panas suhu 94°C siap dituang dengan stabil."
+        },
+        {
+          "stepNo": 3,
+          "phase": "prep",
+          "title": "Timbangan Digital (Scale)",
+          "description": "Dikalibrasi dan di-tare ke angka 0.0g sebelum menakar kopi."
+        },
+        {
+          "stepNo": 1,
+          "phase": "brew",
+          "title": "Penakaran & Penempatan",
+          "targetTime": "00:00",
+          "description": "Masukkan 9g bubuk kopi gilingan fine ke dalam gelas saji secara merata di dasar gelas."
+        },
+        {
+          "stepNo": 2,
+          "phase": "brew",
+          "title": "Penuangan Air",
+          "targetTime": "00:00 – 00:20",
+          "description": "Tuang 160ml air panas suhu 94°C perlahan hingga seluruh permukaan kopi terendam.",
+          "callout": "Target timbangan: 160 ml"
+        },
+        {
+          "stepNo": 3,
+          "phase": "brew",
+          "title": "Perendaman",
+          "targetTime": "00:20 – 02:50",
+          "description": "Diamkan sekitar 2 menit 30 detik agar ampas mengendap dan ekstraksi terbentuk sempurna.",
+          "callout": "Tutup gelas agar suhu stabil"
+        },
+        {
+          "stepNo": 4,
+          "phase": "brew",
+          "title": "Pengadukan & Penyajian",
+          "targetTime": "02:50 – 03:10",
           "description": "Aduk perlahan sekali, biarkan ampas mengendap, lalu nikmati seduhan langsung dari gelas.",
           "callout": "Aduk searah 3-5 putaran"
         }

@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.2 (skema DB `schema_version` = 3 — D-19/D-20 + tools)
+Versi: 1.3 (skema DB `schema_version` = 3 — D-19/D-20 + tools; KB seed 1.2)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -206,6 +206,8 @@ CREATE TABLE analysis_defects (
 
 Rekomendasi per analisis. Parameter seduh **tidak diduplikasi** — cukup `primary_recipe_id`.
 
+> `reason` diisi dari **template naratif per konteks species × roast** (`assets/knowledge/reason_templates.json`, 12 key `Species|Roast`) sampai engine ML/LLM menghasilkan rekomendasi adaptif.
+
 ```sql
 CREATE TABLE recommendations (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -299,7 +301,7 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 
 ```json
 {
-  "kb_version": "1.1",
+  "kb_version": "1.2",
   "tools": [
     {
       "tool_id": "T001",
@@ -357,6 +359,8 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 ```
 
 Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bila `brew_methods` masih kosong (idempoten); naik skema ke v3 menjalankan reseed agar `brew_tools`/`brew_method_tools` terisi. Setelah itu SQLite menjadi satu-satunya sumber query runtime.
+
+> **Coverage `kb_version` 1.2 (14 resep):** R001–R003 (seed awal) + R004–R014 — **1 resep default per kombinasi species × roast** untuk 4 species (`Arabica`/`Robusta`/`Liberika`/`Mixed`) × 3 roast (`Light`/`Medium`/`Dark`). Dengan cakupan ini FK `recommendations.primary_recipe_id` selalu bisa dipenuhi untuk hasil analisis ber-roast matang (AC-04: `Green` tidak menerima rekomendasi). Bila `kb_version` asset naik, `KnowledgeBaseSeeder.seedIfEmpty()` melakukan **reseed otomatis** saat database dibuka (DB dev lama terselamatkan tanpa hapus data manual).
 
 ---
 

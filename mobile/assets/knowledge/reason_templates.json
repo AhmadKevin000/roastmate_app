@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "reasons": {
+    "Arabica|Light": "Arabica Light menonjolkan keasaman buah dan profil floral yang halus. V60 dengan air 92–94 °C dan gilingan medium-fine menghasilkan cup yang clean dan terang; gilingan terlalu halus berisiko over-extract dan getir.",
+    "Arabica|Medium": "Arabica Medium menyeimbangkan sweetness, body, dan keasaman. V60 air 92 °C dengan gilingan medium memberi cup seimbang; bila terasa tipis, haluskan gilingan sedikit atau naikkan dosis.",
+    "Arabica|Dark": "Arabica Dark menghadirkan rasa cokelat pekat dan body penuh. French Press dengan air 90 °C dan gilingan kasar mengeluarkan body tanpa pahit berlebih; perpendek perendaman bila cup terlalu pahit.",
+    "Robusta|Light": "Robusta Light cukup jarang dijumpai; body-nya tebal dengan aroma herbal ringan. French Press air 94 °C membantu ekstraksi yang merata tanpa rasa mentah; tingkatkan rasio air bila terlalu pekat.",
+    "Robusta|Medium": "Robusta Medium punya body kuat dan pahit khas yang dominan. Kopi tubruk porsi kecil dengan gilingan fine dan air 95 °C mengeluarkan intensitasnya penuh; kurangi dosis bila terlalu pekat untuk lidah.",
+    "Robusta|Dark": "Robusta Dark menonjolkan body tebal dan rasa cokelat–tembakau. French Press / tubruk dengan air 90–95 °C mengeluarkan body penuh; tingkatkan rasio air bila terlalu pekat untuk mengurangi pahit.",
+    "Liberika|Light": "Liberika Light menampilkan karakter aromatik-woody dan herbal yang unik. French Press air 94 °C dengan gilingan medium-coarse menampilkan body dan aromanya; toleransi seduh lebih longgar dibanding arabica.",
+    "Liberika|Medium": "Liberika Medium berkarakter kuat dengan sedikit nuansa 'medisinal' yang khas. Tubruk gilingan fine dengan air 95 °C meratakan rasa; tambah air bila cup terasa terlalu berat.",
+    "Liberika|Dark": "Liberika Dark kuat, gelap, dan penuh karakter. Tubruk gilingan fine dengan air 93 °C menjaga intensitasnya; kurangi dosis atau tambah air bila terlalu berat untuk dinikmati langsung.",
+    "Mixed|Light": "Campuran biji Light punya profil cerah yang bervariasi antar species. V60 air 92 °C dengan gilingan medium-fine aman untuk cup yang bersih dan seimbang; sesuaikan gilingan ke arah halus bila terasa tipis.",
+    "Mixed|Medium": "Campuran biji Medium paling aman diseduh di kisaran tengah. French Press air 92 °C dengan gilingan medium-coarse memberi body merata dan toleran terhadap perbedaan antar biji.",
+    "Mixed|Dark": "Campuran biji Dark cocok untuk seduhan kuat sehari-hari. Tubruk gilingan fine dengan air 94 °C menghasilkan cup pekat; tambahkan gula atau susu bila diperlukan untuk meredam pahit."
+  }
+}

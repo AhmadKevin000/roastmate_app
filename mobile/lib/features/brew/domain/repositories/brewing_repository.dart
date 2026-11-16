@@ -17,6 +17,16 @@ abstract class BrewingRepository {
   /// Mengambil resep default untuk suatu metode seduh.
   Future<BrewRecipe?> getDefaultRecipe(String methodId);
 
+  /// Mengambil resep default untuk kombinasi species × roast context
+  /// (lookup recommendation engine — `idx_recipes_lookup`).
+  ///
+  /// Strict: return null bila tidak ada (UI memakai fallback), tidak
+  /// melakukan fallback ke resep lain.
+  Future<BrewRecipe?> findDefaultRecipe({
+    required String species,
+    required String roastContext,
+  });
+
   /// Mengambil master seluruh alat seduh.
   Future<List<BrewTool>> getAllTools();
 }

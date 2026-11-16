@@ -20,7 +20,7 @@ class AppDatabase {
 
   Future<Database> _open() async {
     final path = p.join(await getDatabasesPath(), kDatabaseName);
-    return openDatabase(
+    final db = await openDatabase(
       path,
       version: kSchemaVersion,
       onConfigure: (db) async {
@@ -29,6 +29,11 @@ class AppDatabase {
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
+
+    // Cek seed KB tiap kali buka: no-op bila versi sama, reseed bila
+    // `kb_version` asset naik (DB dev lama tetap terselamatkan).
+    await KnowledgeBaseSeeder(db).seedIfEmpty();
+    return db;
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -45,8 +50,6 @@ class AppDatabase {
       'key': kMetaSchemaVersion,
       'value': version.toString(),
     });
-
-    await KnowledgeBaseSeeder(db).seedIfEmpty();
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {

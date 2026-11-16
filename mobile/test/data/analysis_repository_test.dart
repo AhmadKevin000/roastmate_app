@@ -43,6 +43,11 @@ void main() {
     alternatives: const [],
     detections: const [],
     modelVersion: 'Model CV v2.4',
+    shapeUniformity: 0.88,
+    sizeUniformity: 0.84,
+    roastUniformity: 0.81,
+    roastConfidence: 0.91,
+    roastDistribution: const {'Light': 0.8, 'Medium': 0.18, 'Dark': 0.02},
   );
 
   setUp(() async {
@@ -99,8 +104,19 @@ void main() {
       expect(item.defectCounts[DefectClass.severe], 0);
 
       // Turunan konsisten dengan entity (D-02): grade & defectRate dihitung.
+      // defectRate BERBOBOT (PRD AC-03): (1×0.7 + 1×0.3) / 28 = 1.0/28
       expect(item.detail.grade, IndicativeGrade.specialty);
-      expect(item.detail.defectRate, closeTo(2 / 28, 1e-9));
+      expect(item.detail.defectRate, closeTo(1.0 / 28, 1e-9));
+
+      // Kolom uniformity & provenance roast roundtrip (Plan 1).
+      expect(item.detail.shapeUniformity, 0.88);
+      expect(item.detail.sizeUniformity, 0.84);
+      expect(item.detail.roastUniformity, 0.81);
+      expect(item.detail.roastConfidence, 0.91);
+      expect(
+        item.detail.roastDistribution,
+        {'Light': 0.8, 'Medium': 0.18, 'Dark': 0.02},
+      );
 
       // Deteksi per-biji & rekomendasi memang tidak disimpan (D-19).
       expect(item.detail.detections, isEmpty);

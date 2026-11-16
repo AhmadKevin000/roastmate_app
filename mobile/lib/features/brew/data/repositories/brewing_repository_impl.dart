@@ -103,6 +103,23 @@ class BrewingRepositoryImpl implements BrewingRepository {
   }
 
   @override
+  Future<BrewRecipe?> findDefaultRecipe({
+    required String species,
+    required String roastContext,
+  }) async {
+    final db = await _db;
+    final rows = await db.query(
+      'brew_recipes',
+      where: 'species = ? AND roast_context = ? AND is_default = 1',
+      whereArgs: [species, roastContext],
+      limit: 1,
+    );
+
+    if (rows.isEmpty) return null;
+    return _parseRecipe(rows.first);
+  }
+
+  @override
   Future<List<BrewTool>> getAllTools() async {
     final db = await _db;
     final rows = await db.query(

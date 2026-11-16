@@ -225,7 +225,7 @@ Quality score dihitung dari **defect only** (bukan multicomponent):
 ```
 defect_rate   = Σ(count[c] × weight[c]) / n_crop   (soft: expected weight per biji)
 quality_score = round(100 × (1 − defect_rate))
-profile: High ≥ 90 (dr ≤ 0.10) · Medium ≥ 70 (dr ≤ 0.30) · Low < 70
+profile: High ≥ 75 (dr ≤ 0.25) · Medium ≥ 60 (dr ≤ 0.40) · Low < 60
 ```
 
 Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** masuk rumus score.

@@ -18,8 +18,33 @@ class KnowledgeBaseSeeder {
     final count = Sqflite.firstIntValue(
       await _db.rawQuery('SELECT COUNT(*) FROM brew_methods'),
     );
-    if ((count ?? 0) > 0) return;
+    if ((count ?? 0) > 0) {
+      // Tabel terisi: reseed hanya bila `kb_version` asset naik
+      // (DB dev lama terselamatkan tanpa hapus data manual; versi sama = no-op).
+      await _reseedIfKbBumped();
+      return;
+    }
     await _seed();
+  }
+
+  /// Bandingkan `meta[kb_version]` dengan `kb_version` asset; bila berbeda,
+  /// jalankan [reseed] (meta ikut ter-update di akhir `_seed`).
+  Future<void> _reseedIfKbBumped() async {
+    final raw = await rootBundle.loadString(kKnowledgeSeedAsset);
+    final assetVersion =
+        (jsonDecode(raw) as Map<String, dynamic>)['kb_version'] as String?;
+    if (assetVersion == null) return;
+
+    final rows = await _db.query(
+      'meta',
+      columns: ['value'],
+      where: 'key = ?',
+      whereArgs: [kMetaKbVersion],
+    );
+    final storedVersion = rows.isEmpty ? null : rows.first['value'] as String?;
+    if (storedVersion == assetVersion) return;
+
+    await reseed();
   }
 
   /// Menghapus dan mengisi ulang data knowledge base (misal saat schema upgrade).

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/entities/analysis_history_item.dart';
@@ -45,6 +47,7 @@ class AnalysisRepository {
     RecommendationRef? recommendation,
   }) async {
     return _db.transaction((txn) async {
+      final distribution = result.roastDistribution;
       final id = await txn.insert('analyses', {
         'created_at': createdAt.toIso8601String(),
         'image_path': imagePath,
@@ -54,8 +57,14 @@ class AnalysisRepository {
         'model_version': result.modelVersion,
         'species': result.species,
         'roast': result.roast,
+        'roast_confidence': result.roastConfidence,
+        'roast_distribution':
+            distribution == null ? null : jsonEncode(distribution),
         'visible_beans': result.visibleBeans,
         'defect_rate': result.defectRate,
+        'shape_uniformity': result.shapeUniformity,
+        'size_uniformity': result.sizeUniformity,
+        'roast_uniformity': result.roastUniformity,
         'quality_score': result.qualityScore,
         'quality_profile': _profileName(result.qualityProfile),
       });
@@ -144,7 +153,7 @@ class AnalysisRepository {
     );
     final counts = {for (final c in DefectClass.values) c: 0};
     for (final row in rows) {
-      final cls = _defectClassFromName(row['defect_class'] as String);
+      final cls = defectClassFromName(row['defect_class'] as String);
       if (cls != null) counts[cls] = row['count'] as int;
     }
     return counts;
@@ -156,6 +165,15 @@ class AnalysisRepository {
     DateTime createdAt,
   ) {
     final visibleBeans = (row['visible_beans'] as int?) ?? 0;
+    final distributionRaw = row['roast_distribution'] as String?;
+    Map<String, double>? distribution;
+    if (distributionRaw != null && distributionRaw.isNotEmpty) {
+      distribution = <String, double>{
+        for (final e in (jsonDecode(distributionRaw) as Map<String, dynamic>)
+            .entries)
+          e.key: (e.value as num).toDouble(),
+      };
+    }
     return InspectionResult(
       batchLabel: (row['batch_label'] as String?) ?? '-',
       batchName: (row['batch_name'] as String?) ?? 'Tanpa nama',
@@ -170,6 +188,11 @@ class AnalysisRepository {
       alternatives: const [],
       detections: const [], // per-biji tidak disimpan (D-20)
       modelVersion: (row['model_version'] as String?) ?? '-',
+      shapeUniformity: (row['shape_uniformity'] as num?)?.toDouble() ?? 0,
+      sizeUniformity: (row['size_uniformity'] as num?)?.toDouble() ?? 0,
+      roastUniformity: (row['roast_uniformity'] as num?)?.toDouble() ?? 0,
+      roastConfidence: (row['roast_confidence'] as num?)?.toDouble(),
+      roastDistribution: distribution,
     );
   }
 }
@@ -200,13 +223,6 @@ String _defectClassName(DefectClass cls) {
     case DefectClass.severe:
       return 'Severe';
   }
-}
-
-DefectClass? _defectClassFromName(String name) {
-  for (final c in DefectClass.values) {
-    if (_defectClassName(c) == name) return c;
-  }
-  return null;
 }
 
 const List<String> _monthAbbrev = [

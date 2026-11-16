@@ -1,3 +1,4 @@
+import '../../features/analysis/domain/quality_engine.dart';
 import '../enums/defect_class.dart';
 import '../enums/indicative_grade.dart';
 import '../enums/quality_profile.dart';
@@ -25,6 +26,24 @@ class InspectionResult {
   final List<BeanDetection> detections;
   final String modelVersion;
 
+  /// ID baris `analyses` (diisi saat dibaca dari DB).
+  final int? analysisId;
+
+  /// Uniformity bentuk (0.0–1.0); ditampilkan, tidak masuk skor (PRD §8).
+  final double shapeUniformity;
+
+  /// Uniformity ukuran (0.0–1.0); ditampilkan, tidak masuk skor (PRD §8).
+  final double sizeUniformity;
+
+  /// Uniformity roast (0.0–1.0); ditampilkan, tidak masuk skor (PRD §8).
+  final double roastUniformity;
+
+  /// Confidence deteksi roast (0.0–1.0) — atribut provenance.
+  final double? roastConfidence;
+
+  /// Sebaran roast per biji, mis. `{'Light': 0.8, 'Medium': 0.2}`.
+  final Map<String, double>? roastDistribution;
+
   InspectionResult({
     required this.batchLabel,
     required this.batchName,
@@ -39,6 +58,12 @@ class InspectionResult {
     required this.alternatives,
     required this.detections,
     required this.modelVersion,
+    this.analysisId,
+    this.shapeUniformity = 0,
+    this.sizeUniformity = 0,
+    this.roastUniformity = 0,
+    this.roastConfidence,
+    this.roastDistribution,
   });
 
   /// Salinan dengan sebagian field diganti (mis. menimpa `batchName` dari
@@ -57,6 +82,12 @@ class InspectionResult {
     List<AlternativeMethod>? alternatives,
     List<BeanDetection>? detections,
     String? modelVersion,
+    int? analysisId,
+    double? shapeUniformity,
+    double? sizeUniformity,
+    double? roastUniformity,
+    double? roastConfidence,
+    Map<String, double>? roastDistribution,
   }) {
     return InspectionResult(
       batchLabel: batchLabel ?? this.batchLabel,
@@ -72,19 +103,22 @@ class InspectionResult {
       alternatives: alternatives ?? this.alternatives,
       detections: detections ?? this.detections,
       modelVersion: modelVersion ?? this.modelVersion,
+      analysisId: analysisId ?? this.analysisId,
+      shapeUniformity: shapeUniformity ?? this.shapeUniformity,
+      sizeUniformity: sizeUniformity ?? this.sizeUniformity,
+      roastUniformity: roastUniformity ?? this.roastUniformity,
+      roastConfidence: roastConfidence ?? this.roastConfidence,
+      roastDistribution: roastDistribution ?? this.roastDistribution,
     );
   }
 
   int get normalCount => defectCounts[DefectClass.normal] ?? 0;
 
+  /// Defect rate **berbobot** sesuai PRD AC-03 (delegasi ke [QualityEngine]).
   double get defectRate =>
-      visibleBeans > 0 ? (visibleBeans - normalCount) / visibleBeans : 0.0;
+      QualityEngine.defectRate(defectCounts, visibleBeans);
 
-  QualityProfile get qualityProfile {
-    if (qualityScore >= 75) return QualityProfile.high;
-    if (qualityScore >= 60) return QualityProfile.medium;
-    return QualityProfile.low;
-  }
+  QualityProfile get qualityProfile => QualityEngine.profile(qualityScore);
 
   IndicativeGrade get grade {
     if (qualityScore >= 85) return IndicativeGrade.specialty;
