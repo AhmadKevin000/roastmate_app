@@ -8,11 +8,13 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v5: jaminan kolom `analyses` yang diperkenalkan selama dev untuk DB
+/// lama (era dev/bon) — migrasi defensif per kolom, idempoten.
 /// v4: tabel `user_brew_recipes` (resep buatan user; di luar KB & reseed).
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 4;
+const int kSchemaVersion = 5;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
