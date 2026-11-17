@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/analysis/presentation/views/analysis_history_screen.dart';
 import '../../features/brew/presentation/views/brew_catalog_screen.dart';
 import '../../features/brew/presentation/views/recipe_detail_screen.dart';
+import '../../features/brew/presentation/views/user_recipe_form_screen.dart';
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/result/presentation/views/result_view.dart';
 import '../../features/scan/presentation/views/scan_setup_view.dart';
@@ -14,7 +15,7 @@ import '../main_shell.dart';
 ///
 /// Route mengikuti `docs/ARCHITECTURE_MOBILE.md` §6:
 /// `/home` · `/scan` · `/result/:analysisId` · `/history` ·
-/// `/history/:analysisId` · `/brewing` · `/brewing/:methodId`.
+/// `/history/:analysisId` · `/brewing` · `/brewing/new` · `/brewing/:methodId`.
 ///
 /// Tambahan `/scan/setup` — form nama jenis biji sebelum membuka kamera.
 ///
@@ -63,6 +64,10 @@ final GoRouter appRouter = GoRouter(
         analysisId: int.tryParse(state.pathParameters['analysisId'] ?? ''),
         fallback: state.extra as InspectionResult?,
       ),
+    ),
+    GoRoute(
+      path: '/brewing/new',
+      builder: (context, state) => const UserRecipeFormScreen(),
     ),
     GoRoute(
       path: '/brewing/:methodId',

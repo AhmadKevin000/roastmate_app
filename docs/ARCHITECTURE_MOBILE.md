@@ -129,10 +129,12 @@ Routes (GoRouter):
 /history
 /history/:analysisId
 /brewing
+/brewing/new
 /brewing/:methodId
 ```
 
 `/result/:analysisId` & `/history/:analysisId`: segmen di-`int.tryParse`. Id valid → detail dibaca dari SQLite; segmen non-int (mis. `draft` dari alur scan) → data in-memory dari `state.extra` (fallback, AC-04).
+`/brewing/new`: form tambah resep user (di luar shell — push penuh, seperti `/scan`); resep disimpan di `user_brew_recipes` (Plan 4).
 
 ---
 
@@ -250,7 +252,8 @@ Repository (yang sudah ada di kode):
 
 ```
 AnalysisRepository   (riwayat: analyses + analysis_defects)
-BrewingRepository    (katalog: brew_methods + brew_tools + brew_recipes)
+BrewingRepository    (katalog: brew_methods + brew_tools + brew_recipes;
+                      resep user: user_brew_recipes — Plan 4)
 HomeRepository       (ringkasan Beranda dari analyses)
 ```
 
@@ -263,6 +266,10 @@ transaksi) → upload foto **best-effort** via `CloudinaryService` (sukses:
 `flutter_dotenv`; paket `cloudinary` (Dart) dipakai karena `cloudinary_flutter`
 (semu versi) hanya widget/URL-gen tanpa API upload.
 `BrewingRepository` adalah satu-satunya akses ke `brew_methods` + `brew_recipes`. **Katalog dan Recommendation Engine memakai repository & data yang sama** — tidak boleh ada data brewing terpisah.
+
+Sejak v4, `BrewingRepository` juga mengakses `user_brew_recipes` (resep user)
+via `getUserRecipes` / `insertUserRecipe` / `deleteUserRecipe`. Resep user
+**tidak** ikut lookup rekomendasi maupun reseed KB (tabel terpisah).
 
 ```
 BrewingCatalog ─┐

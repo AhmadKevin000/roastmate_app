@@ -138,7 +138,7 @@ void main() {
   // §2 Daftar Tabel
   // ==========================================================================
   group('§2 Daftar tabel', () {
-    test('berisi tepat 8 tabel sesuai dokumen', () async {
+    test('berisi tepat 9 tabel sesuai dokumen', () async {
       const expected = {
         'brew_methods',
         'brew_tools',
@@ -147,6 +147,7 @@ void main() {
         'analyses',
         'analysis_defects',
         'recommendations',
+        'user_brew_recipes',
         'meta',
       };
       expect(await tableNames(db), expected);
@@ -661,6 +662,155 @@ void main() {
         'steps',
         'notes',
       });
+    });
+  });
+
+  // ==========================================================================
+  // §9.5 Tabel user_brew_recipes (resep user)
+  // ==========================================================================
+  group('§9.5 user_brew_recipes', () {
+    /// Baris resep user valid ([methodId] harus sudah ada di `brew_methods`).
+    Future<void> insertUserRecipe(
+      Database db, {
+      String id = 'U1',
+      String methodId = 'M001',
+      Map<String, Object?> overrides = const {},
+    }) async {
+      final row = <String, Object?>{
+        'recipe_id': id,
+        'name': 'Resep Uji',
+        'method_id': methodId,
+        'species': 'Arabica',
+        'quality_profile': 'High',
+        'roast_context': 'Light',
+        'dose_g': 15.0,
+        'water_volume_ml': 240,
+        'grind_size': 'Medium-Fine',
+        'temperature_c': 93,
+        'brewing_time_s': 170,
+        'notes': null,
+        'created_at': '2026-01-01T00:00:00.000',
+      }..addAll(overrides);
+      await db.insert('user_brew_recipes', row);
+    }
+
+    setUp(() async {
+      await insertMethod(db);
+    });
+
+    test('memuat tepat kolom yang didokumentasikan', () async {
+      final cols = (await columnsOf(db, 'user_brew_recipes')).keys.toSet();
+      expect(cols, {
+        'recipe_id',
+        'name',
+        'method_id',
+        'species',
+        'quality_profile',
+        'roast_context',
+        'dose_g',
+        'water_volume_ml',
+        'grind_size',
+        'temperature_c',
+        'brewing_time_s',
+        'notes',
+        'created_at',
+      });
+    });
+
+    test('insert valid diterima', () async {
+      await insertUserRecipe(db);
+      final rows = await db.query('user_brew_recipes');
+      expect(rows.single['name'], 'Resep Uji');
+    });
+
+    test('name NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'name': null}),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5: nama resep wajib ada',
+      );
+    });
+
+    test('created_at NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'created_at': null}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final species in const ['Arabica', 'Robusta', 'Liberika', 'Mixed']) {
+      test('menerima species "$species"', () async {
+        await insertUserRecipe(db, overrides: {'species': species});
+      });
+    }
+
+    test('menolak species di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'species': 'Excelsa'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final profile in const ['High', 'Medium', 'Low']) {
+      test('menerima quality_profile "$profile"', () async {
+        await insertUserRecipe(db,
+            overrides: {'quality_profile': profile});
+      });
+    }
+
+    test('menolak quality_profile di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'quality_profile': 'Premium'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final ctx in const [
+      'Green',
+      'Light',
+      'Medium',
+      'Dark',
+      'Light/Medium',
+      'Medium/Dark',
+    ]) {
+      test('menerima roast_context "$ctx"', () async {
+        await insertUserRecipe(db, overrides: {'roast_context': ctx});
+      });
+    }
+
+    test('menolak roast_context di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'roast_context': 'Extra Dark'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final grind in const [
+      'Espresso',
+      'Fine',
+      'Medium-Fine',
+      'Medium',
+      'Medium-Coarse',
+      'Coarse',
+    ]) {
+      test('menerima grind_size "$grind"', () async {
+        await insertUserRecipe(db, overrides: {'grind_size': grind});
+      });
+    }
+
+    test('menolak grind_size di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'grind_size': 'Powder'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('method_id harus ada di brew_methods (FK)', () async {
+      expect(
+        () => insertUserRecipe(db, methodId: 'M999'),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5: method_id merujuk ke KB (di luar reseed)',
+      );
     });
   });
 }

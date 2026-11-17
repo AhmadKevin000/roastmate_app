@@ -77,6 +77,11 @@ class BrewStep {
 /// Resep seduh — pemilik seluruh parameter seduh (D-10).
 class BrewRecipe {
   final String recipeId;
+
+  /// Nama resep. Resep KB: `''` (nama tampil dari `brew_methods.method_name`);
+  /// resep user: diisi dari form (Plan 4).
+  final String name;
+
   final String methodId;
   final String species;
   final String qualityProfile;
@@ -99,6 +104,7 @@ class BrewRecipe {
 
   const BrewRecipe({
     required this.recipeId,
+    this.name = '',
     required this.methodId,
     required this.species,
     required this.qualityProfile,

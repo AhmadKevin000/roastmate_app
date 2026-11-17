@@ -91,6 +91,30 @@ class AppDatabase {
       );
     }
 
+    // v3 → v4: tabel user_brew_recipes (resep user — di luar KB/reseed).
+    if (oldVersion < 4) {
+      batch.execute('''
+        CREATE TABLE IF NOT EXISTS user_brew_recipes (
+          recipe_id        TEXT PRIMARY KEY,
+          name             TEXT NOT NULL,
+          method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+          species          TEXT NOT NULL CHECK (species IN
+                           ('Arabica','Robusta','Liberika','Mixed')),
+          quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
+          roast_context    TEXT NOT NULL CHECK (roast_context IN
+                           ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
+          dose_g           REAL,
+          water_volume_ml  INTEGER,
+          grind_size       TEXT CHECK (grind_size IN
+                           ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
+          temperature_c    INTEGER,
+          brewing_time_s   INTEGER,
+          notes            TEXT,
+          created_at       TEXT NOT NULL
+        )
+      ''');
+    }
+
     await batch.commit(noResult: true);
 
     // Reseed knowledge base jika naik ke v3 agar tools & gambar terisi.

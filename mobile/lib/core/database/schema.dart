@@ -8,10 +8,11 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v4: tabel `user_brew_recipes` (resep buatan user; di luar KB & reseed).
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 3;
+const int kSchemaVersion = 4;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -123,6 +124,26 @@ const List<String> kCreateTableStatements = <String>[
     primary_recipe_id     TEXT NOT NULL REFERENCES brew_recipes(recipe_id),
     alternative_method_id TEXT REFERENCES brew_methods(method_id),
     reason                TEXT
+  )
+  ''',
+  // §9.5 user_brew_recipes (resep buatan user — di luar KB & reseed)
+  '''
+  CREATE TABLE user_brew_recipes (
+    recipe_id        TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+    species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
+    quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
+    roast_context    TEXT NOT NULL CHECK (roast_context IN
+                        ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
+    dose_g           REAL,
+    water_volume_ml  INTEGER,
+    grind_size       TEXT CHECK (grind_size IN
+                        ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
+    temperature_c    INTEGER,
+    brewing_time_s   INTEGER,
+    notes            TEXT,
+    created_at       TEXT NOT NULL
   )
   ''',
   // §9 meta
