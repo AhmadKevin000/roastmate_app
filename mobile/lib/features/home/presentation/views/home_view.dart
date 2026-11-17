@@ -36,7 +36,10 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: _background,
-      appBar: const RoastmateAppHeader(subtitle: 'Beranda'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Beranda',
+        onSettings: () => context.push('/profile'),
+      ),
       body: RefreshIndicator(
         color: _primary,
         onRefresh: () => ref.read(homeViewModelProvider.notifier).load(),
@@ -120,7 +123,8 @@ class HomePage extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               OutlinedButton(
-                onPressed: () => ref.read(homeViewModelProvider.notifier).load(),
+                onPressed: () =>
+                    ref.read(homeViewModelProvider.notifier).load(),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _primary,
                   side: const BorderSide(color: _secondary, width: 1.5),
@@ -347,11 +351,7 @@ class HomePage extends ConsumerWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _buildLegendRow(
-                      _primary,
-                      SpeciesLabels.arabica,
-                      summary,
-                    ),
+                    _buildLegendRow(_primary, SpeciesLabels.arabica, summary),
                     const SizedBox(height: 12),
                     _buildLegendRow(
                       const Color(0xFFCBBFB5),

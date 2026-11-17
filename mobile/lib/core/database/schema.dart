@@ -8,6 +8,9 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v7: kolom sync (D-29) — `uuid`/`user_id`/`sync_status`/`updated_at` pada
+/// `analyses` & `user_brew_recipes`; `uuid`/`sync_status` pada
+/// `analysis_defects` & `recommendations`. Kunci lintas device = `uuid`.
 /// v6: rebuild `user_brew_recipes` — `method_id` nullable (metode
 /// "Lainnya" di luar KB) + kolom `method_name`, `steps`, `video_url`;
 /// `brew_recipes` + kolom `video_url`.
@@ -17,7 +20,7 @@ library;
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 6;
+const int kSchemaVersion = 7;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -85,10 +88,15 @@ const List<String> kCreateTableStatements = <String>[
     video_url        TEXT
   )
   ''',
-  // §6 analyses
+  // §6 analyses (v7: + kolom sync D-29)
   '''
   CREATE TABLE analyses (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                  TEXT UNIQUE,
+    user_id               TEXT,
+    sync_status           TEXT NOT NULL DEFAULT 'local'
+                            CHECK (sync_status IN ('local','pending','synced')),
+    updated_at            TEXT,
     created_at            TEXT NOT NULL,
     name                  TEXT,
     image_path            TEXT,
@@ -109,10 +117,13 @@ const List<String> kCreateTableStatements = <String>[
     quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low'))
   )
   ''',
-  // §7 analysis_defects
+  // §7 analysis_defects (v7: + kolom sync D-29)
   '''
   CREATE TABLE analysis_defects (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid          TEXT UNIQUE,
+    sync_status   TEXT NOT NULL DEFAULT 'local'
+                    CHECK (sync_status IN ('local','pending','synced')),
     analysis_id   INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
     defect_class  TEXT NOT NULL CHECK (defect_class IN
                     ('Normal','Quaker','Broken','Severe')),
@@ -120,10 +131,13 @@ const List<String> kCreateTableStatements = <String>[
     UNIQUE (analysis_id, defect_class)
   )
   ''',
-  // §8 recommendations
+  // §8 recommendations (v7: + kolom sync D-29)
   '''
   CREATE TABLE recommendations (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid                  TEXT UNIQUE,
+    sync_status           TEXT NOT NULL DEFAULT 'local'
+                            CHECK (sync_status IN ('local','pending','synced')),
     analysis_id           INTEGER NOT NULL UNIQUE
                             REFERENCES analyses(id) ON DELETE CASCADE,
     primary_method_id     TEXT NOT NULL REFERENCES brew_methods(method_id),
@@ -135,10 +149,16 @@ const List<String> kCreateTableStatements = <String>[
   // §9.5 user_brew_recipes (resep buatan user — di luar KB & reseed)
   //
   // `method_id` nullable: null = metode "Lainnya" (di luar KB);
-  // `method_name` menyimpan nama display untuk semua resep (v6).
+  // `method_name` menyimpan nama display untuk semua resep (v6);
+  // v7: + kolom sync D-29.
   '''
   CREATE TABLE user_brew_recipes (
     recipe_id        TEXT PRIMARY KEY,
+    uuid             TEXT UNIQUE,
+    user_id          TEXT,
+    sync_status      TEXT NOT NULL DEFAULT 'local'
+                       CHECK (sync_status IN ('local','pending','synced')),
+    updated_at       TEXT,
     name             TEXT NOT NULL,
     method_id        TEXT REFERENCES brew_methods(method_id) ON DELETE SET NULL,
     method_name      TEXT NOT NULL,
@@ -175,5 +195,5 @@ const List<String> kCreateIndexStatements = <String>[
   'CREATE INDEX idx_analyses_created ON analyses(created_at)',
   'CREATE INDEX idx_defects_analysis ON analysis_defects(analysis_id)',
   'CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id)',
+  'CREATE INDEX idx_analyses_sync ON analyses(sync_status)',
 ];
-

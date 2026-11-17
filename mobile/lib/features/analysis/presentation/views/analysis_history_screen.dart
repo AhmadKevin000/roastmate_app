@@ -88,10 +88,7 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
     // Navigasi per id (Plan 3): detail dibaca dari SQLite. Item mock
     // (tanpa id) → segmen non-int + extra in-memory (fallback router).
     final id = item.detail.analysisId;
-    context.push(
-      '/history/${id ?? 'mock'}',
-      extra: item.detail,
-    );
+    context.push('/history/${id ?? 'mock'}', extra: item.detail);
   }
 
   /// Hapus satu analisis + children (cascade) lalu muat ulang (v6).
@@ -129,9 +126,9 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
       await AnalysisRepository(db).deleteAnalysis(id);
       await _loadItems();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Analisis dihapus')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Analisis dihapus')));
       }
     } catch (_) {
       if (mounted) {
@@ -156,7 +153,10 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Analisis'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Analisis',
+        onSettings: () => context.push('/profile'),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
