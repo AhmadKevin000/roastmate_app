@@ -139,12 +139,13 @@ class BrewMethodTabContent extends StatelessWidget {
               color: RoastmateColors.textPrimary,
             ),
           ),
-          Text(
-            sub,
-            style: RoastmateText.bodySm.copyWith(
-              color: RoastmateColors.textSecondary,
+          if (sub.isNotEmpty)
+            Text(
+              sub,
+              style: RoastmateText.bodySm.copyWith(
+                color: RoastmateColors.textSecondary,
+              ),
             ),
-          ),
         ],
       ),
     );

@@ -29,6 +29,11 @@ class InspectionResult {
   /// ID baris `analyses` (diisi saat dibaca dari DB).
   final int? analysisId;
 
+  /// Path foto capture lokal (Plan 3) — dipakai detail fallback saat
+  /// `analysisId` belum ada di DB; setelah upload sukses, URL Cloudinary
+  /// tinggal di kolom `analyses.image_path`.
+  final String? imagePath;
+
   /// Uniformity bentuk (0.0–1.0); ditampilkan, tidak masuk skor (PRD §8).
   final double shapeUniformity;
 
@@ -59,6 +64,7 @@ class InspectionResult {
     required this.detections,
     required this.modelVersion,
     this.analysisId,
+    this.imagePath,
     this.shapeUniformity = 0,
     this.sizeUniformity = 0,
     this.roastUniformity = 0,
@@ -83,6 +89,7 @@ class InspectionResult {
     List<BeanDetection>? detections,
     String? modelVersion,
     int? analysisId,
+    String? imagePath,
     double? shapeUniformity,
     double? sizeUniformity,
     double? roastUniformity,
@@ -104,6 +111,7 @@ class InspectionResult {
       detections: detections ?? this.detections,
       modelVersion: modelVersion ?? this.modelVersion,
       analysisId: analysisId ?? this.analysisId,
+      imagePath: imagePath ?? this.imagePath,
       shapeUniformity: shapeUniformity ?? this.shapeUniformity,
       sizeUniformity: sizeUniformity ?? this.sizeUniformity,
       roastUniformity: roastUniformity ?? this.roastUniformity,

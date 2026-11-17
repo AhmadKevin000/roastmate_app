@@ -51,13 +51,17 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/result/:analysisId',
       builder: (context, state) => InspectionDetailScreen(
-        result: state.extra as InspectionResult?,
+        // Int → id baris `analyses` (baca DB). Non-int (`draft`, `scan-*`)
+        // → analysisId null → fallback `state.extra` (alur scan, Plan 3).
+        analysisId: int.tryParse(state.pathParameters['analysisId'] ?? ''),
+        fallback: state.extra as InspectionResult?,
       ),
     ),
     GoRoute(
       path: '/history/:analysisId',
       builder: (context, state) => InspectionDetailScreen(
-        result: state.extra as InspectionResult?,
+        analysisId: int.tryParse(state.pathParameters['analysisId'] ?? ''),
+        fallback: state.extra as InspectionResult?,
       ),
     ),
     GoRoute(

@@ -3,12 +3,19 @@ import '../../../../shared/models/analysis_result.dart';
 /// Satu baris riwayat analisis untuk daftar di tab Analisis.
 ///
 /// Membungkus [InspectionResult] lengkap (dipakai layar Detail Inspeksi) dan
-/// menambahkan [dateLabel] khusus tampilan daftar.
+/// menambahkan [dateLabel] khusus tampilan daftar. [imagePath] adalah foto
+/// analisis (`analyses.image_path`) untuk thumbnail kartu — null untuk
+/// item mock/data lama tanpa foto.
 class AnalysisHistoryItem {
   final InspectionResult detail;
   final String dateLabel;
+  final String? imagePath;
 
-  const AnalysisHistoryItem({required this.detail, required this.dateLabel});
+  const AnalysisHistoryItem({
+    required this.detail,
+    required this.dateLabel,
+    this.imagePath,
+  });
 
   String get batchName => detail.batchName;
   String get species => detail.species;

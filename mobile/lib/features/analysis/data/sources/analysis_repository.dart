@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/entities/analysis_history_item.dart';
+import '../../../result/domain/entities/analysis_detail.dart';
 import '../../../../shared/models/analysis_result.dart';
 
 /// Referensi rekomendasi yang sudah terikat ke knowledge base.
@@ -133,6 +134,7 @@ class AnalysisRepository {
         AnalysisHistoryItem(
           dateLabel: formatHistoryDate(createdAt),
           detail: _fromRow(row, defects, createdAt),
+          imagePath: row['image_path'] as String?,
         ),
       );
     }
@@ -155,6 +157,66 @@ class AnalysisRepository {
     return AnalysisHistoryItem(
       dateLabel: formatHistoryDate(createdAt),
       detail: _fromRow(row, defects, createdAt),
+      imagePath: row['image_path'] as String?,
+    );
+  }
+
+  /// Detail lengkap satu analisis per id untuk layar Detail Inspeksi
+  /// (Plan 3): baris `analyses` + counts defect + foto + rekomendasi
+  /// (join knowledge base). Null bila id tidak ada.
+  Future<AnalysisDetail?> getDetail(int id) async {
+    final rows = await _db.query(
+      'analyses',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+
+    final row = rows.first;
+    final createdAt = DateTime.parse(row['created_at'] as String);
+    final defects = await _defectCounts(id);
+    final result = _fromRow(row, defects, createdAt);
+
+    final recRows = await _db.rawQuery('''
+      SELECT rec.*,
+             pm.method_name  AS primary_method_name,
+             pm.subtitle     AS primary_method_subtitle,
+             pr.recipe_id    AS primary_recipe_id,
+             pr.method_id    AS primary_method_id_r,
+             pr.dose_g, pr.water_volume_ml, pr.grind_size,
+             pr.temperature_c, pr.brewing_time_s,
+             am.method_name  AS alt_method_name,
+             am.subtitle     AS alt_method_subtitle,
+             ar.dose_g AS a_dose, ar.water_volume_ml AS a_water,
+             ar.grind_size AS a_grind,
+             ar.temperature_c AS a_temp, ar.brewing_time_s AS a_time
+      FROM recommendations rec
+      JOIN brew_methods pm ON pm.method_id = rec.primary_method_id
+      JOIN brew_recipes pr ON pr.recipe_id = rec.primary_recipe_id
+      LEFT JOIN brew_methods am ON am.method_id = rec.alternative_method_id
+      LEFT JOIN brew_recipes ar
+             ON ar.method_id = rec.alternative_method_id
+            AND ar.species = (SELECT species FROM analyses WHERE id = ?)
+            AND ar.is_default = 1
+      WHERE rec.analysis_id = ?
+    ''', [id, id]);
+
+    BrewRecommendation? recommendation;
+    List<AlternativeMethod> alternatives = const [];
+    if (recRows.isNotEmpty) {
+      final recRow = recRows.first;
+      recommendation = toBrewRecommendation(recRow);
+      alternatives = [?toAlternativeMethod(recRow)];
+    }
+
+    return AnalysisDetail(
+      analysisId: id,
+      result: result,
+      imagePath: row['image_path'] as String?,
+      recommendation: recommendation,
+      alternatives: alternatives,
+      summaryText: buildAnalysisSummary(result),
     );
   }
 
@@ -208,6 +270,7 @@ class AnalysisRepository {
       alternatives: const [],
       detections: const [], // per-biji tidak disimpan (D-20)
       modelVersion: (row['model_version'] as String?) ?? '-',
+      analysisId: row['id'] as int?,
       shapeUniformity: (row['shape_uniformity'] as num?)?.toDouble() ?? 0,
       sizeUniformity: (row['size_uniformity'] as num?)?.toDouble() ?? 0,
       roastUniformity: (row['roast_uniformity'] as num?)?.toDouble() ?? 0,

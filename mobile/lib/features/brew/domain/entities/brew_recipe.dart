@@ -6,6 +6,7 @@
 library;
 
 import 'brew_tool.dart';
+import '../../../../shared/utils/brew_label_helpers.dart';
 
 /// Fase langkah seduh (D-18): persiapan/alat vs langkah seduh.
 enum BrewStepPhase { prep, brew }
@@ -122,16 +123,8 @@ class BrewRecipe {
       steps.where((s) => s.phase == BrewStepPhase.brew).toList();
 
   /// Rasio **dihitung** `water_volume_ml / dose_g` — tidak disimpan (D-10).
-  String get ratioLabel {
-    final dose = doseG;
-    final water = waterVolumeMl;
-    if (dose == null || dose <= 0 || water == null) return '—';
-    final ratio = water / dose;
-    final text = ratio == ratio.roundToDouble()
-        ? ratio.toStringAsFixed(0)
-        : ratio.toStringAsFixed(1);
-    return '1:$text';
-  }
+  String get ratioLabel =>
+      brewRatioLabel(doseG: doseG, waterVolumeMl: waterVolumeMl);
 
   String get doseLabel => doseG == null ? '—' : '${doseG!.toStringAsFixed(1)} g';
 
@@ -144,11 +137,5 @@ class BrewRecipe {
   String get grindLabel => grindSize ?? '—';
 
   String get timeLabel =>
-      brewingTimeS == null ? '—' : _formatSeconds(brewingTimeS!);
-
-  static String _formatSeconds(int seconds) {
-    final minutes = seconds ~/ 60;
-    final rest = seconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${rest.toString().padLeft(2, '0')}';
-  }
+      brewingTimeS == null ? '—' : formatBrewSeconds(brewingTimeS!);
 }

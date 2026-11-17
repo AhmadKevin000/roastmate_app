@@ -420,10 +420,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
     setState(() => _isAnalyzing = false);
     // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
-    // `analysisId` null (DB gagal) → segmen `draft` (fallback extra, Plan 3).
+    // `analysisId` null (DB gagal) → segmen `draft` (fallback extra, Plan 3);
+    // detail fallback memakai path lokal foto capture (imagePath).
+    final result = buildResultFromTemplate(
+      template,
+      displayName,
+      batchLabel,
+    ).copyWith(imagePath: image?.path);
     context.pushReplacement(
       '/result/${analysisId ?? 'draft'}',
-      extra: buildResultFromTemplate(template, displayName, batchLabel),
+      extra: result,
     );
   }
 }

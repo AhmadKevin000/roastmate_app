@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/widgets/analysis_image.dart';
 import '../../../../shared/models/analysis_result.dart';
 import 'bean_overlay_painter.dart';
 
 class VisualEvidenceCard extends StatelessWidget {
   final InspectionResult result;
 
-  const VisualEvidenceCard({Key? key, required this.result}) : super(key: key);
+  /// Foto analisis (`analyses.image_path`) — URL Cloudinary atau path lokal.
+  final String? imagePath;
+
+  const VisualEvidenceCard({
+    Key? key,
+    required this.result,
+    this.imagePath,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -51,20 +60,13 @@ class VisualEvidenceCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    'assets/images/sample_batch.jpg',
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: RoastmateColors.surfaceContainer,
-                      child: const Center(
-                        child: Icon(Icons.image_not_supported, color: RoastmateColors.iconMuted),
-                      ),
+                  AnalysisImage(imagePath: imagePath),
+                  if (result.detections.isNotEmpty)
+                    CustomPaint(
+                      painter: BeanOverlayPainter(result.detections),
                     ),
-                  ),
-                  CustomPaint(
-                    painter: BeanOverlayPainter(result.detections),
-                  ),
-                  Positioned(
+                  if (imagePath != null && imagePath!.isNotEmpty)
+                    Positioned(
                     bottom: 8,
                     right: 8,
                     child: InkWell(
@@ -153,17 +155,17 @@ class VisualEvidenceCard extends StatelessWidget {
             minScale: 1,
             maxScale: 4,
             child: Stack(
+              fit: StackFit.passthrough,
               children: [
-                Image.asset(
-                  'assets/images/sample_batch.jpg',
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: RoastmateColors.iconMuted),
+                AnalysisImage(
+                  imagePath: imagePath,
                 ),
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: BeanOverlayPainter(result.detections),
+                if (result.detections.isNotEmpty)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: BeanOverlayPainter(result.detections),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
