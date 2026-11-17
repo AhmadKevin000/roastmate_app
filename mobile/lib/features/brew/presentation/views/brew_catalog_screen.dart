@@ -22,10 +22,7 @@ class BrewCatalogScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: RoastmateAppHeader(
-        subtitle: 'Seduh',
-        onAdd: () => context.push('/brewing/new'),
-      ),
+      appBar: const RoastmateAppHeader(subtitle: 'Seduh'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
@@ -85,7 +82,8 @@ class BrewCatalogScreen extends ConsumerWidget {
                   padding:
                       const EdgeInsets.symmetric(vertical: RoastmateSpacing.sm),
                   child: Text(
-                    'Belum ada resep buatanmu — ketuk + untuk menambah.',
+                    'Belum ada resep buatanmu — ketuk tombol + di pojok '
+                    'kanan bawah untuk menambah.',
                     style: RoastmateText.bodySm.copyWith(
                       color: RoastmateColors.textSecondary,
                     ),
@@ -97,7 +95,11 @@ class BrewCatalogScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: RoastmateSpacing.sm),
                     child: UserRecipeCard(
                       recipe: recipe,
-                      method: state.methodById(recipe.methodId),
+                      method: recipe.methodId == null
+                          ? null
+                          : state.methodById(recipe.methodId!),
+                      onTap: () =>
+                          context.push('/brewing/user/${recipe.recipeId}'),
                     ),
                   ),
             ],

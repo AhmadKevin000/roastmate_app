@@ -11,10 +11,12 @@ import '../../../../shared/utils/brew_label_helpers.dart';
 import '../../domain/entities/brew_recipe.dart';
 import '../viewmodels/brew_view_model.dart';
 
-/// Form tambah resep seduh buatan user (Plan 4 — route `/brewing/new`).
+/// Form tambah resep seduh buatan user (route `/brewing/new`).
 ///
-/// Parameter penuh tanpa langkah seduh (v1). Validasi: nama wajib (≥ 3
-/// karakter), dropdown wajib, angka opsional ≥ 0 (suhu 0–100).
+/// v6: metode KB atau "Lainnya" (nama bebas), langkah seduh dinamis, dan
+/// link video YouTube opsional. Validasi: nama wajib (≥ 3 karakter),
+/// nama metode wajib saat "Lainnya", judul langkah wajib, angka opsional
+/// ≥ 0 (suhu 0–100).
 class UserRecipeFormScreen extends ConsumerStatefulWidget {
   const UserRecipeFormScreen({super.key});
 
@@ -24,6 +26,9 @@ class UserRecipeFormScreen extends ConsumerStatefulWidget {
 }
 
 class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
+  /// Sentinel dropdown untuk metode di luar KB (v6).
+  static const String _otherMethod = 'OTHER';
+
   static const _speciesOptions = ['Arabica', 'Robusta', 'Liberika', 'Mixed'];
   static const _roastOptions = [
     'Green',
@@ -45,6 +50,8 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
 
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
+  late final TextEditingController _otherNameController;
+  late final TextEditingController _videoController;
   late final TextEditingController _doseController;
   late final TextEditingController _waterController;
   late final TextEditingController _tempController;
@@ -58,10 +65,15 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
   String? _grind;
   bool _submitting = false;
 
+  /// Draft langkah seduh (v6) — tiap baris punya controller sendiri.
+  final List<_StepDraft> _steps = <_StepDraft>[];
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
+    _otherNameController = TextEditingController();
+    _videoController = TextEditingController();
     _doseController = TextEditingController();
     _waterController = TextEditingController();
     _tempController = TextEditingController();
@@ -69,14 +81,28 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
     _notesController = TextEditingController();
   }
 
+  void _addStep() {
+    setState(() => _steps.add(_StepDraft()));
+  }
+
+  void _removeStep(int index) {
+    _steps[index].dispose();
+    setState(() => _steps.removeAt(index));
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
+    _otherNameController.dispose();
+    _videoController.dispose();
     _doseController.dispose();
     _waterController.dispose();
     _tempController.dispose();
     _timeController.dispose();
     _notesController.dispose();
+    for (final s in _steps) {
+      s.dispose();
+    }
     super.dispose();
   }
 
@@ -145,10 +171,24 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
     setState(() => _submitting = true);
 
     final notes = _notesController.text.trim();
+    final methods = ref.read(brewCatalogProvider).methods;
+    final isOther = _methodId == _otherMethod;
+
+    String kbMethodName = _methodId;
+    for (final m in methods) {
+      if (m.methodId == _methodId) {
+        kbMethodName = m.methodName;
+        break;
+      }
+    }
+
     final recipe = BrewRecipe(
       recipeId: '', // di-generate repo: U<epoch-micros>
       name: _nameController.text.trim(),
-      methodId: _methodId,
+      methodId: isOther ? null : _methodId,
+      methodName: isOther
+          ? _otherNameController.text.trim()
+          : kbMethodName,
       species: _species,
       qualityProfile: _profile,
       roastContext: _roastContext,
@@ -159,6 +199,21 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
       brewingTimeS: _parseInt(_timeController.text),
       source: 'USER',
       notes: notes.isEmpty ? null : notes,
+      videoUrl: _videoController.text.trim().isEmpty
+          ? null
+          : _videoController.text.trim(),
+      steps: [
+        for (var i = 0; i < _steps.length; i++)
+          BrewStep(
+            stepNo: i + 1,
+            phase: BrewStepPhase.brew,
+            title: _steps[i].title.text.trim(),
+            description: _steps[i].description.text.trim(),
+            targetTime: _steps[i].time.text.trim().isEmpty
+                ? null
+                : _steps[i].time.text.trim(),
+          ),
+      ],
     );
 
     try {
@@ -175,9 +230,10 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
     }
   }
 
-  InputDecoration _decoration(String label) {
+  InputDecoration _decoration(String label, {String? hint}) {
     return InputDecoration(
       labelText: label,
+      hintText: hint,
       labelStyle: RoastmateText.labelLg.copyWith(
         color: RoastmateColors.textSecondary,
       ),
@@ -215,6 +271,131 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
       validator: (v) => v == null ? requiredMessage : null,
       isExpanded: true,
       decoration: _decoration(label),
+    );
+  }
+
+  /// Seksi "Langkah Seduh" dinamis (v6): tambah/hapus baris; tiap baris
+  /// judul wajib, deskripsi & target waktu opsional.
+  Widget _buildStepsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Langkah Seduh (opsional)',
+                style: RoastmateText.titleSm.copyWith(
+                  color: RoastmateColors.textPrimary,
+                ),
+              ),
+            ),
+            TextButton.icon(
+              onPressed: _addStep,
+              style: TextButton.styleFrom(
+                foregroundColor: RoastmateColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: RoastmateSpacing.sm,
+                ),
+                minimumSize: Size.zero,
+              ),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Tambah Langkah'),
+            ),
+          ],
+        ),
+        if (_steps.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: RoastmateSpacing.xs),
+            child: Text(
+              'Tuliskan langkah demi langkah cara seduhmu — tampil di '
+              'halaman detail resep.',
+              style: RoastmateText.bodySm.copyWith(
+                color: RoastmateColors.iconMuted,
+              ),
+            ),
+          )
+        else ...[
+          const SizedBox(height: RoastmateSpacing.sm),
+          for (var i = 0; i < _steps.length; i++) ...[
+            _buildStep(i, _steps[i]),
+            if (i < _steps.length - 1)
+              const SizedBox(height: RoastmateSpacing.sm),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStep(int index, _StepDraft step) {
+    return Container(
+      padding: const EdgeInsets.all(RoastmateSpacing.md),
+      decoration: BoxDecoration(
+        color: RoastmateColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(RoastmateRadius.small),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Langkah ${index + 1}',
+                style: RoastmateText.labelMd.copyWith(
+                  color: RoastmateColors.primary,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                tooltip: 'Hapus langkah',
+                onPressed: () => _removeStep(index),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: RoastmateColors.error,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: RoastmateSpacing.xs),
+          TextFormField(
+            controller: step.title,
+            style: RoastmateText.bodyMd.copyWith(
+              color: RoastmateColors.textPrimary,
+            ),
+            decoration: _decoration('Judul langkah'),
+            validator: (value) {
+              if ((value?.trim() ?? '').isEmpty) {
+                return 'Judul langkah wajib diisi';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: RoastmateSpacing.xs),
+          TextFormField(
+            controller: step.description,
+            maxLines: 2,
+            style: RoastmateText.bodyMd.copyWith(
+              color: RoastmateColors.textPrimary,
+            ),
+            decoration: _decoration(
+              'Deskripsi (opsional)',
+              hint: 'mis. Tuang spiral sampai 240 ml',
+            ),
+          ),
+          const SizedBox(height: RoastmateSpacing.xs),
+          TextFormField(
+            controller: step.time,
+            style: RoastmateText.bodyMd.copyWith(
+              color: RoastmateColors.textPrimary,
+            ),
+            decoration: _decoration(
+              'Target waktu (opsional)',
+              hint: 'mis. 00:30',
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -279,6 +460,10 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                               value: m.methodId,
                               child: Text(m.methodName),
                             ),
+                          const DropdownMenuItem(
+                            value: _otherMethod,
+                            child: Text('Lainnya (metode lain)'),
+                          ),
                         ],
                         onChanged: (v) =>
                             setState(() => _methodId = v ?? _methodId),
@@ -287,6 +472,25 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                         isExpanded: true,
                         decoration: _decoration('Metode'),
                       ),
+                    if (_methodId == _otherMethod) ...[
+                      const SizedBox(height: RoastmateSpacing.md),
+                      TextFormField(
+                        controller: _otherNameController,
+                        style: RoastmateText.bodyLg.copyWith(
+                          color: RoastmateColors.textPrimary,
+                        ),
+                        decoration: _decoration(
+                          'Nama metode',
+                          hint: 'mis. AeroPress Homemade',
+                        ),
+                        validator: (value) {
+                          final t = value?.trim() ?? '';
+                          if (t.isEmpty) return 'Nama metode wajib diisi';
+                          if (t.length < 2) return 'Nama minimal 2 karakter';
+                          return null;
+                        },
+                      ),
+                    ],
                     const SizedBox(height: RoastmateSpacing.md),
                     _dropdown(
                       'Species',
@@ -398,6 +602,19 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                       ],
                     ),
                     const SizedBox(height: RoastmateSpacing.md),
+                    _buildStepsSection(),
+                    const SizedBox(height: RoastmateSpacing.md),
+                    TextFormField(
+                      controller: _videoController,
+                      style: RoastmateText.bodyMd.copyWith(
+                        color: RoastmateColors.textPrimary,
+                      ),
+                      decoration: _decoration(
+                        'Link video YouTube (opsional)',
+                        hint: 'https://youtu.be/…',
+                      ),
+                    ),
+                    const SizedBox(height: RoastmateSpacing.md),
                     TextFormField(
                       controller: _notesController,
                       maxLines: 3,
@@ -442,5 +659,18 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
         ),
       ),
     );
+  }
+}
+
+/// Satu baris draft langkah seduh (v6) — controller per field.
+class _StepDraft {
+  final TextEditingController title = TextEditingController();
+  final TextEditingController description = TextEditingController();
+  final TextEditingController time = TextEditingController();
+
+  void dispose() {
+    title.dispose();
+    description.dispose();
+    time.dispose();
   }
 }

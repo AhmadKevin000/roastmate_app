@@ -82,7 +82,17 @@ class BrewRecipe {
   /// resep user: diisi dari form (Plan 4).
   final String name;
 
-  final String methodId;
+  /// ID metode KB. Resep KB: selalu terisi. Resep user: `null` bila metode
+  /// "Lainnya" (di luar KB) — nama display diambil dari [methodName] (v6).
+  final String? methodId;
+
+  /// Nama display metode. Resep user: nama dari dropdown KB atau input
+  /// "Lainnya"; resep KB: `''` (tampil dari entitas [BrewMethod]) (v6).
+  final String methodName;
+
+  /// Link video YouTube (preview cara seduh) — tampil di Detail Resep (v6).
+  final String? videoUrl;
+
   final String species;
   final String qualityProfile;
   final String roastContext;
@@ -105,7 +115,9 @@ class BrewRecipe {
   const BrewRecipe({
     required this.recipeId,
     this.name = '',
-    required this.methodId,
+    this.methodId,
+    this.methodName = '',
+    this.videoUrl,
     required this.species,
     required this.qualityProfile,
     required this.roastContext,

@@ -11,7 +11,15 @@ class HistoryCard extends StatelessWidget {
   final AnalysisHistoryItem item;
   final VoidCallback? onTap;
 
-  const HistoryCard({Key? key, required this.item, this.onTap}) : super(key: key);
+  /// Aksi hapus (v6). Null → ikon hapus tidak dirender (mis. item mock).
+  final VoidCallback? onDelete;
+
+  const HistoryCard({
+    Key? key,
+    required this.item,
+    this.onTap,
+    this.onDelete,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +92,17 @@ class HistoryCard extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (onDelete != null)
+                          IconButton(
+                            tooltip: 'Hapus analisis',
+                            onPressed: onDelete,
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: RoastmateColors.error,
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: RoastmateSpacing.xs),

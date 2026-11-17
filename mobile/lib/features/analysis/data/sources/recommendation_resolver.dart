@@ -30,7 +30,8 @@ class RecommendationResolver {
     final reason = await _reasons.reasonFor(species, roast);
 
     return RecommendationRef(
-      methodId: recipe.methodId,
+      // Resep KB: `method_id` NOT NULL di DDL — tak mungkin null.
+      methodId: recipe.methodId!,
       recipeId: recipe.recipeId,
       alternativeMethodId: await _alternativeMethodId(recipe),
       reason: reason,

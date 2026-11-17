@@ -1,6 +1,6 @@
 # ROASTMATE — DECISION LOG
 
-Versi: 1.5
+Versi: 1.6
 Tujuan: mencatat keputusan & penyelesaian kontradiksi antar dokumen, agar tidak muncul lagi.
 
 ---
@@ -501,6 +501,24 @@ YOLOv8n-cls.
 - `kSchemaVersion` naik **1 → 2** dengan migrasi `ALTER TABLE analyses ADD COLUMN name TEXT`.
 
 **Dampak:** `DATABASE_SCHEMA.md` §6 & §12; `mobile/lib/core/database/schema.dart`; migrasi di `app_database.dart`.
+
+---
+
+## D-28 — Skema v6: metode "Lainnya", langkah & video resep user, hapus riwayat, FAB
+
+**Konteks:** Plan `feat/recipe-enhancements` — form resep user perlu mendukung metode di luar KB ("Lainnya"), langkah seduh, dan link video; detail resep (KB & user) menampilkan video; riwayat analisis bisa dihapus; tombol tambah resep pindah dari ikon header ke FAB.
+
+**Keputusan:**
+
+- `user_brew_recipes` di-**rebuild** (SQLite tak bisa mengubah FK/NOT NULL via `ALTER`): `method_id` jadi **nullable** + `ON DELETE SET NULL`, plus kolom `method_name TEXT NOT NULL`, `steps TEXT` (JSON, shape sama `brew_recipes.steps`), `video_url TEXT`. Data lama dipindah; `method_name` di-resolve dari join `brew_methods` (fallback string `method_id`).
+- **`ON DELETE SET NULL`** (bukan `CASCADE`/`RESTRICT`): reseed KB (`DELETE FROM brew_methods`) tak boleh menghancurkan resep user — `method_id` jadi NULL, `method_name` tetap sehingga UI utuh. Menutup bug laten: device dengan resep user + `kb_version` bump akan crash saat reseed (FK violation).
+- `brew_recipes` cukup `ALTER ADD COLUMN video_url TEXT` (guarded idempoten via `PRAGMA table_info`, pola v5).
+- **Video = thumbnail + buka aplikasi YouTube** (`url_launcher`, `LaunchMode.externalApplication`); tanpa player embed. Link KB diisi belakangan di JSON seed (plumbing `video_url` tanpa bump `kb_version`; saat link actual diisi → bump `kb_version` untuk reseed).
+- **Hapus riwayat**: ikon di `HistoryCard` (hanya item DB, `analysisId` terisi) → dialog konfirmasi → `DELETE` + cascade defects/recommendations + hapus file foto lokal best-effort.
+- **FAB** di `MainShell` (hanya path eksak `/brewing`); param `onAdd` di `RoastmateAppHeader` dihapus.
+- Detail resep user: route `/brewing/user/:recipeId` (sebelum `/brewing/:methodId`), layout selaras Detail Resep KB.
+
+**Dampak:** `DATABASE_SCHEMA.md` v1.6 (§5, §9.5, §12, §14); `ARCHITECTURE_MOBILE.md` §6; `PRD.md` FR-05/06/07; `kSchemaVersion` 5 → 6.
 
 ---
 

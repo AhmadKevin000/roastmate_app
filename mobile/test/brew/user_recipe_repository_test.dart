@@ -40,6 +40,7 @@ BrewRecipe fixtureRecipe({String name = 'Resep Uji'}) => BrewRecipe(
       recipeId: '',
       name: name,
       methodId: 'M001',
+      methodName: 'V60 / Pour Over',
       species: 'Arabica',
       qualityProfile: 'High',
       roastContext: 'Light',
@@ -50,6 +51,22 @@ BrewRecipe fixtureRecipe({String name = 'Resep Uji'}) => BrewRecipe(
       brewingTimeS: 170,
       notes: 'Catatan uji',
       source: 'USER',
+      videoUrl: 'https://www.youtube.com/watch?v=abc123',
+      steps: const [
+        BrewStep(
+          stepNo: 1,
+          phase: BrewStepPhase.brew,
+          title: 'Bloom',
+          description: 'Tuang 30 ml, tunggu 30 detik',
+          targetTime: '00:00 - 00:30',
+        ),
+        BrewStep(
+          stepNo: 2,
+          phase: BrewStepPhase.brew,
+          title: 'Pour',
+          description: 'Tuang spiral sampai 240 ml',
+        ),
+      ],
     );
 
 void main() {
@@ -77,6 +94,8 @@ void main() {
     expect(r.recipeId, startsWith('U'));
     expect(r.name, 'Resep Uji');
     expect(r.methodId, 'M001');
+    expect(r.methodName, 'V60 / Pour Over');
+    expect(r.videoUrl, 'https://www.youtube.com/watch?v=abc123');
     expect(r.species, 'Arabica');
     expect(r.qualityProfile, 'High');
     expect(r.roastContext, 'Light');
@@ -88,7 +107,32 @@ void main() {
     expect(r.notes, 'Catatan uji');
     expect(r.source, 'USER');
     expect(r.isDefault, isFalse, reason: 'resep user bukan default KB');
-    expect(r.steps, isEmpty, reason: 'v1 tanpa langkah seduh');
+    // v6: langkah seduh tersimpan (stepNo, phase, title, desc, targetTime).
+    expect(r.steps, hasLength(2));
+    expect(r.steps[0].title, 'Bloom');
+    expect(r.steps[0].description, 'Tuang 30 ml, tunggu 30 detik');
+    expect(r.steps[0].targetTime, '00:00 - 00:30');
+    expect(r.steps[0].phase, BrewStepPhase.brew);
+    expect(r.steps[1].targetTime, isNull);
+  });
+
+  test('insert methodId null (metode "Lainnya") → tersimpan utuh', () async {
+    await repo.insertUserRecipe(BrewRecipe(
+      recipeId: '',
+      name: 'Resep AeroPress',
+      methodId: null,
+      methodName: 'AeroPress Homemade',
+      species: 'Robusta',
+      qualityProfile: 'Medium',
+      roastContext: 'Medium/Dark',
+      source: 'USER',
+    ));
+
+    final r = (await repo.getUserRecipes()).single;
+    expect(r.methodId, isNull);
+    expect(r.methodName, 'AeroPress Homemade');
+    expect(r.steps, isEmpty);
+    expect(r.videoUrl, isNull);
   });
 
   test('dua insert → urutan created_at DESC (terbaru dulu)', () async {
@@ -116,6 +160,16 @@ void main() {
     await repo.deleteUserRecipe('U_TIDAK_ADA');
 
     expect(await repo.getUserRecipes(), hasLength(1));
+  });
+
+  test('getUserRecipeById → resep sesuai id / null bila tak ada', () async {
+    await repo.insertUserRecipe(fixtureRecipe());
+    final id = (await repo.getUserRecipes()).single.recipeId;
+
+    final found = await repo.getUserRecipeById(id);
+    expect(found, isNotNull);
+    expect(found!.name, 'Resep Uji');
+    expect(await repo.getUserRecipeById('U_TIDAK_ADA'), isNull);
   });
 
   test('insert method_id tidak ada di KB → throw (FK)', () async {

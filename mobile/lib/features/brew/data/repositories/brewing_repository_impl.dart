@@ -130,6 +130,19 @@ class BrewingRepositoryImpl implements BrewingRepository {
   }
 
   @override
+  Future<BrewRecipe?> getUserRecipeById(String recipeId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'user_brew_recipes',
+      where: 'recipe_id = ?',
+      whereArgs: [recipeId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return _parseUserRecipe(rows.first);
+  }
+
+  @override
   Future<List<BrewRecipe>> getUserRecipes() async {
     final db = await _db;
     final rows = await db.query(
@@ -142,24 +155,27 @@ class BrewingRepositoryImpl implements BrewingRepository {
   @override
   Future<void> insertUserRecipe(BrewRecipe recipe) async {
     final db = await _db;
-    // Validasi ringan: metode harus ada di KB (FK juga menolak).
-    final methodRows = await db.query(
-      'brew_methods',
-      where: 'method_id = ?',
-      whereArgs: [recipe.methodId],
-      limit: 1,
-    );
-    if (methodRows.isEmpty) {
-      throw Exception(
-        'Metode ${recipe.methodId} tidak ada di knowledge base',
+    // Validasi ringan: bila metode KB dipilih, pastikan ada (FK juga menolak).
+    // `methodId` null = metode "Lainnya" (di luar KB) — sah (v6).
+    final methodId = recipe.methodId;
+    if (methodId != null) {
+      final methodRows = await db.query(
+        'brew_methods',
+        where: 'method_id = ?',
+        whereArgs: [methodId],
+        limit: 1,
       );
+      if (methodRows.isEmpty) {
+        throw Exception('Metode $methodId tidak ada di knowledge base');
+      }
     }
     await db.insert(
       'user_brew_recipes',
       <String, Object?>{
         'recipe_id': 'U${DateTime.now().microsecondsSinceEpoch}',
         'name': recipe.name,
-        'method_id': recipe.methodId,
+        'method_id': methodId,
+        'method_name': recipe.methodName,
         'species': recipe.species,
         'quality_profile': recipe.qualityProfile,
         'roast_context': recipe.roastContext,
@@ -168,6 +184,8 @@ class BrewingRepositoryImpl implements BrewingRepository {
         'grind_size': recipe.grindSize,
         'temperature_c': recipe.temperatureC,
         'brewing_time_s': recipe.brewingTimeS,
+        'steps': recipe.steps.isEmpty ? null : jsonEncode(_stepsToJson(recipe.steps)),
+        'video_url': recipe.videoUrl,
         'notes': recipe.notes,
         'created_at': DateTime.now().toIso8601String(),
       },
@@ -210,29 +228,6 @@ class BrewingRepositoryImpl implements BrewingRepository {
   }
 
   BrewRecipe _parseRecipe(Map<String, dynamic> row) {
-    List<BrewStep> steps = [];
-    final stepsRaw = row['steps'] as String?;
-    if (stepsRaw != null && stepsRaw.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(stepsRaw) as List<dynamic>;
-        steps = decoded.map((s) {
-          final sMap = s as Map<String, dynamic>;
-          return BrewStep(
-            stepNo: sMap['stepNo'] as int? ?? 1,
-            phase: sMap['phase'] == 'prep'
-                ? BrewStepPhase.prep
-                : BrewStepPhase.brew,
-            title: sMap['title'] as String? ?? '',
-            description: sMap['description'] as String? ?? '',
-            targetTime: sMap['targetTime'] as String?,
-            callout: sMap['callout'] as String?,
-          );
-        }).toList();
-      } catch (_) {
-        steps = [];
-      }
-    }
-
     return BrewRecipe(
       recipeId: row['recipe_id'] as String,
       name: row['name'] as String? ?? '',
@@ -247,19 +242,21 @@ class BrewingRepositoryImpl implements BrewingRepository {
       brewingTimeS: row['brewing_time_s'] as int?,
       source: row['source'] as String? ?? '',
       isDefault: (row['is_default'] as int? ?? 0) == 1,
-      steps: steps,
+      steps: _parseSteps(row['steps'] as String?),
       notes: row['notes'] as String?,
+      videoUrl: row['video_url'] as String?,
     );
   }
 
   /// Parse baris `user_brew_recipes`. Tabel ini tidak punya kolom
-  /// `source`/`is_default`/`steps` → di-mapping tetap: `USER` / `false` /
-  /// kosong (di luar lookup rekomendasi & reseed KB).
+  /// `source`/`is_default` → di-mapping tetap: `USER` / `false` (di luar
+  /// lookup rekomendasi & reseed KB).
   BrewRecipe _parseUserRecipe(Map<String, dynamic> row) {
     return BrewRecipe(
       recipeId: row['recipe_id'] as String,
       name: row['name'] as String? ?? '',
-      methodId: row['method_id'] as String,
+      methodId: row['method_id'] as String?,
+      methodName: row['method_name'] as String? ?? '',
       species: row['species'] as String,
       qualityProfile: row['quality_profile'] as String,
       roastContext: row['roast_context'] as String,
@@ -270,8 +267,47 @@ class BrewingRepositoryImpl implements BrewingRepository {
       brewingTimeS: row['brewing_time_s'] as int?,
       source: 'USER',
       isDefault: false,
-      steps: const [],
+      steps: _parseSteps(row['steps'] as String?),
       notes: row['notes'] as String?,
+      videoUrl: row['video_url'] as String?,
     );
   }
+
+  /// Decode kolom JSON `steps` (shape sama untuk KB & resep user).
+  List<BrewStep> _parseSteps(String? stepsRaw) {
+    if (stepsRaw == null || stepsRaw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(stepsRaw) as List<dynamic>;
+      return decoded.map((s) {
+        final sMap = s as Map<String, dynamic>;
+        return BrewStep(
+          stepNo: sMap['stepNo'] as int? ?? 1,
+          phase: sMap['phase'] == 'prep'
+              ? BrewStepPhase.prep
+              : BrewStepPhase.brew,
+          title: sMap['title'] as String? ?? '',
+          description: sMap['description'] as String? ?? '',
+          targetTime: sMap['targetTime'] as String?,
+          callout: sMap['callout'] as String?,
+        );
+      }).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Encode langkah untuk kolom JSON `steps` (shape sama dengan KB).
+  List<Map<String, Object?>> _stepsToJson(List<BrewStep> steps) =>
+      steps
+          .map((s) => <String, Object?>{
+                'stepNo': s.stepNo,
+                'phase': s.phase == BrewStepPhase.prep ? 'prep' : 'brew',
+                'title': s.title,
+                'description': s.description,
+                if (s.targetTime != null && s.targetTime!.isNotEmpty)
+                  'targetTime': s.targetTime,
+                if (s.callout != null && s.callout!.isNotEmpty)
+                  'callout': s.callout,
+              })
+          .toList();
 }

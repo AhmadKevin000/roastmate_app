@@ -130,11 +130,14 @@ Routes (GoRouter):
 /history/:analysisId
 /brewing
 /brewing/new
+/brewing/user/:recipeId
 /brewing/:methodId
 ```
 
 `/result/:analysisId` & `/history/:analysisId`: segmen di-`int.tryParse`. Id valid → detail dibaca dari SQLite; segmen non-int (mis. `draft` dari alur scan) → data in-memory dari `state.extra` (fallback, AC-04).
 `/brewing/new`: form tambah resep user (di luar shell — push penuh, seperti `/scan`); resep disimpan di `user_brew_recipes` (Plan 4).
+`/brewing/user/:recipeId`: Detail Resep Kamu (di luar shell — push penuh); dibaca dari `user_brew_recipes` per id. Dideklarasikan **sebelum** `/brewing/:methodId`.
+Tombol tambah resep Seduh adalah **FAB** di `MainShell` (hanya saat path eksak `/brewing`); ikon `+` di header sudah dihapus (v6).
 
 ---
 

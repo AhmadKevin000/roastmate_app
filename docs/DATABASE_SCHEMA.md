@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.5 (skema DB `schema_version` = 5 — tabel `user_brew_recipes` + jaminan kolom `analyses` legacy; KB seed 1.2)
+Versi: 1.6 (skema DB `schema_version` = 6 — rebuild `user_brew_recipes`: metode "Lainnya", `steps`, `video_url`; kolom `video_url` di `brew_recipes`; KB seed 1.2)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -123,7 +123,8 @@ CREATE TABLE brew_recipes (
   source           TEXT NOT NULL,
   is_default       INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0,1)),
   steps            TEXT,
-  notes            TEXT
+  notes            TEXT,
+  video_url        TEXT
 );
 ```
 
@@ -143,6 +144,7 @@ CREATE TABLE brew_recipes (
 | `is_default`      | INTEGER | `1` = resep umum katalog metode                                                       |
 | `steps`           | TEXT    | JSON langkah; tiap item punya `phase`: `prep` \| `brew`                               |
 | `notes`           | TEXT    | Tips kalibrasi rasa & catatan resep                                                   |
+| `video_url`       | TEXT    | Link video YouTube panduan seduh (opsional; v6). Ditampilkan di Detail Resep         |
 
 Rasio **tidak disimpan**; dihitung `water_volume_ml / dose_g`.
 
@@ -244,7 +246,7 @@ Isi awal: `schema_version`, `kb_version`.
 
 ---
 
-## 9.5 Tabel `user_brew_recipes` (v4)
+## 9.5 Tabel `user_brew_recipes` (v4, bentuk final v6)
 
 Resep seduh buatan user (Plan 4). Kelompok **User Data** — tabel terpisah
 dari KB: **tidak ikut reseed `kb_version`** dan **tidak dipakai
@@ -254,7 +256,8 @@ recommendation engine** (lookup rekomendasi hanya `brew_recipes`).
 CREATE TABLE user_brew_recipes (
   recipe_id        TEXT PRIMARY KEY,
   name             TEXT NOT NULL,
-  method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+  method_id        TEXT REFERENCES brew_methods(method_id) ON DELETE SET NULL,
+  method_name      TEXT NOT NULL,
   species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
   quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
   roast_context    TEXT NOT NULL CHECK (roast_context IN
@@ -265,6 +268,8 @@ CREATE TABLE user_brew_recipes (
                      ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
   temperature_c    INTEGER,
   brewing_time_s   INTEGER,
+  steps            TEXT,
+  video_url        TEXT,
   notes            TEXT,
   created_at       TEXT NOT NULL
 );
@@ -274,11 +279,20 @@ Catatan:
 
 - `recipe_id` = prefix `U` + epoch-micros, di-generate repository
   (mis. `U1750000000000000`).
-- Tanpa kolom `source`/`is_default`/`steps` — saat parse ke entity
-  di-mapping tetap: `source='USER'`, `isDefault=false`, `steps=[]`.
+- `method_id` **nullable** (v6): `NULL` = metode "Lainnya" yang tidak ada
+  di KB. `method_name` menyimpan nama display untuk semua resep — dari
+  dropdown KB atau input bebas form — sehingga UI tetap utuh meski
+  `method_id` hilang (mis. akibat reseed KB; lihat `ON DELETE SET NULL`).
+- `steps` (v6): JSON array, shape sama dengan `brew_recipes.steps`
+  (`stepNo`, `phase`, `title`, `description?`, `targetTime?`).
+- `video_url` (v6): link video YouTube (opsional).
+- Tanpa kolom `source`/`is_default` — saat parse ke entity di-mapping
+  tetap: `source='USER'`, `isDefault=false`.
 - `created_at` hanya untuk ordering tampil (terbaru dulu); volume kecil →
   sort in-memory, tanpa index baru.
-- v1 tanpa langkah seduh (`steps`) untuk resep user.
+- Rebuild v5→v6 memakai pola resmi SQLite (foreign_keys OFF → create new
+  → INSERT SELECT → drop → rename → ON); `method_name` data lama
+  di-resolve via join `brew_methods`, fallback string `method_id`.
 
 ---
 
@@ -337,8 +351,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 | v2   | v3  | Tabel `brew_tools`, `brew_method_tools`; kolom `brew_methods.subtitle`/`image_asset`; reseed KB (tools & gambar) | Tercatat |
 | v3   | v4  | Tabel `user_brew_recipes` (resep user, kelompok User Data) | Tercatat |
 | v4   | v5  | Jaminan kolom legacy `analyses` (`name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path`) — cek per kolom via `PRAGMA table_info`, idempoten | Tercatat |
+| v5   | v6  | Rebuild `user_brew_recipes` (pola resmi SQLite; foreign_keys OFF selama rebuild): `method_id` nullable + `ON DELETE SET NULL`, kolom baru `method_name`, `steps`, `video_url`; data lama dipindah, `method_name` di-resolve dari join `brew_methods`. `brew_recipes` + kolom `video_url` (ALTER, guarded idempoten) | Tercatat |
 
-`kSchemaVersion` terkini = **5**.
+`kSchemaVersion` terkini = **6**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
@@ -388,6 +403,7 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
       "source": "BR001",
       "is_default": 1,
       "notes": "Sesuaikan grind bila seduhan terlalu pahit.",
+      "video_url": "https://www.youtube.com/watch?v=...",
       "steps": [
         {
           "stepNo": 1,
@@ -407,7 +423,7 @@ Sumber seed: `assets/knowledge/brewing_knowledge.json`.
 }
 ```
 
-Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bila `brew_methods` masih kosong (idempoten); naik skema ke v3 menjalankan reseed agar `brew_tools`/`brew_method_tools` terisi. Setelah itu SQLite menjadi satu-satunya sumber query runtime.
+Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bila `brew_methods` masih kosong (idempoten); naik skema ke v3 menjalankan reseed agar `brew_tools`/`brew_method_tools` terisi. Setelah itu SQLite menjadi satu-satunya sumber query runtime. `video_url` pada resep seed bersifat opsional (v6): saat link diisi di JSON, naikkan `kb_version` untuk memicu reseed.
 
 > **Coverage `kb_version` 1.2 (14 resep):** R001–R003 (seed awal) + R004–R014 — **1 resep default per kombinasi species × roast** untuk 4 species (`Arabica`/`Robusta`/`Liberika`/`Mixed`) × 3 roast (`Light`/`Medium`/`Dark`). Dengan cakupan ini FK `recommendations.primary_recipe_id` selalu bisa dipenuhi untuk hasil analisis ber-roast matang (AC-04: `Green` tidak menerima rekomendasi). Bila `kb_version` asset naik, `KnowledgeBaseSeeder.seedIfEmpty()` melakukan **reseed otomatis** saat database dibuka (DB dev lama terselamatkan tanpa hapus data manual).
 
@@ -420,8 +436,9 @@ Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bil
 3. Satu `analysis` maksimal punya satu baris `recommendations`.
 4. `analysis_defects` unik per (`analysis_id`, `defect_class`).
 5. `analyses` dan turunannya dihapus berantai (`ON DELETE CASCADE`).
-6. Nilai enum harus sesuai bagian 11; ditegakkan `CHECK` pada `brew_methods` (`method_type`), `brew_recipes` (`species`, `quality_profile`, `roast_context`, `grind_size`), `analyses` (`species`, `roast`, `quality_profile`), dan `analysis_defects` (`defect_class`).
+6. Nilai enum harus sesuai bagian 11; ditegakkan `CHECK` pada `brew_methods` (`method_type`), `brew_recipes` (`species`, `quality_profile`, `roast_context`, `grind_size`), `analyses` (`species`, `roast`, `quality_profile`), `analysis_defects` (`defect_class`), dan `user_brew_recipes` (`species`, `quality_profile`, `roast_context`, `grind_size`).
 7. `source` wajib terisi (traceability BR001–BR004).
+8. `user_brew_recipes.method_id` boleh `NULL` (metode "Lainnya", v6); `method_name` wajib terisi. Bila baris `brew_methods` dihapus (reseed KB), referensi ikut `ON DELETE SET NULL` — baris resep user tidak pernah ikut terhapus.
 
 ---
 

@@ -115,3 +115,11 @@ final brewRecipeForMethodProvider =
     Provider.family<BrewRecipe?, String>((ref, id) {
   return ref.watch(brewCatalogProvider).recipeForMethod(id);
 });
+
+/// Resep user berdasarkan id (untuk Detail Resep Kamu) — baca DB langsung
+/// (di luar state katalog & reseed KB).
+final brewUserRecipeByIdProvider =
+    FutureProvider.autoDispose.family<BrewRecipe?, String>((ref, id) async {
+  final repo = ref.watch(brewingRepositoryProvider);
+  return repo.getUserRecipeById(id);
+});

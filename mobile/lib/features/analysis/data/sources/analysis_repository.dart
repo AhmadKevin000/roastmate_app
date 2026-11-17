@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 
@@ -221,9 +222,26 @@ class AnalysisRepository {
   }
 
   /// Menghapus satu analisis. Defects & recommendations ikut lewat
-  /// `ON DELETE CASCADE`.
+  /// `ON DELETE CASCADE`. File foto lokal (bila `image_path` masih path
+  /// device, bukan URL Cloudinary) dihapus best-effort — kegagalan
+  /// diabaikan (cache device akan membersihkannya).
   Future<void> deleteAnalysis(int id) async {
+    final rows = await _db.query(
+      'analyses',
+      columns: ['image_path'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
     await _db.delete('analyses', where: 'id = ?', whereArgs: [id]);
+
+    final path = rows.isEmpty ? null : rows.first['image_path'] as String?;
+    if (path == null || path.isEmpty || path.startsWith('http')) return;
+    try {
+      await File(path).delete();
+    } catch (_) {
+      // Best-effort: file mungkin sudah hilang.
+    }
   }
 
   Future<Map<DefectClass, int>> _defectCounts(int analysisId) async {

@@ -30,11 +30,15 @@ abstract class BrewingRepository {
   /// Mengambil master seluruh alat seduh.
   Future<List<BrewTool>> getAllTools();
 
+  /// Mengambil resep buatan user berdasarkan id (null bila tidak ada).
+  Future<BrewRecipe?> getUserRecipeById(String recipeId);
+
   /// Mengambil resep buatan user (tabel `user_brew_recipes`), terbaru dulu.
   Future<List<BrewRecipe>> getUserRecipes();
 
   /// Menyimpan resep buatan user. `recipe_id` di-generate `U<epoch-micros>`,
-  /// `created_at` = now. `methodId` harus merujuk ke `brew_methods` (FK).
+  /// `created_at` = now. `methodId` boleh `null` (metode "Lainnya" di luar
+  /// KB) — bila diisi harus merujuk ke `brew_methods` (FK).
   Future<void> insertUserRecipe(BrewRecipe recipe);
 
   /// Menghapus resep user berdasarkan id (no-op bila tidak ada).
