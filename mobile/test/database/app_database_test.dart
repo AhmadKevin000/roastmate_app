@@ -60,7 +60,7 @@ void main() {
       await AppDatabase.instance.close();
     });
 
-    test('onCreate membentuk tepat 8 tabel (§2)', () async {
+    test('onCreate membentuk tepat 9 tabel (§2)', () async {
       final db = await AppDatabase.instance.database;
       expect(await tableNames(db), {
         'brew_methods',
@@ -70,6 +70,7 @@ void main() {
         'analyses',
         'analysis_defects',
         'recommendations',
+        'user_brew_recipes',
         'meta',
       });
     });
@@ -221,6 +222,61 @@ void main() {
 
       expect(columns, contains('name'));
       expect((await metaValues(db))[kMetaSchemaVersion], kSchemaVersion.toString());
+    });
+
+    test('migrasi v3 → v4 menambah tabel user_brew_recipes, data v3 utuh', () async {
+      final path = p.join(await getDatabasesPath(), kDatabaseName);
+
+      // Bangun database skema v3 seperti instalasi sebelum Plan 4:
+      // seluruh DDL v4 kecuali tabel user_brew_recipes.
+      final v3 = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 3,
+          onCreate: (db, version) async {
+            for (final stmt in kCreateTableStatements) {
+              if (stmt.contains('user_brew_recipes')) continue;
+              await db.execute(stmt);
+            }
+            // Data v3 yang harus tetap utuh setelah migrasi.
+            await db.insert('brew_methods', {
+              'method_id': 'M001',
+              'method_name': 'V60 / Pour Over',
+              'method_type': 'pour_over',
+            });
+            await db.insert('analyses', {
+              'created_at': '2026-01-01T00:00:00Z',
+              'batch_name': 'Batch Uji Migrasi',
+              'species': 'Arabica',
+            });
+            await db.insert('meta', {
+              'key': kMetaSchemaVersion,
+              'value': '3',
+            });
+          },
+        ),
+      );
+      await v3.close();
+
+      // Buka dengan versi skema terkini: onUpgrade menjalankan v3 → v4.
+      final db = await AppDatabase.instance.database;
+      expect(await tableNames(db), contains('user_brew_recipes'));
+
+      // Data v3 utuh (riwayat tak disentuh migrasi/seeder).
+      final analyses = await db.query(
+        'analyses',
+        where: 'batch_name = ?',
+        whereArgs: ['Batch Uji Migrasi'],
+      );
+      expect(analyses, hasLength(1));
+      final methods = await db.query(
+        'brew_methods',
+        where: 'method_id = ?',
+        whereArgs: ['M001'],
+      );
+      expect(methods, hasLength(1));
+      expect((await metaValues(db))[kMetaSchemaVersion],
+          kSchemaVersion.toString());
     });
   });
 }
