@@ -77,17 +77,20 @@ Aplikasi memiliki 3 tab utama.
 - Riwayat analisis (daftar + filter Semua / Arabica / Robusta / Liberika / Mixed).
 - Setiap item: nama, tanggal, jenis, jumlah biji terlihat, jumlah defect, skor, grade.
 - Buka detail inspeksi (hasil analisis lengkap).
+- Hapus satu analisis (dengan konfirmasi; defects & rekomendasi ikut terhapus).
 - Ekspor CSV.
 
 ### Tab Seduh
 - Katalog metode seduh.
 - Ringkasan tiap metode (rasio, waktu, grind, suhu).
-- Buka detail resep (panduan langkah statis).
+- Buka detail resep (panduan langkah statis + video panduan bila ada).
+- Seksi **Resep Kamu**: kartu tappable → Detail Resep Kamu; tambah via **FAB** (hanya di katalog Seduh) & hapus (dengan konfirmasi).
 
 ### Layar pendukung
 - Scan Kamera (kamera + overlay deteksi + indikator pencahayaan).
 - Detail Inspeksi (hasil analisis lengkap).
-- Detail Resep (panduan langkah).
+- Detail Resep (panduan langkah + video panduan bila ada).
+- Detail Resep Kamu (resep buatan user: parameter, langkah, video, catatan).
 
 ---
 
@@ -152,21 +155,28 @@ Seduh
 - Daftar seluruh analisis tersimpan.
 - Filter berdasarkan species.
 - Ringkasan: total analisis, rata-rata skor, komposisi jenis.
+- Hapus satu analisis (dengan dialog konfirmasi); `analysis_defects` & `recommendations` ikut terhapus via `ON DELETE CASCADE`; file foto lokal (bila `image_path` masih path device) dihapus best-effort.
 - Ekspor CSV.
 
 ### FR-06 Katalog Metode Seduh
 - Daftar metode (mis. V60, French Press, Kopi Tubruk).
 - Ringkasan parameter tiap metode.
 - Buka detail resep.
-- Seksi **Resep Kamu**: tambah (form `/brewing/new` — parameter penuh, tanpa
-  langkah seduh di v1) & hapus (dengan konfirmasi) resep buatan user;
-  tersimpan di `user_brew_recipes`, aman dari reseed KB, tidak dipakai
-  recommendation engine.
+- Tombol tambah resep = **FAB** di katalog Seduh (di atas bottom nav; ikon `+` di header dihapus).
+- Seksi **Resep Kamu**: tambah (form `/brewing/new`), hapus (dengan konfirmasi), dan
+  buka detail (`/brewing/user/:recipeId`) resep buatan user; tersimpan di
+  `user_brew_recipes`, aman dari reseed KB, tidak dipakai recommendation engine.
+- Form v6: metode KB atau **"Lainnya"** (nama bebas, `method_id` = NULL),
+  parameter penuh, **langkah seduh dinamis** (judul wajib, deskripsi & target
+  waktu opsional, tambah/hapus baris), dan **link video YouTube** opsional.
 
 ### FR-07 Detail Resep
 - Ringkasan resep (berat, total air, suhu, grind, total waktu, metode).
 - Daftar persiapan & alat.
 - **Panduan langkah statis** (bernomor, dengan label target waktu sebagai informasi).
+- **Video panduan** (bila tersedia di `video_url`): thumbnail YouTube + tombol
+  buka aplikasi YouTube (tanpa player embed). Tampil di Detail Resep KB maupun
+  Detail Resep Kamu.
 - Tips kalibrasi rasa.
 - Tidak ada timer interaktif.
 
