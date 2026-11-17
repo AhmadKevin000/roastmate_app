@@ -1,0 +1,176 @@
+import 'package:flutter/material.dart';
+
+import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/theme/roastmate_text.dart';
+import '../../../../core/theme/roastmate_spacing.dart';
+import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/widgets/analysis_image.dart';
+import '../../../../shared/models/analysis_result.dart';
+import 'bean_overlay_painter.dart';
+
+class VisualEvidenceCard extends StatelessWidget {
+  final InspectionResult result;
+
+  /// Foto analisis (`analyses.image_path`) — URL Cloudinary atau path lokal.
+  final String? imagePath;
+
+  const VisualEvidenceCard({
+    Key? key,
+    required this.result,
+    this.imagePath,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
+      padding: const EdgeInsets.all(RoastmateSpacing.lg),
+      decoration: BoxDecoration(
+        color: RoastmateColors.surface,
+        borderRadius: BorderRadius.circular(RoastmateRadius.large),
+        border: Border.all(color: RoastmateColors.borderDefault),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.center_focus_strong_outlined, size: 16, color: RoastmateColors.textSecondary),
+                  const SizedBox(width: RoastmateSpacing.sm),
+                  Text(
+                    "Bukti Visual Klasifikasi",
+                    style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+                  ),
+                ],
+              ),
+              Text(
+                result.modelVersion,
+                style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textSecondary),
+              ),
+            ],
+          ),
+          const SizedBox(height: RoastmateSpacing.md),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(RoastmateRadius.small),
+            child: AspectRatio(
+              aspectRatio: 1.35,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AnalysisImage(imagePath: imagePath),
+                  if (result.detections.isNotEmpty)
+                    CustomPaint(
+                      painter: BeanOverlayPainter(result.detections),
+                    ),
+                  if (imagePath != null && imagePath!.isNotEmpty)
+                    Positioned(
+                    bottom: 8,
+                    right: 8,
+                    child: InkWell(
+                      onTap: () {
+                        _showFullScreenImage(context);
+                      },
+                      borderRadius: BorderRadius.circular(RoastmateRadius.full),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: RoastmateColors.surfaceInverse.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(RoastmateRadius.full),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.zoom_in, size: 16, color: RoastmateColors.surface),
+                            const SizedBox(width: 4),
+                            Text("Ketuk perbesar", style: RoastmateText.labelSm.copyWith(color: RoastmateColors.surface)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: RoastmateSpacing.md),
+          Wrap(
+            spacing: RoastmateSpacing.sm,
+            runSpacing: RoastmateSpacing.xs,
+            children: _buildLegend(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildLegend() {
+    final Map<DefectClass, String> labels = {
+      DefectClass.normal: "Normal",
+      DefectClass.quaker: "Quaker",
+      DefectClass.broken: "Broken",
+      DefectClass.severe: "Severe",
+    };
+
+    return result.defectCounts.entries
+        .where((e) => e.value > 0)
+        .map((e) {
+      final color = RoastmateColors.defect[e.key.name] ?? RoastmateColors.primary;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            "${labels[e.key]} (${e.value})",
+            style: RoastmateText.labelSm.copyWith(color: RoastmateColors.textPrimary),
+          ),
+        ],
+      );
+    }).toList();
+  }
+
+  void _showFullScreenImage(BuildContext context) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (context) => Scaffold(
+        backgroundColor: RoastmateColors.surfaceInverse,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: RoastmateColors.surface),
+          elevation: 0,
+        ),
+        body: Center(
+          child: InteractiveViewer(
+            panEnabled: true,
+            boundaryMargin: const EdgeInsets.all(20),
+            minScale: 1,
+            maxScale: 4,
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                AnalysisImage(
+                  imagePath: imagePath,
+                ),
+                if (result.detections.isNotEmpty)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: BeanOverlayPainter(result.detections),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
+}

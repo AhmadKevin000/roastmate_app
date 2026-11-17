@@ -31,7 +31,8 @@ Pemrosesan dirancang berjalan di perangkat: model visi menganalisis gambar, Open
 | Kamera              | Flutter `camera` plugin                                     |
 | Analisis bentuk     | OpenCV                                                      |
 | Penyimpanan lokal   | SQLite melalui `sqflite`                                    |
-| State management    | Riverpod atau Provider (pilihan implementasi belum dikunci) |
+| State management    | Riverpod                                                    |
+| Upload foto         | Cloudinary (paket `cloudinary` + `flutter_dotenv`)          |
 
 Paket pendukung di atas merupakan stack rancangan; integrasi ML dan penyimpanan lokal akan ditambahkan sesuai tahap implementasi.
 
@@ -49,11 +50,19 @@ flutter pub get
 flutter run
 ```
 
+> **Catatan setup — Cloudinary (`.env`):** foto analisis di-upload **best-effort**
+> ke Cloudinary; kredensial dibaca dari `mobile/.env` (gitignored) yang terdaftar
+> sebagai asset. Setelah clone, salin `mobile/.env.example` → `mobile/.env` lalu
+> isi `CLOUD_NAME`, `CLOUDINARY_API`, dan `CLOUDINARY_SECRET`. Tanpa file `.env`,
+> `flutter run`/build gagal (asset tidak ketemu); tanpa kredensial valid, upload
+> dinonaktifkan — alur inti (analisis + riwayat lokal) tetap berjalan penuh secara
+> offline (AC-02).
+
 ## Fitur
 
 - Memindai batch biji kopi menggunakan kamera atau memilih foto dari galeri.
 - Mendeteksi biji yang terlihat dan mengklasifikasikan species, roast, serta defect.
-- Menganalisis bentuk dan distribusi biji.
+- Menganalisis bentuk dan keseragaman biji.
 - Menampilkan Quality Score, Quality Profile, grade indikatif, jumlah biji, dan defect rate.
 - Memberikan rekomendasi metode seduh serta parameter awal dari knowledge base resep.
 - Menyimpan dan menelusuri riwayat analisis, termasuk filter berdasarkan species.
@@ -75,7 +84,7 @@ Panduan resep dapat menampilkan target waktu sebagai teks statis. Aplikasi tidak
 
 ```text
 roastmate_app/
-├── docs/                  # PRD, arsitektur ML/mobile, design system, keputusan
+├── docs/                  # PRD, arsitektur ML/mobile, skema database, design system, keputusan
 ├── UI/                    # Mockup layar dan design system
 ├── mobile/                # Aplikasi Flutter
 │   ├── lib/               # Kode aplikasi Dart
