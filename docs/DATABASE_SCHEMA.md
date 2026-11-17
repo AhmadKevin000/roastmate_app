@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.4 (skema DB `schema_version` = 4 — tabel `user_brew_recipes`; KB seed 1.2)
+Versi: 1.5 (skema DB `schema_version` = 5 — tabel `user_brew_recipes` + jaminan kolom `analyses` legacy; KB seed 1.2)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -187,6 +187,7 @@ Catatan:
 - Deteksi per-biji (bounding box, confidence) **tidak disimpan** (D-20).
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Liberika`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
+- Kolom `name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path` dijamin eksis pada DB lama oleh migrasi v5 (defensif per kolom — lihat §12).
 
 ---
 
@@ -335,8 +336,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 | v1   | v2  | Kolom `analyses`: `name`, `batch_label`, `batch_name`, `model_version` (D-19/D-20) | Tercatat |
 | v2   | v3  | Tabel `brew_tools`, `brew_method_tools`; kolom `brew_methods.subtitle`/`image_asset`; reseed KB (tools & gambar) | Tercatat |
 | v3   | v4  | Tabel `user_brew_recipes` (resep user, kelompok User Data) | Tercatat |
+| v4   | v5  | Jaminan kolom legacy `analyses` (`name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path`) — cek per kolom via `PRAGMA table_info`, idempoten | Tercatat |
 
-`kSchemaVersion` terkini = **4**.
+`kSchemaVersion` terkini = **5**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 

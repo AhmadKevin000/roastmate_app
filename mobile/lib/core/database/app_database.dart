@@ -115,6 +115,39 @@ class AppDatabase {
       ''');
     }
 
+    // v4 → v5: tambal kolom `analyses` untuk DB lama (era dev/bon).
+    // Kolom `name` dkk hanya punya migrasi `oldVersion < 2`, dan
+    // `image_path`/`annotated_image_path` tak pernah punya migrasi — DB
+    // lama dengan versi file ≥ 2 lolos tanpa kolom tersebut (crash INSERT
+    // di alur scan). Cek per kolom via PRAGMA, tambah hanya yang hilang
+    // (idempoten, aman untuk semua kondisi legacy).
+    if (oldVersion < 5) {
+      final analysisCols = (await db.rawQuery('PRAGMA table_info(analyses)'))
+          .map((r) => r['name'] as String)
+          .toSet();
+      // Kolom yang sudah dijadwalkan langkah v2 (masih di batch belum
+      // commit — tak terlihat oleh PRAGMA di atas): jangan dobel.
+      if (oldVersion < 2) {
+        analysisCols
+          ..add('name')
+          ..add('batch_label')
+          ..add('batch_name')
+          ..add('model_version');
+      }
+      for (final col in const [
+        'name',
+        'batch_label',
+        'batch_name',
+        'model_version',
+        'image_path',
+        'annotated_image_path',
+      ]) {
+        if (!analysisCols.contains(col)) {
+          batch.execute('ALTER TABLE analyses ADD COLUMN $col TEXT');
+        }
+      }
+    }
+
     await batch.commit(noResult: true);
 
     // Reseed knowledge base jika naik ke v3 agar tools & gambar terisi.

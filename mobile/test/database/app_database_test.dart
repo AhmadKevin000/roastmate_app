@@ -278,5 +278,84 @@ void main() {
       expect((await metaValues(db))[kMetaSchemaVersion],
           kSchemaVersion.toString());
     });
+
+    test('migrasi v4 → v5 menambal kolom analyses legacy (data utuh)',
+        () async {
+      final path = p.join(await getDatabasesPath(), kDatabaseName);
+
+      // Simulasi DB v4 era dev/bon: versi file 4, tabel lengkap, tetapi
+      // `analyses` tanpa kolom identitas (name, batch_label, batch_name,
+      // model_version) — persis kondisi device yang crash di alur scan.
+      const legacyAnalyses = '''
+        CREATE TABLE analyses (
+          id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+          created_at            TEXT NOT NULL,
+          image_path            TEXT,
+          annotated_image_path  TEXT,
+          species               TEXT CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
+          roast                 TEXT CHECK (roast IN ('Green','Light','Medium','Dark')),
+          roast_confidence      REAL,
+          roast_distribution    TEXT,
+          visible_beans         INTEGER,
+          defect_rate           REAL,
+          shape_uniformity      REAL,
+          size_uniformity       REAL,
+          roast_uniformity      REAL,
+          quality_score         INTEGER,
+          quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low'))
+        )
+      ''';
+      final v4 = await databaseFactoryFfi.openDatabase(
+        path,
+        options: OpenDatabaseOptions(
+          version: 4,
+          onCreate: (db, version) async {
+            for (final stmt in kCreateTableStatements) {
+              if (stmt.contains('CREATE TABLE analyses')) continue;
+              await db.execute(stmt);
+            }
+            await db.execute(legacyAnalyses);
+            await db.insert('analyses', {
+              'created_at': '2026-11-01T00:00:00Z',
+              'image_path': '/cache/legacy.jpg',
+              'species': 'Liberika',
+              'roast': 'Light',
+            });
+            await db.insert('meta', {
+              'key': kMetaSchemaVersion,
+              'value': '4',
+            });
+          },
+        ),
+      );
+      await v4.close();
+
+      final db = await AppDatabase.instance.database;
+      final cols = (await db.rawQuery('PRAGMA table_info(analyses)'))
+          .map((r) => r['name'] as String)
+          .toSet();
+      expect(
+        cols,
+        containsAll({
+          'name',
+          'batch_label',
+          'batch_name',
+          'model_version',
+          'image_path',
+          'annotated_image_path',
+        }),
+      );
+
+      // Baris legacy utuh (INSERT alur scan kini bisa lewat).
+      final rows = await db.query(
+        'analyses',
+        where: 'species = ?',
+        whereArgs: ['Liberika'],
+      );
+      expect(rows, hasLength(1));
+      expect(rows.single['image_path'], '/cache/legacy.jpg');
+      expect((await metaValues(db))[kMetaSchemaVersion],
+          kSchemaVersion.toString());
+    });
   });
 }
