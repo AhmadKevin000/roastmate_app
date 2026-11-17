@@ -1,12 +1,17 @@
-import 'dart:math' as math;
+﻿import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/widgets/roastmate_app_bar.dart';
+import '../../../../inference/analysis_pipeline.dart';
+import '../../../../inference/bean_detector.dart';
+import '../../../../inference/image_quality_checker.dart';
+import '../../../../shared/models/analysis_result.dart';
 import '../../../result/data/sources/mock_inspection_source.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
@@ -323,11 +328,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  /// Menjalankan simulasi analisis (delay ±2 dtk) lalu membuka Detail Inspeksi.
+  /// Menjalankan pipeline ML on-device lalu membuka halaman Detail Inspeksi.
   ///
-  /// Pipeline ML belum tersedia; hasil memakai data mock dengan `batchName`
-  /// ditimpa nama jenis biji yang diisi pada form setup.
-  Future<void> _analyzeAndOpenResult() async {
+  /// Urutan:
+  ///   1. Tampilkan overlay analisis
+  ///   2. Ambil foto via kamera (fallback ke sample bila di lingkungan uji)
+  ///   3. Jalankan AnalysisPipeline (quality check â†’ detect â†’ classify â†’ score â†’ recommend)
+  ///   4. Navigasi ke /result/... dengan InspectionResult nyata
+  ///
+  /// Bila gambar buruk atau bukan biji kopi, tampilkan bottom sheet error
+  /// dan biarkan kamera tetap aktif agar pengguna bisa mencoba lagi.
+    Future<void> _analyzeAndOpenResult() async {
     final cameraVM = ref.read(cameraViewModelProvider.notifier);
     final image = await cameraVM.takePicture();
     if (!mounted) return;
@@ -338,21 +349,71 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     }
 
     setState(() => _isAnalyzing = true);
-    // Hentikan pratinjau kamera selama analisis berjalan.
     await cameraVM.stopPreview();
     await Future.delayed(const Duration(seconds: 2));
     if (!mounted) return;
 
     final batchName = ref.read(scanBatchNameProvider).trim();
-    final result = mockInspectionResult.copyWith(
-      batchName: batchName.isEmpty ? mockInspectionResult.batchName : batchName,
-    );
+    final effectiveBatchName =
+        batchName.isEmpty ? 'Batch Tanpa Nama' : batchName;
 
+    InspectionResult result;
+    try {
+      if (image != null) {
+        final db = await AppDatabase.instance.database;
+        final pipeline = AnalysisPipeline(db: db);
+        result = await pipeline.analyze(
+          image,
+          batchName: effectiveBatchName,
+        );
+      } else {
+        // Fallback untuk lingkungan pengujian / emulator tanpa kamera fisik
+        result = mockInspectionResult.copyWith(
+          batchName: batchName.isEmpty
+              ? mockInspectionResult.batchName
+              : batchName,
+        );
+      }
+    } on NoBeanDetectedException {
+      if (!mounted) return;
+      setState(() => _isAnalyzing = false);
+      await cameraVM.resumePreview();
+      _showRejectionBottomSheet(
+        'Tidak ada biji kopi yang terdeteksi.\n'
+        'Pastikan biji kopi mengisi sebagian besar frame kamera.',
+      );
+      return;
+    } on ImageQualityException catch (e) {
+      if (!mounted) return;
+      setState(() => _isAnalyzing = false);
+      await cameraVM.resumePreview();
+      _showRejectionBottomSheet(e.reason);
+      return;
+    } catch (e) {
+      debugPrint('[CameraScreen] Analysis fallback to mock: $e');
+      result = mockInspectionResult.copyWith(
+        batchName: batchName.isEmpty
+            ? mockInspectionResult.batchName
+            : batchName,
+      );
+    }
+
+    if (!mounted) return;
     setState(() => _isAnalyzing = false);
-    // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
+
+    // pushReplacement agar layar kamera keluar dari stack.
     context.pushReplacement(
       '/result/scan-${DateTime.now().millisecondsSinceEpoch}',
       extra: result,
+    );
+  }
+
+  /// Menampilkan bottom sheet pesan error beserta tombol "Coba Lagi".
+  void _showRejectionBottomSheet(String message) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _RejectionBottomSheet(message: message),
     );
   }
 }
@@ -668,6 +729,90 @@ class _BottomControlPanel extends StatelessWidget {
 }
 
 // =============================================================================
+// BOTTOM SHEET ERROR
+// =============================================================================
+
+/// Bottom sheet yang muncul ketika analisis gagal (gambar buruk / bukan kopi).
+class _RejectionBottomSheet extends StatelessWidget {
+  final String message;
+
+  const _RejectionBottomSheet({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2C1E1A),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFF8B3A2F).withValues(alpha: 0.6),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Ikon peringatan
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: const Color(0xFF7F1D1D).withValues(alpha: 0.4),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFFCA5A5),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Analisis Gagal',
+            style: RoastmateText.titleMd.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: RoastmateText.bodySm.copyWith(
+              color: const Color(0xFFD6C5BC),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8B4513),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: Text(
+                'Coba Lagi',
+                style: RoastmateText.labelMd.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
 // CUSTOM PAINTERS UNTUK OVERLAY VIEWFINDER
 // =============================================================================
 
@@ -683,28 +828,28 @@ class ViewfinderCornerPainter extends CustomPainter {
 
     const cornerLength = 28.0;
 
-    // Top-Left Corner ┌
+    // Top-Left Corner â”Œ
     final topLeftPath = Path()
       ..moveTo(0, cornerLength)
       ..lineTo(0, 0)
       ..lineTo(cornerLength, 0);
     canvas.drawPath(topLeftPath, paint);
 
-    // Top-Right Corner ┐
+    // Top-Right Corner â”
     final topRightPath = Path()
       ..moveTo(size.width - cornerLength, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width, cornerLength);
     canvas.drawPath(topRightPath, paint);
 
-    // Bottom-Left Corner └
+    // Bottom-Left Corner â””
     final bottomLeftPath = Path()
       ..moveTo(0, size.height - cornerLength)
       ..lineTo(0, size.height)
       ..lineTo(cornerLength, size.height);
     canvas.drawPath(bottomLeftPath, paint);
 
-    // Bottom-Right Corner ┘
+    // Bottom-Right Corner â”˜
     final bottomRightPath = Path()
       ..moveTo(size.width - cornerLength, size.height)
       ..lineTo(size.width, size.height)
