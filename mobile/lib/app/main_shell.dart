@@ -30,10 +30,22 @@ class MainShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _indexFor(context);
+    final isBrewCatalog = GoRouterState.of(context).uri.path == '/brewing';
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
       body: child,
+      // FAB tambah resep — hanya katalog Seduh (di atas bottom nav).
+      floatingActionButton: isBrewCatalog
+          ? FloatingActionButton(
+              tooltip: 'Tambah resep',
+              onPressed: () => context.push('/brewing/new'),
+              backgroundColor: RoastmateColors.primary,
+              foregroundColor: RoastmateColors.surface,
+              elevation: 2,
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
           border: Border(

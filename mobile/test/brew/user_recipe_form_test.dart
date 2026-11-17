@@ -66,9 +66,10 @@ Widget _app(Database db, {String initial = '/brewing/new'}) {
 }
 
 /// Viewport lebih tinggi dari default 800×600 agar seluruh form (termasuk
-/// tombol Simpan) bisa di-tap tanpa scroll.
+/// seksi langkah dinamis, field video, dan tombol Simpan) bisa di-tap
+/// tanpa scroll.
 void _useTallView(WidgetTester tester) {
-  tester.view.physicalSize = const Size(800, 1600);
+  tester.view.physicalSize = const Size(800, 2400);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 }
@@ -147,7 +148,7 @@ void main() {
     await settle(tester);
 
     // Urutan TextFormField: nama(0), dose(1), air(2), suhu(3), waktu(4),
-    // notes(5).
+    // video(5), notes(6) — v6 menambah field link video sebelum notes.
     await tester.enterText(find.byType(TextFormField).at(0), 'V60 Eksperimen');
     await tester.enterText(find.byType(TextFormField).at(1), '15');
     await tester.enterText(find.byType(TextFormField).at(2), '240');
@@ -206,5 +207,52 @@ void main() {
     await settle(tester);
 
     expect(find.text('Resep Uji'), findsNothing);
+  });
+
+  // v6: seksi langkah dinamis — tambah, hapus (label ikut ter-number ulang).
+  testWidgets('Tambah Langkah → baris langkah tampil & bisa dihapus',
+      (tester) async {
+    _useTallView(tester);
+    await tester.pumpWidget(_app(db));
+    await settle(tester);
+
+    await tester.tap(find.text('Tambah Langkah'));
+    await settle(tester);
+    expect(find.text('Langkah 1'), findsOneWidget);
+    expect(find.text('Judul langkah'), findsOneWidget);
+    expect(find.text('Deskripsi (opsional)'), findsOneWidget);
+
+    await tester.tap(find.text('Tambah Langkah'));
+    await settle(tester);
+    expect(find.text('Langkah 2'), findsOneWidget);
+
+    // Hapus langkah pertama → langkah kedua ter-number jadi "Langkah 1".
+    await tester.tap(find.byIcon(Icons.delete_outline).first);
+    await settle(tester);
+    expect(find.text('Langkah 2'), findsNothing);
+    expect(find.text('Langkah 1'), findsOneWidget);
+  });
+
+  // v6: metode "Lainnya" (di luar KB) → field nama metode wajib.
+  testWidgets('metode "Lainnya" → field nama metode tampil & divalidasi',
+      (tester) async {
+    _useTallView(tester);
+    await tester.pumpWidget(_app(db));
+    await settle(tester);
+
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pump(const Duration(milliseconds: 400)); // animasi menu
+    await tester.tap(find.text('Lainnya (metode lain)'));
+    await settle(tester);
+
+    expect(find.text('Nama metode'), findsOneWidget);
+
+    // Submit tanpa isi nama metode → validasi muncul.
+    await tester.enterText(find.byType(TextFormField).first, 'Resep Uji');
+    await tester.tap(find.text('Simpan Resep'));
+    await settle(tester);
+
+    expect(find.text('Nama metode wajib diisi'), findsOneWidget);
+    expect(find.text('Katalog Metode Seduh'), findsNothing);
   });
 }

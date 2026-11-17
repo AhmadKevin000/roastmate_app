@@ -44,6 +44,7 @@ dependencies:
   # Catatan: `cloudinary_flutter` (semua versi) HANYA widget/URL gen — tidak
   # punya API upload. Upload signed memakai paket `cloudinary` (SDK Dart murni).
   cloudinary: ^2.1.1
+  url_launcher: ^6.3.3
 
 dev_dependencies:
   flutter_test:

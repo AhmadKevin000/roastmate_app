@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:pbl_sem5/app/main_shell.dart';
 import 'package:pbl_sem5/features/brew/data/sources/mock_brewing_source.dart';
 import 'package:pbl_sem5/features/brew/domain/entities/brew_recipe.dart';
 import 'package:pbl_sem5/features/brew/domain/entities/brew_tool.dart';
@@ -150,5 +151,52 @@ void main() {
     expect(find.byIcon(Icons.play_arrow), findsNothing);
     expect(find.byIcon(Icons.pause), findsNothing);
     expect(find.byIcon(Icons.stop), findsNothing);
+  });
+
+  // FAB tambah resep (v6) — hanya di katalog Seduh, di dalam shell 3-tab.
+  Widget shellApp({String initial = '/brewing'}) => ProviderScope(
+        overrides: [
+          brewingRepositoryProvider
+              .overrideWithValue(_FakeBrewingRepository()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: initial,
+            routes: <RouteBase>[
+              ShellRoute(
+                builder: (context, state, child) => MainShell(child: child),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: '/home',
+                    builder: (context, state) => const Text('Beranda'),
+                  ),
+                  GoRoute(
+                    path: '/history',
+                    builder: (context, state) => const Text('Analisis'),
+                  ),
+                  GoRoute(
+                    path: '/brewing',
+                    builder: (context, state) => const BrewCatalogScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  testWidgets('FAB tambah resep tampil di katalog Seduh', (tester) async {
+    await tester.pumpWidget(shellApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.byTooltip('Tambah resep'), findsOneWidget);
+  });
+
+  testWidgets('FAB tidak tampil di tab lain', (tester) async {
+    await tester.pumpWidget(shellApp(initial: '/home'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 }

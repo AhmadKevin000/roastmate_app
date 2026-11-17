@@ -9,17 +9,14 @@ import '../theme/roastmate_text.dart';
 ///
 /// Dirender sebagai [AppBar] sehingga tetap menempel di atas saat konten
 /// di-scroll (sama seperti layar detail). Menampilkan logo aplikasi, nama
-/// "Roastmate", sublabel tab aktif, ikon tambah (opsional), dan ikon
-/// pengaturan. Tidak memakai avatar.
+/// "Roastmate", sublabel tab aktif, dan ikon pengaturan. Tidak memakai avatar.
+/// (Tombol tambah resep Seduh = FAB di [MainShell], v6.)
 class RoastmateAppHeader extends StatelessWidget
     implements PreferredSizeWidget {
   /// Sublabel tab aktif (mis. "Beranda", "Analisis", "Seduh").
   final String subtitle;
 
   final VoidCallback? onSettings;
-
-  /// Callback tombol tambah (opsional — hanya tab Seduh yang memakainya).
-  final VoidCallback? onAdd;
 
   /// Tinggi area toolbar (tanpa inset status bar).
   static const double toolbarHeight = 64;
@@ -28,7 +25,6 @@ class RoastmateAppHeader extends StatelessWidget
     super.key,
     required this.subtitle,
     this.onSettings,
-    this.onAdd,
   });
 
   @override
@@ -77,17 +73,6 @@ class RoastmateAppHeader extends StatelessWidget
         ],
       ),
       actions: [
-        if (onAdd != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              onPressed: onAdd,
-              icon: const Icon(
-                Icons.add,
-                color: RoastmateColors.primary,
-              ),
-            ),
-          ),
         Padding(
           padding: const EdgeInsets.only(right: 8),
           child: IconButton(

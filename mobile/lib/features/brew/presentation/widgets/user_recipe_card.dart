@@ -8,17 +8,27 @@ import '../../../../core/theme/roastmate_text.dart';
 import '../../domain/entities/brew_recipe.dart';
 import '../viewmodels/brew_view_model.dart';
 
-/// Kartu resep buatan user di seksi "Resep Kamu" (Plan 4).
+/// Kartu resep buatan user di seksi "Resep Kamu".
 ///
 /// Menampilkan nama, chip metode/species/roast, baris parameter (reuse label
 /// [BrewRecipe]), notes satu baris, dan aksi hapus dengan dialog konfirmasi.
+/// [onTap] membuka Detail Resep Kamu (v6).
 class UserRecipeCard extends ConsumerWidget {
-  const UserRecipeCard({super.key, required this.recipe, this.method});
+  const UserRecipeCard({
+    super.key,
+    required this.recipe,
+    this.method,
+    this.onTap,
+  });
 
   final BrewRecipe recipe;
 
-  /// Metode KB yang dirujuk (untuk label nama); null bila tak ditemukan.
+  /// Metode KB yang dirujuk (untuk label nama); null bila tak ditemukan
+  /// atau metode "Lainnya" (v6).
   final BrewMethod? method;
+
+  /// Buka detail resep (v6).
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,81 +41,89 @@ class UserRecipeCard extends ConsumerWidget {
 
     final notes = recipe.notes;
 
-    return Container(
-      padding: const EdgeInsets.all(RoastmateSpacing.lg),
-      decoration: BoxDecoration(
-        color: RoastmateColors.surface,
+    return Material(
+      color: RoastmateColors.surface,
+      borderRadius: BorderRadius.circular(RoastmateRadius.large),
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(RoastmateRadius.large),
-        border: Border.all(color: RoastmateColors.borderDefault),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          padding: const EdgeInsets.all(RoastmateSpacing.lg),
+          decoration: BoxDecoration(
+            color: RoastmateColors.surface,
+            borderRadius: BorderRadius.circular(RoastmateRadius.large),
+            border: Border.all(color: RoastmateColors.borderDefault),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  recipe.name,
-                  style: RoastmateText.titleMd.copyWith(
-                    color: RoastmateColors.textPrimary,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      recipe.name,
+                      style: RoastmateText.titleMd.copyWith(
+                        color: RoastmateColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Hapus resep',
+                    onPressed: () => _confirmDelete(context, ref),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 20,
+                      color: RoastmateColors.error,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: RoastmateSpacing.sm),
+              Wrap(
+                spacing: RoastmateSpacing.xs,
+                runSpacing: RoastmateSpacing.xs,
+                children: [
+                  _chip(
+                    method?.methodName ?? recipe.methodName,
+                    RoastmateColors.espressoSoft,
+                    RoastmateColors.primary,
+                  ),
+                  _chip(
+                    recipe.species,
+                    RoastmateColors.statusInfoContainer,
+                    RoastmateColors.statusInfo,
+                  ),
+                  _chip(
+                    recipe.roastContext,
+                    RoastmateColors.surfaceContainer,
+                    RoastmateColors.textSecondary,
+                  ),
+                ],
+              ),
+              if (params.isNotEmpty) ...[
+                const SizedBox(height: RoastmateSpacing.sm),
+                Text(
+                  params,
+                  style: RoastmateText.bodySm.copyWith(
+                    color: RoastmateColors.textSecondary,
                   ),
                 ),
-              ),
-              IconButton(
-                tooltip: 'Hapus resep',
-                onPressed: () => _confirmDelete(context, ref),
-                icon: const Icon(
-                  Icons.delete_outline,
-                  size: 20,
-                  color: RoastmateColors.error,
+              ],
+              if (notes != null && notes.isNotEmpty) ...[
+                const SizedBox(height: RoastmateSpacing.xs),
+                Text(
+                  notes,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: RoastmateText.bodySm.copyWith(
+                    color: RoastmateColors.iconMuted,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
-          const SizedBox(height: RoastmateSpacing.sm),
-          Wrap(
-            spacing: RoastmateSpacing.xs,
-            runSpacing: RoastmateSpacing.xs,
-            children: [
-              _chip(
-                method?.methodName ?? recipe.methodName,
-                RoastmateColors.espressoSoft,
-                RoastmateColors.primary,
-              ),
-              _chip(
-                recipe.species,
-                RoastmateColors.statusInfoContainer,
-                RoastmateColors.statusInfo,
-              ),
-              _chip(
-                recipe.roastContext,
-                RoastmateColors.surfaceContainer,
-                RoastmateColors.textSecondary,
-              ),
-            ],
-          ),
-          if (params.isNotEmpty) ...[
-            const SizedBox(height: RoastmateSpacing.sm),
-            Text(
-              params,
-              style: RoastmateText.bodySm.copyWith(
-                color: RoastmateColors.textSecondary,
-              ),
-            ),
-          ],
-          if (notes != null && notes.isNotEmpty) ...[
-            const SizedBox(height: RoastmateSpacing.xs),
-            Text(
-              notes,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: RoastmateText.bodySm.copyWith(
-                color: RoastmateColors.iconMuted,
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
