@@ -100,11 +100,11 @@ Alur tiap fitur:
 ```
 Home    → HomeView → HomeViewModel → StatisticsUseCase
 Scan    → ScanView → ScanViewModel → AnalyzeCoffeeBatchUseCase → AnalysisPipeline
-Result  → ResultView → ResultViewModel → AnalysisResult
+Result  → ResultView → ResultViewModel → AnalysisRepository.getDetail(id, join KB)
 Brew    → BrewView → BrewViewModel → BrewingRepository
 ```
 
-Result menampilkan: species, roast, quality score, quality profile, ringkasan defect, rekomendasi seduh, dan parameter resep.
+Result menampilkan: species, roast, quality score, quality profile, ringkasan defect, rekomendasi seduh, parameter resep, foto analisis (`analyses.image_path`), dan `summaryText` (di-generate saat baca, D-20).
 
 ---
 
@@ -131,6 +131,8 @@ Routes (GoRouter):
 /brewing
 /brewing/:methodId
 ```
+
+`/result/:analysisId` & `/history/:analysisId`: segmen di-`int.tryParse`. Id valid → detail dibaca dari SQLite; segmen non-int (mis. `draft` dari alur scan) → data in-memory dari `state.extra` (fallback, AC-04).
 
 ---
 
@@ -305,6 +307,10 @@ Parameter seduh pada `BrewingRecommendation` berasal dari `brew_recipes` terpili
 `defectDistribution` memakai **4 kelas** (`Normal`/`Quaker`/`Broken`/`Severe`). Narasi sub-jenis parah (`underdeveloped`/`overroasted`/`contamination`) adalah **nilai turunan** `defect_interpretation` dari `Severe` + `roast` — tidak disimpan (lihat `DATABASE_SCHEMA.md` §15).
 
 `summaryText` **diturunkan saat tampil** dari angka hasil (template lokal, D-21) — tidak ada kolom DB. `reason` disimpan di `recommendations.reason`.
+
+**Pembacaan detail:** layar Detail Inspeksi fetch **per `analysisId`** dari SQLite — `AnalysisRepository.getDetail(id)` → `AnalysisDetail { result (analyses + analysis_defects), imagePath, recommendation + alternatives (join `recommendations` × `brew_methods`/`brew_recipes`), summaryText (runtime, D-20) }`. Route `draft` atau baca DB gagal → fallback in-memory (route extra) dari alur scan.
+
+**Foto analisis** (`analyses.image_path`) dirender lewat widget bersama `AnalysisImage` — support URL Cloudinary + path lokal; thumbnail di list (Beranda/Riwayat) memakai transformasi resize `c_fill` (helper `cloudinaryThumbnailUrl`). **Gambar KB** (metode/alat, `assets/images/`) tetap aset lokal `Image.asset` — tidak di-upload/di-serve Cloudinary.
 
 ---
 

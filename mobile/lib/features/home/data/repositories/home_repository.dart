@@ -40,6 +40,7 @@ class HomeRepository {
       species: (row['species'] as String?) ?? SpeciesLabels.unknown,
       visibleBeans: (row['visible_beans'] as num?)?.toInt() ?? 0,
       qualityScore: (row['quality_score'] as num?)?.toInt() ?? 0,
+      imagePath: row['image_path'] as String?,
     );
   }
 }

@@ -39,6 +39,7 @@ Map<String, Object?> _row({
   String? species = SpeciesLabels.arabica,
   int? visibleBeans = 24,
   int? qualityScore = 82,
+  String? imagePath,
 }) {
   return <String, Object?>{
     'id': id,
@@ -47,6 +48,7 @@ Map<String, Object?> _row({
     'species': species,
     'visible_beans': visibleBeans,
     'quality_score': qualityScore,
+    'image_path': imagePath,
   };
 }
 
@@ -79,6 +81,26 @@ void main() {
       expect(item.qualityScore, 82);
       expect(item.grade, IndicativeGrade.premium);
       expect(item.shortDateLabel, '12 Mar, 10:24');
+    });
+
+    test('memetakan kolom image_path ke imagePath (null bila tidak ada)', () async {
+      const url = 'https://res.cloudinary.com/demo/image/upload/a.jpg';
+      final source = _FakeSummarySource(
+        AnalysisSummarySnapshot(
+          totalAnalyses: 2,
+          averageScore: 80,
+          speciesCounts: const <String, int>{SpeciesLabels.arabica: 2},
+          recentRows: [
+            _row(id: 1, imagePath: url),
+            _row(id: 2),
+          ],
+        ),
+      );
+
+      final summary = await HomeRepository(source).loadSummary();
+
+      expect(summary.recentAnalyses[0].imagePath, url);
+      expect(summary.recentAnalyses[1].imagePath, isNull);
     });
 
     test('riwayat kosong menghasilkan ringkasan kosong tanpa error', () async {
