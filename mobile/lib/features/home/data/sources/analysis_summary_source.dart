@@ -26,7 +26,7 @@ class AnalysisSummarySnapshot {
   final Map<String, int> speciesCounts;
 
   /// Baris terbaru: `id`, `name`, `created_at`, `species`, `visible_beans`,
-  /// `quality_score`.
+  /// `quality_score`, `image_path`.
   final List<Map<String, Object?>> recentRows;
 }
 
@@ -91,6 +91,7 @@ class SqliteAnalysisSummarySource implements AnalysisSummarySource {
         'species',
         'visible_beans',
         'quality_score',
+        'image_path',
       ],
       orderBy: 'created_at DESC',
       limit: recentLimit,

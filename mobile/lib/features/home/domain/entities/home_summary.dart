@@ -24,6 +24,7 @@ class HomeAnalysisSummary {
     required this.species,
     required this.visibleBeans,
     required this.qualityScore,
+    this.imagePath,
   });
 
   final int id;
@@ -32,6 +33,10 @@ class HomeAnalysisSummary {
   final String species;
   final int visibleBeans;
   final int qualityScore;
+
+  /// Foto analisis untuk thumbnail kartu (URL Cloudinary / path lokal);
+  /// null bila baris lama tanpa foto.
+  final String? imagePath;
 
   IndicativeGrade get grade => gradeForScore(qualityScore);
 

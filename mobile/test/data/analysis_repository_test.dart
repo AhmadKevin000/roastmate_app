@@ -12,13 +12,17 @@ import 'package:sqflite/sqflite.dart'
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'
     show databaseFactoryFfi, sqfliteFfiInit;
 
+import 'package:pbl_sem5/core/database/knowledge_base_seeder.dart';
 import 'package:pbl_sem5/core/database/schema.dart';
 import 'package:pbl_sem5/features/analysis/data/sources/analysis_repository.dart';
 import 'package:pbl_sem5/shared/models/analysis_result.dart';
 
 void main() {
+  // Diperlukan agar `rootBundle` (dipakai seeder KB) tersedia di test.
+  TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
+
   setUpAll(() {
-    sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   });
 
@@ -72,6 +76,8 @@ void main() {
         });
       },
     );
+    // KB 14 resep (Plan 1) — dibutuhkan uji join rekomendasi (Plan 3).
+    await KnowledgeBaseSeeder(db).seedIfEmpty();
     repo = AnalysisRepository(db);
   });
 
@@ -82,7 +88,13 @@ void main() {
   group('AnalysisRepository', () {
     test('insert lalu getHistory mengembalikan field yang sama', () async {
       final createdAt = DateTime(2025, 3, 12, 10, 24);
-      final id = await repo.insertResult(fixture, createdAt: createdAt);
+      const imageUrl =
+          'https://res.cloudinary.com/demo/image/upload/batch_042.jpg';
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: createdAt,
+        imagePath: imageUrl,
+      );
       expect(id, greaterThan(0));
 
       final history = await repo.getHistory();
@@ -96,6 +108,9 @@ void main() {
       expect(item.detail.qualityScore, 86);
       expect(item.detail.visibleBeans, 28);
       expect(item.detail.modelVersion, 'Model CV v2.4');
+      // Foto analisis termapping (Plan 3) + id untuk navigasi per id.
+      expect(item.imagePath, imageUrl);
+      expect(item.detail.analysisId, id);
 
       // Rekap defect: kelas bernilai 0 tetap terbaca sebagai 0.
       expect(item.defectCounts[DefectClass.normal], 26);
@@ -197,7 +212,7 @@ void main() {
           fixture,
           createdAt: DateTime(2025, 3, 12),
           recommendation: const RecommendationRef(
-            methodId: 'M001',
+            methodId: 'M999', // tidak ada di seed KB
             reason: 'uji FK',
           ),
         ),
@@ -226,6 +241,95 @@ void main() {
         relativeTimeLabel(now.subtract(const Duration(days: 4)), now: now),
         'Dipindai 4 hari yang lalu',
       );
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getDetail (Plan 3): analyses + defects + foto + join rekomendasi KB.
+  // ---------------------------------------------------------------------------
+  group('getDetail', () {
+    const imageUrl =
+        'https://res.cloudinary.com/demo/image/upload/batch_042.jpg';
+
+    test('membaca baris + defect + foto + rekomendasi join KB (R004)',
+        () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12, 10, 24),
+        imagePath: imageUrl,
+        recommendation: const RecommendationRef(
+          methodId: 'M001',
+          recipeId: 'R004', // Arabica | Light default
+          alternativeMethodId: 'M002',
+          reason:
+              'Skor Specialty dengan defect rendah — V60 mengoptimalkan clarity.',
+        ),
+      );
+
+      final detail = await repo.getDetail(id);
+      expect(detail, isNotNull);
+      expect(detail!.analysisId, id);
+
+      // `analyses` + defects roundtrip (termasuk uniformity & defectRate).
+      expect(detail.result.batchName, 'Mandheling Honey Anaerob');
+      expect(detail.result.species, 'Arabica');
+      expect(detail.result.roast, 'Light');
+      expect(detail.result.qualityScore, 86);
+      expect(detail.result.visibleBeans, 28);
+      expect(detail.result.defectCounts[DefectClass.quaker], 1);
+      expect(detail.result.defectCounts[DefectClass.broken], 1);
+      expect(detail.result.shapeUniformity, 0.88);
+      expect(detail.result.defectRate, closeTo(1.0 / 28, 1e-9));
+      expect(detail.result.analysisId, id);
+
+      // Foto analisis = URL yang di-insert.
+      expect(detail.imagePath, imageUrl);
+
+      // summaryText di-generate runtime (D-20): deterministik.
+      expect(detail.summaryText, contains('Mandheling Honey Anaerob'));
+      expect(detail.summaryText, contains('Arabica, Light'));
+      expect(detail.summaryText, contains('28 biji'));
+      expect(detail.summaryText, contains('skor 86/100 (High)'));
+      expect(detail.summaryText, contains('Defect dominan: Quaker'));
+
+      // Rekomendasi dari join KB: R004 (15g/240ml → 1:16, 170s → 02:50).
+      final rec = detail.recommendation;
+      expect(rec, isNotNull);
+      expect(rec!.methodTitle, 'V60 / Pour Over — Metode Drip Perkusi Manual');
+      expect(rec.reasonText, contains('V60 mengoptimalkan clarity'));
+      expect(rec.ratio, '1:16');
+      expect(rec.ratioSub, '15g : 240ml air');
+      expect(rec.tempC, '93°C');
+      expect(rec.grind, 'Medium-Fine');
+      expect(rec.targetTime, '02:50');
+
+      // Alternatif: M002 + resep default species Arabica (R002, 18g/252ml).
+      expect(detail.alternatives, hasLength(1));
+      final alt = detail.alternatives.single;
+      expect(alt.title, 'French Press — Ekstraksi Immersion Rendam Total');
+      expect(alt.ratio, '1:14');
+      expect(alt.grind, 'Coarse');
+      expect(alt.targetTime, '04:00');
+    });
+
+    test('id tak dikenal → null', () async {
+      expect(await repo.getDetail(9999), isNull);
+    });
+
+    test('tanpa recommendations → detail tetap ada, rekomendasi null',
+        () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+      );
+
+      final detail = await repo.getDetail(id);
+      expect(detail, isNotNull);
+      expect(detail!.recommendation, isNull);
+      expect(detail.alternatives, isEmpty);
+      expect(detail.imagePath, isNull);
+      // Ringkasan tetap ter-generate meski tanpa rekomendasi.
+      expect(detail.summaryText, contains('skor 86/100'));
     });
   });
 }

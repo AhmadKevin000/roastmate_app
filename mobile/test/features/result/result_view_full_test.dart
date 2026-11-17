@@ -44,7 +44,9 @@ void main() {
         ProviderScope(
           child: MaterialApp(
             theme: roastmateTheme,
-            home: InspectionDetailScreen(result: mockInspectionResult),
+            // Route `draft` (analysisId null) → data in-memory langsung
+            // tampil sebagai detail (fallback, Plan 3) — tanpa DB.
+            home: InspectionDetailScreen(fallback: mockInspectionResult),
           ),
         ),
       );

@@ -85,8 +85,11 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
   }
 
   void _openDetail(AnalysisHistoryItem item) {
+    // Navigasi per id (Plan 3): detail dibaca dari SQLite. Item mock
+    // (tanpa id) → segmen non-int + extra in-memory (fallback router).
+    final id = item.detail.analysisId;
     context.push(
-      '/history/${Uri.encodeComponent(item.detail.batchLabel)}',
+      '/history/${id ?? 'mock'}',
       extra: item.detail,
     );
   }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
+import '../../../../core/widgets/analysis_image.dart';
 import '../../../../core/widgets/roastmate_app_header.dart';
 import '../../../../shared/enums/indicative_grade.dart';
 import '../../domain/entities/home_summary.dart';
@@ -714,22 +715,22 @@ class HomePage extends ConsumerWidget {
       color: _cardWhite,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
-        // Layar Detail Inspeksi masih memakai data mock; sampai bisa membaca
-        // SQLite, kartu mengarah ke tab Analisis.
         onTap: () => context.go('/history'),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: _cardBg,
-                  borderRadius: BorderRadius.circular(12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: AnalysisImage(
+                    imagePath: item.imagePath,
+                    thumbnail: true,
+                  ),
                 ),
-                child: const Icon(Icons.coffee, color: _secondary),
               ),
               const SizedBox(width: 12),
               Expanded(

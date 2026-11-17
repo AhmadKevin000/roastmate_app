@@ -116,6 +116,10 @@ void main() {
     expect(find.text('32 biji terlihat'), findsOneWidget);
     expect(find.text('88'), findsOneWidget);
     expect(find.text('12 Mar, 10:24 • Arabica'), findsOneWidget);
+
+    // Thumbnail foto (Plan 3): baris tanpa image_path → placeholder ikon
+    // kopi, tanpa crash (AC-4) — dua kartu, dua placeholder.
+    expect(find.byIcon(Icons.coffee_outlined), findsNWidgets(2));
   });
 
   testWidgets('riwayat kosong menampilkan empty state, bukan angka palsu', (
