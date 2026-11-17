@@ -561,8 +561,33 @@ direvisi secara eksplisit, bukan dilanggar diam-diam.
    tampil normal di device lain; baris dengan path lokal hanya tampil di device
    asal (thumbnail placeholder di device lain). Keterbatasan ini diterima; upload
    Cloudinary tetap best-effort sehingga tidak semua foto punya URL.
-9. **Tanpa login = app utuh seperti sekarang.** Login hanya membuka sync; tidak
-   ada paywall atau gate fitur analisis.
+9. **~~Tanpa login = app utuh seperti sekarang~~ (direvisi — D-30):** sejak D-30,
+   app memakai **auth gate** — tanpa sesi login, app selalu berawal di layar
+   login/daftar dan fitur utama tidak bisa diakses. Mode guest dihapus; riwayat
+   selalu terikat akun.
+
+---
+
+## D-30 — Auth gate: login wajib di first-run (revisi D-29 poin 9)
+
+**Konteks:** Setelah fitur akun rilis (D-29), muncul permintaan UX: pengguna baru
+harus disambung layar sign in/sign up saat pertama membuka app, bukan menemukan
+login opsional di dalam dashboard.
+
+**Keputusan (reversal sebagian D-29):**
+
+1. **Auth gate penuh:** tanpa sesi aktif, semua route fitur (Beranda, Scan,
+   Riwayat, Seduh, dst.) dialihkan ke `/login`. Tidak ada mode guest.
+2. Prinsip **offline-first untuk alur analisis tetap berlaku** — setelah login,
+   scan/analisis/riwayat tidak butuh internet; sync tetap best-effort. Yang
+   berubah: **first-run dan pemakaian awal kini butuh internet** untuk login.
+3. Sesi dipersistensi oleh Supabase SDK; gate hanya berlaku bila tidak ada sesi
+   (first-run atau setelah logout/token kedaluwarsa).
+4. Logout mengembalikan ke layar login. Riwayat lokal device tetap ada; bila
+   akun lain login di device yang sama, riwayat cloud akun baru di-pull dan
+   di-merge by uuid (baris milik akun sebelumnya tetap lokal dan ikut tersinkor
+   ke akun baru — keterbatasan multi-akun single-device yang diterima).
+5. **Dokumen yang menyesuaikan:** PRD FR-10 & AC-11, ARCHITECTURE_MOBILE §18.
 
 **Dampak:** `DATABASE_SCHEMA.md` v1.7 (§6–§9.5, §12, §16-skema cloud);
 `ARCHITECTURE_MOBILE.md` (bagian Auth & Sync); `PRD.md` FR-10/FR-11, NFR, AC;

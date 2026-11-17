@@ -192,10 +192,10 @@ Seduh
 - Tidak memaksakan satu kelas.
 
 ### FR-10 Akun (Login/Daftar)
-- Login & daftar dengan **email + sandi** (Supabase Auth).
-- Tanpa login, aplikasi tetap berfungsi utuh — login **tidak** menggate fitur analisis.
-- Profil: email tercatat + tombol logout.
+- **Auth gate:** pertama kali membuka aplikasi, user **wajib** sign in/sign up (email + sandi, Supabase Auth) sebelum masuk fitur utama. Tidak ada mode guest.
+- Profil: email tercatat + tombol logout. Logout kembali ke layar login (riwayat lokal device tetap ada; data riwayat per device terikat akun yang login).
 - Kredensial & URL project Supabase dikonfigurasi via `.env` (tidak di-hardcode).
+- Sesi tersimpan oleh Supabase (session persistence) — login hanya sekali, kecuali logout/token kadaluarsa.
 
 ### FR-11 Sinkronisasi Riwayat Antar Device
 - Saat login & online: riwayat analisis (`analyses` + defects + rekomendasi) dan resep user di-sync ke Supabase (best-effort di background).
@@ -212,7 +212,7 @@ Seduh
 | Aspek | Target |
 |---|---|
 | Platform | Android & iOS (Flutter) |
-| Mode operasi | On-device, offline-first (alur inti tanpa internet; sync akun best-effort — FR-10/11) |
+| Mode operasi | Offline-first untuk alur analisis; butuh internet untuk login & sync (FR-10/11, auth gate) |
 | Latensi inference | < ~1 detik per foto |
 | Penggunaan RAM | < ~120 MB |
 | Ukuran model total | ~17 MB (detector fp16 6.1 + 3× classifier fp32) |
@@ -302,7 +302,7 @@ Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** 
 | AC-08 | Riwayat analisis tersimpan lokal dan dapat diekspor CSV. |
 | AC-09 | Grade ditentukan dari pemetaan Quality Profile → Grade (bagian 8). |
 | AC-10 | Tidak ada komponen timer interaktif di aplikasi. |
-| AC-11 | Tanpa login, seluruh fitur analisis/riwayat/seduh tetap berfungsi. |
+| AC-11 | Tanpa sesi login, app selalu berawal di layar login/daftar; fitur analisis hanya bisa diakses setelah login (auth gate, revisi D-29). |
 | AC-12 | Setelah login di device baru, riwayat yang ada di cloud muncul kembali (union by `uuid`). |
 | AC-13 | User tidak dapat membaca baris milik user lain (RLS, dites dengan dua akun). |
 

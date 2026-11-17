@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/auth/auth_controller.dart';
 import '../../features/auth/presentation/views/login_screen.dart';
 import '../../features/auth/presentation/views/profile_screen.dart';
 import '../../features/auth/presentation/views/register_screen.dart';
@@ -26,8 +28,29 @@ import '../main_shell.dart';
 ///
 /// Tiga tab (`/home`, `/history`, `/brewing`) dibungkus [MainShell] (bottom nav).
 /// Scan & detail di-push sebagai layar penuh.
+///
+/// **Auth gate (D-30):** tanpa sesi login, semua route fitur dialihkan ke
+/// `/login`; `/login` & `/register` hanya bisa diakses tanpa sesi. Sesi Supabase
+/// dipersistensi SDK, jadi gate hanya aktif saat first-run/logout.
 final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
+  refreshListenable: AuthGateListenable.instance,
+  redirect: (context, state) {
+    final auth = AuthGateListenable.instance.authState;
+    final loggedIn = auth?.loggedIn ?? false;
+    final unavailable = auth?.unavailable ?? false;
+    final goingToAuth =
+        state.matchedLocation == '/login' ||
+        state.matchedLocation == '/register';
+
+    // Supabase tidak dikonfigurasi (.env kosong) → tanpa gate, app jalan
+    // offline penuh (fallback defensif; di production tidak terjadi).
+    if (unavailable) return goingToAuth ? '/home' : null;
+
+    if (!loggedIn && !goingToAuth) return '/login';
+    if (loggedIn && goingToAuth) return '/home';
+    return null;
+  },
   routes: <RouteBase>[
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
@@ -91,3 +114,22 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
+
+/// Jembatan Riverpod ↔ GoRouter untuk auth gate (D-30).
+///
+/// [RoastmateApp] (ConsumerWidget) memanggil [update] tiap
+/// `authControllerProvider` berubah; router membaca [authState] di redirect
+/// dan mendengarkan notify agar re-navigate saat login/logout.
+class AuthGateListenable extends ChangeNotifier {
+  AuthGateListenable._();
+  static final AuthGateListenable instance = AuthGateListenable._();
+
+  AuthState? _authState;
+  AuthState? get authState => _authState;
+
+  void update(AuthState state) {
+    if (_authState == state) return;
+    _authState = state;
+    notifyListeners();
+  }
+}

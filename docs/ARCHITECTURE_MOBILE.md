@@ -409,8 +409,10 @@ Flutter App
 
 ## 18. Auth & Sync (D-29)
 
-Fitur akun + sinkronisasi riwayat antar device. **Offline-first tetap berlaku:**
-tanpa internet/login, alur inti tidak pernah terganggu; sync murni best-effort.
+Fitur akun + sinkronisasi riwayat antar device. **Auth gate (D-30):** tanpa
+sesi login, app selalu berawal di layar login/daftar — fitur utama tidak bisa
+diakses sebelum login. Setelah login, alur analisis tetap offline; sync murni
+best-effort.
 
 ### Komponen
 
@@ -424,15 +426,20 @@ features/sync/     SyncService — push pending + pull remote, dijalankan saat l
 ### Alur
 
 ```
+App start → AuthGate: sesi Supabase ada?
+  ├─ Ya → route fitur utama (Beranda dkk.)
+  └─ Tidak → redirect /login (auth gate, D-30)
 Login sukses → SyncService.run()
   ├─ Push: baris sync_status='pending' → upsert cloud by uuid → tandai 'synced'
   ├─ Backfill: baris lama tanpa uuid → beri UUID v4 + 'pending' sebelum push
   └─ Pull: baris cloud milik user yang uuid-nya belum ada lokal → insert (sync_status='synced')
 Scan selesai (login aktif) → insert lokal dengan uuid + 'pending' → sync best-effort
+Logout → hapus sesi → redirect /login (riwayat lokal tetap; sync berhenti)
 ```
 
 ### Aturan
 
+- **Auth gate (D-30):** redirect deklaratif di GoRouter — listen `authControllerProvider`; route fitur memerlukan sesi, `/login` & `/register` hanya untuk tanpa sesi.
 - **Kunci lintas device = `uuid`** (UUID v4). PK lokal `AUTOINCREMENT` tetap.
 - Tabel sync: `analyses`, `analysis_defects`, `recommendations`, `user_brew_recipes`.
 - Merge **union by uuid** (append-only); tidak ada konflik update. Delete di-propagate best-effort, tanpa tombstone.
