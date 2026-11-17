@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.3 (skema DB `schema_version` = 3 — D-19/D-20 + tools; KB seed 1.2)
+Versi: 1.4 (skema DB `schema_version` = 4 — tabel `user_brew_recipes`; KB seed 1.2)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -8,7 +8,9 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 ## 1. Prinsip & Cakupan
 
 - Satu database **SQLite** lokal, seluruhnya on-device.
-- Dua kelompok: **Knowledge Base** (statis, read-only saat runtime) dan **Riwayat** (dinamis, ditulis saat runtime).
+- Tiga kelompok: **Knowledge Base** (statis, read-only saat runtime),
+  **Riwayat** (dinamis, ditulis saat runtime), dan **User Data**
+  (resep buatan user, dinamis — Plan 4).
 - Parameter seduh hanya dimiliki `brew_recipes` (D-10).
 - `grade` **tidak disimpan**; diturunkan dari `quality_profile` (D-02).
 - Tabel didefinisikan dalam **DDL** di dokumen ini; migrasi dikelola via `schema_version`.
@@ -26,6 +28,7 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 | `analyses`          | Riwayat        | Satu sesi analisis batch       |
 | `analysis_defects`  | Riwayat        | Rincian defect per analisis    |
 | `recommendations`   | Riwayat        | Rekomendasi per analisis       |
+| `user_brew_recipes` | User Data      | Resep buatan user (di luar KB) |
 | `meta`              | Internal       | `schema_version`, `kb_version` |
 
 ---
@@ -39,6 +42,8 @@ analyses 1 ── N analysis_defects                                         │
     │                                                                    │
     └── 1 ── 1 recommendations ──→ brew_methods (primary/alternative)    │
                               └──→ brew_recipes (primary_recipe_id) ─────┘
+
+user_brew_recipes N ──── 1 brew_methods (method_id; kelompok User Data)
 ```
 
 ---
@@ -238,6 +243,44 @@ Isi awal: `schema_version`, `kb_version`.
 
 ---
 
+## 9.5 Tabel `user_brew_recipes` (v4)
+
+Resep seduh buatan user (Plan 4). Kelompok **User Data** — tabel terpisah
+dari KB: **tidak ikut reseed `kb_version`** dan **tidak dipakai
+recommendation engine** (lookup rekomendasi hanya `brew_recipes`).
+
+```sql
+CREATE TABLE user_brew_recipes (
+  recipe_id        TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+  species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
+  quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
+  roast_context    TEXT NOT NULL CHECK (roast_context IN
+                     ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
+  dose_g           REAL,
+  water_volume_ml  INTEGER,
+  grind_size       TEXT CHECK (grind_size IN
+                     ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
+  temperature_c    INTEGER,
+  brewing_time_s   INTEGER,
+  notes            TEXT,
+  created_at       TEXT NOT NULL
+);
+```
+
+Catatan:
+
+- `recipe_id` = prefix `U` + epoch-micros, di-generate repository
+  (mis. `U1750000000000000`).
+- Tanpa kolom `source`/`is_default`/`steps` — saat parse ke entity
+  di-mapping tetap: `source='USER'`, `isDefault=false`, `steps=[]`.
+- `created_at` hanya untuk ordering tampil (terbaru dulu); volume kecil →
+  sort in-memory, tanpa index baru.
+- v1 tanpa langkah seduh (`steps`) untuk resep user.
+
+---
+
 ## 10. Index
 
 ```sql
@@ -291,8 +334,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 | ---- | --- | ----------------- | -------------------- |
 | v1   | v2  | Kolom `analyses`: `name`, `batch_label`, `batch_name`, `model_version` (D-19/D-20) | Tercatat |
 | v2   | v3  | Tabel `brew_tools`, `brew_method_tools`; kolom `brew_methods.subtitle`/`image_asset`; reseed KB (tools & gambar) | Tercatat |
+| v3   | v4  | Tabel `user_brew_recipes` (resep user, kelompok User Data) | Tercatat |
 
-`kSchemaVersion` terkini = **3**.
+`kSchemaVersion` terkini = **4**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 

@@ -129,6 +129,61 @@ class BrewingRepositoryImpl implements BrewingRepository {
     return rows.map((r) => BrewTool.fromMap(r)).toList();
   }
 
+  @override
+  Future<List<BrewRecipe>> getUserRecipes() async {
+    final db = await _db;
+    final rows = await db.query(
+      'user_brew_recipes',
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(_parseUserRecipe).toList();
+  }
+
+  @override
+  Future<void> insertUserRecipe(BrewRecipe recipe) async {
+    final db = await _db;
+    // Validasi ringan: metode harus ada di KB (FK juga menolak).
+    final methodRows = await db.query(
+      'brew_methods',
+      where: 'method_id = ?',
+      whereArgs: [recipe.methodId],
+      limit: 1,
+    );
+    if (methodRows.isEmpty) {
+      throw Exception(
+        'Metode ${recipe.methodId} tidak ada di knowledge base',
+      );
+    }
+    await db.insert(
+      'user_brew_recipes',
+      <String, Object?>{
+        'recipe_id': 'U${DateTime.now().microsecondsSinceEpoch}',
+        'name': recipe.name,
+        'method_id': recipe.methodId,
+        'species': recipe.species,
+        'quality_profile': recipe.qualityProfile,
+        'roast_context': recipe.roastContext,
+        'dose_g': recipe.doseG,
+        'water_volume_ml': recipe.waterVolumeMl,
+        'grind_size': recipe.grindSize,
+        'temperature_c': recipe.temperatureC,
+        'brewing_time_s': recipe.brewingTimeS,
+        'notes': recipe.notes,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+    );
+  }
+
+  @override
+  Future<void> deleteUserRecipe(String recipeId) async {
+    final db = await _db;
+    await db.delete(
+      'user_brew_recipes',
+      where: 'recipe_id = ?',
+      whereArgs: [recipeId],
+    );
+  }
+
   Future<List<BrewTool>> _getToolsForMethod(Database db, String methodId) async {
     final rows = await db.rawQuery('''
       SELECT t.tool_id, t.tool_name, t.category, t.image_asset, t.description,
@@ -180,6 +235,7 @@ class BrewingRepositoryImpl implements BrewingRepository {
 
     return BrewRecipe(
       recipeId: row['recipe_id'] as String,
+      name: row['name'] as String? ?? '',
       methodId: row['method_id'] as String,
       species: row['species'] as String,
       qualityProfile: row['quality_profile'] as String,
@@ -192,6 +248,29 @@ class BrewingRepositoryImpl implements BrewingRepository {
       source: row['source'] as String? ?? '',
       isDefault: (row['is_default'] as int? ?? 0) == 1,
       steps: steps,
+      notes: row['notes'] as String?,
+    );
+  }
+
+  /// Parse baris `user_brew_recipes`. Tabel ini tidak punya kolom
+  /// `source`/`is_default`/`steps` → di-mapping tetap: `USER` / `false` /
+  /// kosong (di luar lookup rekomendasi & reseed KB).
+  BrewRecipe _parseUserRecipe(Map<String, dynamic> row) {
+    return BrewRecipe(
+      recipeId: row['recipe_id'] as String,
+      name: row['name'] as String? ?? '',
+      methodId: row['method_id'] as String,
+      species: row['species'] as String,
+      qualityProfile: row['quality_profile'] as String,
+      roastContext: row['roast_context'] as String,
+      doseG: (row['dose_g'] as num?)?.toDouble(),
+      waterVolumeMl: row['water_volume_ml'] as int?,
+      grindSize: row['grind_size'] as String?,
+      temperatureC: row['temperature_c'] as int?,
+      brewingTimeS: row['brewing_time_s'] as int?,
+      source: 'USER',
+      isDefault: false,
+      steps: const [],
       notes: row['notes'] as String?,
     );
   }

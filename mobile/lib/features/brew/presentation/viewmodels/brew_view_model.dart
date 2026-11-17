@@ -10,18 +10,22 @@ final brewingRepositoryProvider = Provider<BrewingRepository>((ref) {
   return BrewingRepositoryImpl();
 });
 
-/// State katalog seduh (metode + resep).
+/// State katalog seduh (metode + resep + resep user).
 @immutable
 class BrewCatalogState {
   final bool isLoading;
   final List<BrewMethod> methods;
   final List<BrewRecipe> recipes;
+
+  /// Resep buatan user (tabel `user_brew_recipes`), terbaru dulu.
+  final List<BrewRecipe> userRecipes;
   final String? errorMessage;
 
   const BrewCatalogState({
     this.isLoading = false,
     this.methods = const [],
     this.recipes = const [],
+    this.userRecipes = const [],
     this.errorMessage,
   });
 
@@ -65,11 +69,13 @@ class BrewViewModel extends StateNotifier<BrewCatalogState> {
         final recipes = await _repository.getRecipesForMethod(m.methodId);
         allRecipes.addAll(recipes);
       }
+      final userRecipes = await _repository.getUserRecipes();
 
       state = BrewCatalogState(
         isLoading: false,
         methods: methods,
         recipes: allRecipes,
+        userRecipes: userRecipes,
       );
     } catch (e) {
       state = BrewCatalogState(
@@ -77,6 +83,18 @@ class BrewViewModel extends StateNotifier<BrewCatalogState> {
         errorMessage: 'Gagal memuat katalog seduh: $e',
       );
     }
+  }
+
+  /// Menyimpan resep user baru, lalu memuat ulang katalog.
+  Future<void> addRecipe(BrewRecipe recipe) async {
+    await _repository.insertUserRecipe(recipe);
+    await load();
+  }
+
+  /// Menghapus resep user, lalu memuat ulang katalog.
+  Future<void> removeRecipe(String recipeId) async {
+    await _repository.deleteUserRecipe(recipeId);
+    await load();
   }
 }
 

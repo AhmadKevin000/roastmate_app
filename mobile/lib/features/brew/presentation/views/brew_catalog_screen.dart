@@ -10,6 +10,7 @@ import '../../../../core/widgets/roastmate_app_header.dart';
 import '../viewmodels/brew_view_model.dart';
 import '../widgets/brew_method_card.dart';
 import '../widgets/brewing_tip_card.dart';
+import '../widgets/user_recipe_card.dart';
 
 /// Layar "Resep Seduh" — katalog metode seduh (FR-06).
 class BrewCatalogScreen extends ConsumerWidget {
@@ -21,7 +22,10 @@ class BrewCatalogScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Seduh'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Seduh',
+        onAdd: () => context.push('/brewing/new'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
@@ -73,6 +77,31 @@ class BrewCatalogScreen extends ConsumerWidget {
                   ),
                 ),
             const SizedBox(height: RoastmateSpacing.sm),
+            if (!state.isLoading && state.errorMessage == null) ...[
+              _buildUserRecipesHeader(state),
+              const SizedBox(height: RoastmateSpacing.sm),
+              if (state.userRecipes.isEmpty)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: RoastmateSpacing.sm),
+                  child: Text(
+                    'Belum ada resep buatanmu — ketuk + untuk menambah.',
+                    style: RoastmateText.bodySm.copyWith(
+                      color: RoastmateColors.textSecondary,
+                    ),
+                  ),
+                )
+              else
+                for (final recipe in state.userRecipes)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: RoastmateSpacing.sm),
+                    child: UserRecipeCard(
+                      recipe: recipe,
+                      method: state.methodById(recipe.methodId),
+                    ),
+                  ),
+            ],
+            const SizedBox(height: RoastmateSpacing.sm),
             const BrewingTipCard(),
             const SizedBox(height: RoastmateSpacing.xl),
           ],
@@ -83,6 +112,26 @@ class BrewCatalogScreen extends ConsumerWidget {
 
   void _openDetail(BuildContext context, String methodId) {
     context.push('/brewing/$methodId');
+  }
+
+  Widget _buildUserRecipesHeader(BrewCatalogState state) {
+    return Row(
+      children: [
+        Text(
+          'Resep Kamu',
+          style: RoastmateText.titleMd.copyWith(
+            color: RoastmateColors.textPrimary,
+          ),
+        ),
+        const SizedBox(width: RoastmateSpacing.xs),
+        Text(
+          '${state.userRecipes.length}',
+          style: RoastmateText.bodySm.copyWith(
+            color: RoastmateColors.textSecondary,
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildTitleRow(BuildContext context, BrewCatalogState state) {
@@ -112,13 +161,7 @@ class BrewCatalogScreen extends ConsumerWidget {
         const SizedBox(width: RoastmateSpacing.md),
         InkWell(
           borderRadius: BorderRadius.circular(RoastmateRadius.full),
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Kustomisasi akan tersedia di versi berikutnya'),
-              ),
-            );
-          },
+          onTap: () => context.push('/brewing/new'),
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: RoastmateSpacing.md,

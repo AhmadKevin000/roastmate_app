@@ -158,6 +158,10 @@ Seduh
 - Daftar metode (mis. V60, French Press, Kopi Tubruk).
 - Ringkasan parameter tiap metode.
 - Buka detail resep.
+- Seksi **Resep Kamu**: tambah (form `/brewing/new` — parameter penuh, tanpa
+  langkah seduh di v1) & hapus (dengan konfirmasi) resep buatan user;
+  tersimpan di `user_brew_recipes`, aman dari reseed KB, tidak dipakai
+  recommendation engine.
 
 ### FR-07 Detail Resep
 - Ringkasan resep (berat, total air, suhu, grind, total waktu, metode).
