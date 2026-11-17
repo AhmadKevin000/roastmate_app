@@ -8,13 +8,16 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v6: rebuild `user_brew_recipes` — `method_id` nullable (metode
+/// "Lainnya" di luar KB) + kolom `method_name`, `steps`, `video_url`;
+/// `brew_recipes` + kolom `video_url`.
 /// v5: jaminan kolom `analyses` yang diperkenalkan selama dev untuk DB
 /// lama (era dev/bon) — migrasi defensif per kolom, idempoten.
 /// v4: tabel `user_brew_recipes` (resep buatan user; di luar KB & reseed).
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 5;
+const int kSchemaVersion = 6;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -78,7 +81,8 @@ const List<String> kCreateTableStatements = <String>[
     source           TEXT NOT NULL,
     is_default       INTEGER NOT NULL DEFAULT 0 CHECK (is_default IN (0,1)),
     steps            TEXT,
-    notes            TEXT
+    notes            TEXT,
+    video_url        TEXT
   )
   ''',
   // §6 analyses
@@ -129,11 +133,15 @@ const List<String> kCreateTableStatements = <String>[
   )
   ''',
   // §9.5 user_brew_recipes (resep buatan user — di luar KB & reseed)
+  //
+  // `method_id` nullable: null = metode "Lainnya" (di luar KB);
+  // `method_name` menyimpan nama display untuk semua resep (v6).
   '''
   CREATE TABLE user_brew_recipes (
     recipe_id        TEXT PRIMARY KEY,
     name             TEXT NOT NULL,
-    method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
+    method_id        TEXT REFERENCES brew_methods(method_id) ON DELETE SET NULL,
+    method_name      TEXT NOT NULL,
     species          TEXT NOT NULL CHECK (species IN ('Arabica','Robusta','Liberika','Mixed')),
     quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
     roast_context    TEXT NOT NULL CHECK (roast_context IN
@@ -144,6 +152,8 @@ const List<String> kCreateTableStatements = <String>[
                         ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
     temperature_c    INTEGER,
     brewing_time_s   INTEGER,
+    steps            TEXT,
+    video_url        TEXT,
     notes            TEXT,
     created_at       TEXT NOT NULL
   )

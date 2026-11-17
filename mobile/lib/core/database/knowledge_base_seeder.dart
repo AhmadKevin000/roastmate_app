@@ -155,6 +155,7 @@ class KnowledgeBaseSeeder {
         'is_default': r['is_default'],
         'steps': r['steps'] == null ? null : jsonEncode(r['steps']),
         'notes': r['notes'],
+        'video_url': r['video_url'],
       };
 }
 

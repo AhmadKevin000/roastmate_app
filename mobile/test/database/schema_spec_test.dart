@@ -661,6 +661,7 @@ void main() {
         'is_default',
         'steps',
         'notes',
+        'video_url',
       });
     });
   });
@@ -673,13 +674,15 @@ void main() {
     Future<void> insertUserRecipe(
       Database db, {
       String id = 'U1',
-      String methodId = 'M001',
+      String? methodId = 'M001',
+      String methodName = 'V60 / Pour Over',
       Map<String, Object?> overrides = const {},
     }) async {
       final row = <String, Object?>{
         'recipe_id': id,
         'name': 'Resep Uji',
         'method_id': methodId,
+        'method_name': methodName,
         'species': 'Arabica',
         'quality_profile': 'High',
         'roast_context': 'Light',
@@ -688,6 +691,8 @@ void main() {
         'grind_size': 'Medium-Fine',
         'temperature_c': 93,
         'brewing_time_s': 170,
+        'steps': null,
+        'video_url': null,
         'notes': null,
         'created_at': '2026-01-01T00:00:00.000',
       }..addAll(overrides);
@@ -704,6 +709,7 @@ void main() {
         'recipe_id',
         'name',
         'method_id',
+        'method_name',
         'species',
         'quality_profile',
         'roast_context',
@@ -712,6 +718,8 @@ void main() {
         'grind_size',
         'temperature_c',
         'brewing_time_s',
+        'steps',
+        'video_url',
         'notes',
         'created_at',
       });
@@ -810,6 +818,27 @@ void main() {
         () => insertUserRecipe(db, methodId: 'M999'),
         throwsA(isA<DatabaseException>()),
         reason: '§9.5: method_id merujuk ke KB (di luar reseed)',
+      );
+    });
+
+    test('method_id boleh null (metode "Lainnya" di luar KB)', () async {
+      await insertUserRecipe(
+        db,
+        methodId: null,
+        methodName: 'AeroPress Homemade',
+      );
+      final rows = await db.query(
+        'user_brew_recipes',
+        where: 'method_id IS NULL',
+      );
+      expect(rows.single['method_name'], 'AeroPress Homemade');
+    });
+
+    test('method_name NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'method_name': null}),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5 v6: nama display metode wajib ada',
       );
     });
   });

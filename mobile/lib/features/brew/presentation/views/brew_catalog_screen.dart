@@ -97,7 +97,9 @@ class BrewCatalogScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: RoastmateSpacing.sm),
                     child: UserRecipeCard(
                       recipe: recipe,
-                      method: state.methodById(recipe.methodId),
+                      method: recipe.methodId == null
+                          ? null
+                          : state.methodById(recipe.methodId!),
                     ),
                   ),
             ],

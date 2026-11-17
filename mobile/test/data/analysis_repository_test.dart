@@ -8,7 +8,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart'
-    show Database, databaseFactory, inMemoryDatabasePath, openDatabase;
+    show Database, Sqflite, databaseFactory, inMemoryDatabasePath, openDatabase;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart'
     show databaseFactoryFfi, sqfliteFfiInit;
 
@@ -204,6 +204,57 @@ void main() {
       await repo.deleteAnalysis(id);
       expect(await repo.getById(id), isNull);
       expect(await repo.getHistory(), isEmpty);
+    });
+
+    test('deleteAnalysis menghapus defects & recommendations (cascade)',
+        () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+        recommendation: const RecommendationRef(
+          methodId: 'M001',
+          recipeId: 'R004',
+          reason: 'uji cascade',
+        ),
+      );
+
+      expect(
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+              'SELECT COUNT(*) FROM analysis_defects WHERE analysis_id = ?',
+              [id]),
+        ),
+        greaterThan(0),
+      );
+      expect(
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+              'SELECT COUNT(*) FROM recommendations WHERE analysis_id = ?',
+              [id]),
+        ),
+        1,
+      );
+
+      await repo.deleteAnalysis(id);
+
+      expect(
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+              'SELECT COUNT(*) FROM analysis_defects WHERE analysis_id = ?',
+              [id]),
+        ),
+        0,
+        reason: 'defects ikut terhapus via ON DELETE CASCADE',
+      );
+      expect(
+        Sqflite.firstIntValue(
+          await db.rawQuery(
+              'SELECT COUNT(*) FROM recommendations WHERE analysis_id = ?',
+              [id]),
+        ),
+        0,
+        reason: 'rekomendasi ikut terhapus via ON DELETE CASCADE',
+      );
     });
 
     test('rekomendasi ditolak bila method_id tidak ada di KB (FK)', () async {

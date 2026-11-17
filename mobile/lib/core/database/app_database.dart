@@ -148,7 +148,81 @@ class AppDatabase {
       }
     }
 
+    // v5 → v6: rebuild `user_brew_recipes` (SQLite tak bisa mengubah
+    // FK/NOT NULL via ALTER): `method_id` menjadi nullable + kolom baru
+    // `method_name`, `steps`, `video_url`. Data lama dipindah; `method_name`
+    // di-resolve dari join `brew_methods`. `brew_recipes` cukup dapat
+    // kolom `video_url`. foreign_keys dimatikan selama rebuild (resep
+    // SQLite resmi), diaktifkan lagi setelah commit.
+    if (oldVersion < 6) {
+      await db.execute('PRAGMA foreign_keys = OFF');
+      // Cek bentuk aktual (defensif, idempoten — pola v5): DB dev bisa
+      // sudah punya bentuk baru tanpa bump versi.
+      final userRecipeCols =
+          (await db.rawQuery('PRAGMA table_info(user_brew_recipes)'))
+              .map((r) => r['name'] as String)
+              .toSet();
+      final brewRecipeCols =
+          (await db.rawQuery('PRAGMA table_info(brew_recipes)'))
+              .map((r) => r['name'] as String)
+              .toSet();
+      if (!userRecipeCols.contains('method_name')) {
+        batch.execute('''
+          CREATE TABLE user_brew_recipes_v6 (
+            recipe_id        TEXT PRIMARY KEY,
+            name             TEXT NOT NULL,
+            method_id        TEXT REFERENCES brew_methods(method_id) ON DELETE SET NULL,
+            method_name      TEXT NOT NULL,
+            species          TEXT NOT NULL CHECK (species IN
+                             ('Arabica','Robusta','Liberika','Mixed')),
+            quality_profile  TEXT NOT NULL CHECK (quality_profile IN ('High','Medium','Low')),
+            roast_context    TEXT NOT NULL CHECK (roast_context IN
+                             ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
+            dose_g           REAL,
+            water_volume_ml  INTEGER,
+            grind_size       TEXT CHECK (grind_size IN
+                             ('Espresso','Fine','Medium-Fine','Medium','Medium-Coarse','Coarse')),
+            temperature_c    INTEGER,
+            brewing_time_s   INTEGER,
+            steps            TEXT,
+            video_url        TEXT,
+            notes            TEXT,
+            created_at       TEXT NOT NULL
+          )
+        ''');
+        batch.execute('''
+          INSERT INTO user_brew_recipes_v6 (
+            recipe_id, name, method_id, method_name, species, quality_profile,
+            roast_context, dose_g, water_volume_ml, grind_size, temperature_c,
+            brewing_time_s, steps, video_url, notes, created_at
+          )
+          SELECT
+            recipe_id, name, method_id,
+            COALESCE(
+              (SELECT m.method_name FROM brew_methods m
+                WHERE m.method_id = user_brew_recipes.method_id),
+              method_id
+            ),
+            species, quality_profile, roast_context,
+            dose_g, water_volume_ml, grind_size, temperature_c,
+            brewing_time_s, NULL, NULL, notes, created_at
+          FROM user_brew_recipes
+        ''');
+        batch.execute('DROP TABLE user_brew_recipes');
+        batch.execute(
+          'ALTER TABLE user_brew_recipes_v6 RENAME TO user_brew_recipes',
+        );
+      }
+      if (!brewRecipeCols.contains('video_url')) {
+        batch.execute('ALTER TABLE brew_recipes ADD COLUMN video_url TEXT');
+      }
+    }
+
     await batch.commit(noResult: true);
+
+    if (oldVersion < 6) {
+      await db.execute('PRAGMA foreign_keys = ON');
+    }
 
     // Reseed knowledge base jika naik ke v3 agar tools & gambar terisi.
     if (oldVersion < 3) {

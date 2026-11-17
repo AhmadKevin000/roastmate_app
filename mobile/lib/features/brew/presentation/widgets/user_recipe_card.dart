@@ -69,7 +69,7 @@ class UserRecipeCard extends ConsumerWidget {
             runSpacing: RoastmateSpacing.xs,
             children: [
               _chip(
-                method?.methodName ?? recipe.methodId,
+                method?.methodName ?? recipe.methodName,
                 RoastmateColors.espressoSoft,
                 RoastmateColors.primary,
               ),
