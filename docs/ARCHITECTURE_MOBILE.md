@@ -27,6 +27,7 @@ Fokus: peta & keputusan arsitektur (bukan tutorial kode).
 | Kamera | `camera` |
 | Computer vision (shape) | OpenCV (via FFI/binding) |
 | Penyimpanan lokal | `sqflite` (SQLite) |
+| Auth & database cloud | Supabase (`supabase_flutter`) — login + sync riwayat (D-29) |
 | Ikon & font | Material Icons + Inter |
 
 ---
@@ -403,3 +404,45 @@ Flutter App
 - **Integrasi:** Capture → ML → Quality → Recommendation → SQLite → Result.
 - **On-device:** latensi & RAM pada perangkat nyata.
 - **Data:** validasi output terhadap DS010 (custom mobile batch).
+
+---
+
+## 18. Auth & Sync (D-29)
+
+Fitur akun + sinkronisasi riwayat antar device. **Offline-first tetap berlaku:**
+tanpa internet/login, alur inti tidak pernah terganggu; sync murni best-effort.
+
+### Komponen
+
+```
+core/auth/         AuthController (Riverpod) — session Supabase, login/register/logout
+core/network/      SupabaseService — klien Supabase dari .env
+features/auth/     LoginScreen, RegisterScreen, ProfileScreen + ViewModel
+features/sync/     SyncService — push pending + pull remote, dijalankan saat login & app resume
+```
+
+### Alur
+
+```
+Login sukses → SyncService.run()
+  ├─ Push: baris sync_status='pending' → upsert cloud by uuid → tandai 'synced'
+  ├─ Backfill: baris lama tanpa uuid → beri UUID v4 + 'pending' sebelum push
+  └─ Pull: baris cloud milik user yang uuid-nya belum ada lokal → insert (sync_status='synced')
+Scan selesai (login aktif) → insert lokal dengan uuid + 'pending' → sync best-effort
+```
+
+### Aturan
+
+- **Kunci lintas device = `uuid`** (UUID v4). PK lokal `AUTOINCREMENT` tetap.
+- Tabel sync: `analyses`, `analysis_defects`, `recommendations`, `user_brew_recipes`.
+- Merge **union by uuid** (append-only); tidak ada konflik update. Delete di-propagate best-effort, tanpa tombstone.
+- Referensi KB di cloud = ID mentah tanpa FK; resolusi ulang dari KB lokal.
+- RLS Supabase menegakkan kepemilikan per user; UI hanya menyimpan `user_id` = `auth.users.id`.
+- Kredensial di `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`); `.env` gitignored, contoh di `.env.example`.
+- Skema cloud: `DATABASE_SCHEMA.md` §16.
+
+### Testing
+
+- Unit: merge/pull logic (pure Dart, tanpa network), UUID backfill, mapping row ↔ model.
+- Widget: Login/Register/Profile (validasi email-sandi, pesan error).
+- Integrasi: insert pending → push (mock Supabase) → status `synced`; pull idempoten (uuid duplikat tidak diinsert ganda).

@@ -91,6 +91,7 @@ Aplikasi memiliki 3 tab utama.
 - Detail Inspeksi (hasil analisis lengkap).
 - Detail Resep (panduan langkah + video panduan bila ada).
 - Detail Resep Kamu (resep buatan user: parameter, langkah, video, catatan).
+- Akun (login/daftar email-sandi + profil/logout).
 
 ---
 
@@ -190,6 +191,20 @@ Seduh
 - Bila confidence roast di bawah ambang (0.45) → status `uncertain`.
 - Tidak memaksakan satu kelas.
 
+### FR-10 Akun (Login/Daftar)
+- Login & daftar dengan **email + sandi** (Supabase Auth).
+- Tanpa login, aplikasi tetap berfungsi utuh — login **tidak** menggate fitur analisis.
+- Profil: email tercatat + tombol logout.
+- Kredensial & URL project Supabase dikonfigurasi via `.env` (tidak di-hardcode).
+
+### FR-11 Sinkronisasi Riwayat Antar Device
+- Saat login & online: riwayat analisis (`analyses` + defects + rekomendasi) dan resep user di-sync ke Supabase (best-effort di background).
+- Pergantian device: setelah login di device baru, riwayat yang sudah tersimpan di cloud **muncul kembali** (merge union by `uuid`).
+- Data riwayat bersifat **append-only** — tidak ada konflik update; hapus riwayat di-propagate ke cloud best-effort.
+- Offline atau gagal sync tidak memblokir alur inti; baris ditandai `pending` dan dikirim saat online berikutnya.
+- Foto dengan URL Cloudinary tampil di device lain; foto ber-path lokal hanya tampil di device asal.
+- Akses data ditegakkan Row Level Security: user hanya melihat baris miliknya sendiri.
+
 ---
 
 ## 7. Non-Functional Requirements
@@ -197,12 +212,12 @@ Seduh
 | Aspek | Target |
 |---|---|
 | Platform | Android & iOS (Flutter) |
-| Mode operasi | On-device, offline (tanpa internet) |
+| Mode operasi | On-device, offline-first (alur inti tanpa internet; sync akun best-effort — FR-10/11) |
 | Latensi inference | < ~1 detik per foto |
 | Penggunaan RAM | < ~120 MB |
 | Ukuran model total | ~17 MB (detector fp16 6.1 + 3× classifier fp32) |
-| Privasi | Foto tidak pernah dikirim ke server |
-| Riwayat | Tersimpan lokal (SQLite) |
+| Privasi | Foto best-effort ke Cloudinary (URL tersimpan di riwayat); metadata riwayat tersinkron hanya milik user terkait (RLS) |
+| Riwayat | Tersimpan lokal (SQLite); tersinkron ke Supabase saat login (D-29) |
 | Bahasa UI | Indonesia |
 | Aksesibilitas | Target sentuh ≥ 48×48 dp, kontras teks ≥ 4.5:1 |
 
@@ -287,6 +302,9 @@ Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** 
 | AC-08 | Riwayat analisis tersimpan lokal dan dapat diekspor CSV. |
 | AC-09 | Grade ditentukan dari pemetaan Quality Profile → Grade (bagian 8). |
 | AC-10 | Tidak ada komponen timer interaktif di aplikasi. |
+| AC-11 | Tanpa login, seluruh fitur analisis/riwayat/seduh tetap berfungsi. |
+| AC-12 | Setelah login di device baru, riwayat yang ada di cloud muncul kembali (union by `uuid`). |
+| AC-13 | User tidak dapat membaca baris milik user lain (RLS, dites dengan dua akun). |
 
 ---
 

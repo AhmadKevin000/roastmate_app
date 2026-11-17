@@ -59,10 +59,8 @@ class KnowledgeBaseSeeder {
   }
 
   Future<void> _seed() async {
-
     final raw = await rootBundle.loadString(kKnowledgeSeedAsset);
-    final Map<String, dynamic> data =
-        jsonDecode(raw) as Map<String, dynamic>;
+    final Map<String, dynamic> data = jsonDecode(raw) as Map<String, dynamic>;
 
     final tools = (data['tools'] as List<dynamic>? ?? <dynamic>[]);
     final methods = (data['methods'] as List<dynamic>? ?? <dynamic>[]);
@@ -90,16 +88,12 @@ class KnowledgeBaseSeeder {
         final methodTools = mMap['tools'] as List<dynamic>? ?? <dynamic>[];
         for (final mt in methodTools) {
           final mtMap = mt as Map<String, dynamic>;
-          await txn.insert(
-            'brew_method_tools',
-            <String, Object?>{
-              'method_id': mMap['method_id'],
-              'tool_id': mtMap['tool_id'],
-              'is_required': mtMap['is_required'] ?? 1,
-              'notes': mtMap['notes'],
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+          await txn.insert('brew_method_tools', <String, Object?>{
+            'method_id': mMap['method_id'],
+            'tool_id': mtMap['tool_id'],
+            'is_required': mtMap['is_required'] ?? 1,
+            'notes': mtMap['notes'],
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
       }
 
@@ -115,47 +109,45 @@ class KnowledgeBaseSeeder {
 
     final kbVersion = data['kb_version'] as String?;
     if (kbVersion != null) {
-      await _db.insert(
-        'meta',
-        <String, Object?>{'key': kMetaKbVersion, 'value': kbVersion},
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await _db.insert('meta', <String, Object?>{
+        'key': kMetaKbVersion,
+        'value': kbVersion,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
 
   Map<String, Object?> _toolRow(Map<String, dynamic> t) => <String, Object?>{
-        'tool_id': t['tool_id'],
-        'tool_name': t['tool_name'],
-        'category': t['category'],
-        'image_asset': t['image_asset'],
-        'description': t['description'],
-      };
+    'tool_id': t['tool_id'],
+    'tool_name': t['tool_name'],
+    'category': t['category'],
+    'image_asset': t['image_asset'],
+    'description': t['description'],
+  };
 
   Map<String, Object?> _methodRow(Map<String, dynamic> m) => <String, Object?>{
-        'method_id': m['method_id'],
-        'method_name': m['method_name'],
-        'method_type': m['method_type'],
-        'subtitle': m['subtitle'],
-        'image_asset': m['image_asset'],
-        'description': m['description'],
-      };
+    'method_id': m['method_id'],
+    'method_name': m['method_name'],
+    'method_type': m['method_type'],
+    'subtitle': m['subtitle'],
+    'image_asset': m['image_asset'],
+    'description': m['description'],
+  };
 
   Map<String, Object?> _recipeRow(Map<String, dynamic> r) => <String, Object?>{
-        'recipe_id': r['recipe_id'],
-        'method_id': r['method_id'],
-        'species': r['species'],
-        'quality_profile': r['quality_profile'],
-        'roast_context': r['roast_context'],
-        'dose_g': r['dose_g'],
-        'water_volume_ml': r['water_volume_ml'],
-        'grind_size': r['grind_size'],
-        'temperature_c': r['temperature_c'],
-        'brewing_time_s': r['brewing_time_s'],
-        'source': r['source'],
-        'is_default': r['is_default'],
-        'steps': r['steps'] == null ? null : jsonEncode(r['steps']),
-        'notes': r['notes'],
-        'video_url': r['video_url'],
-      };
+    'recipe_id': r['recipe_id'],
+    'method_id': r['method_id'],
+    'species': r['species'],
+    'quality_profile': r['quality_profile'],
+    'roast_context': r['roast_context'],
+    'dose_g': r['dose_g'],
+    'water_volume_ml': r['water_volume_ml'],
+    'grind_size': r['grind_size'],
+    'temperature_c': r['temperature_c'],
+    'brewing_time_s': r['brewing_time_s'],
+    'source': r['source'],
+    'is_default': r['is_default'],
+    'steps': r['steps'] == null ? null : jsonEncode(r['steps']),
+    'notes': r['notes'],
+    'video_url': r['video_url'],
+  };
 }
-

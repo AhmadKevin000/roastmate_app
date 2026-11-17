@@ -522,6 +522,54 @@ YOLOv8n-cls.
 
 ---
 
+## D-29 — Login & sinkronisasi riwayat antar device (Supabase)
+
+**Konteks:** Permintaan fitur: user dapat login sehingga riwayat analisis tetap ada
+saat berganti device. Kondisi awal: seluruh riwayat hanya di SQLite lokal; satu-satunya
+komponen cloud adalah upload foto best-effort ke Cloudinary (D-28-era, `image_path`
+bisa berisi `secure_url`). Aturan non-negotiable "on-device, tanpa upload" perlu
+direvisi secara eksplisit, bukan dilanggar diam-diam.
+
+**Keputusan:**
+
+1. **Provider = Supabase** (auth + Postgres). Dependency baru `supabase_flutter`.
+   Alasan: auth siap pakai, database relasional (mapping dari SQLite mudah), RLS
+   per-user, dan free tier cukup untuk skala project.
+2. **Revisi privasi (supersedes "foto tidak pernah dikirim ke server"):**
+   - Foto batch di-upload ke Cloudinary **best-effort** (sudah ada — keputusan ini
+     hanya mencatatnya agar konsisten dengan dokumen).
+   - **Metadata riwayat** (skor, species, roast, defect, rekomendasi, resep user)
+     di-sync ke Supabase saat user login. Aplikasi tetap **offline-first**: alur
+     inti (scan → hasil → riwayat) tidak pernah membutuhkan internet; sync hanya
+     best-effort di background.
+3. **Lingkup sync:** `analyses`, `analysis_defects`, `recommendations`,
+   `user_brew_recipes`. **Tidak** di-sync: knowledge base (statis, sudah
+   di-bundle), riwayat milik user lain.
+4. **Kunci sync = `uuid`** (UUID v4, di-generate perangkat saat insert). SQLite
+   local PK tetap `AUTOINCREMENT`; `uuid` adalah kunci identitas lintas device.
+   Tanpa ini, ID dari dua device pasti bentrok saat merge.
+5. **Strategi merge = union by `uuid`** (append-only). Data riwayat tidak pernah
+   dimutasi setelah dibuat (D-20: deteksi tidak disimpan; hanya hapus). Delete
+   di-propagate ke cloud best-effort; delete di device lain tidak dipull balik
+   (keterbatasan yang diterima — tidak ada tombstone).
+6. **Kepemilikan data:** setiap baris cloud membawa `user_id UUID` yang identik
+   dengan `auth.users.id`; RLS membatasi akses hanya ke baris milik sendiri.
+7. **Skema lokal v7:** tambah kolom `uuid`, `user_id`, `sync_status`
+   (`local`/`pending`/`synced`), `updated_at` pada keempat tabel sync. Baris lama
+   (pre-v7) di-backfill UUID saat pertama sync, tetap `pending`.
+8. **Foto lintas device:** baris dengan `image_path` berupa URL Cloudinary
+   tampil normal di device lain; baris dengan path lokal hanya tampil di device
+   asal (thumbnail placeholder di device lain). Keterbatasan ini diterima; upload
+   Cloudinary tetap best-effort sehingga tidak semua foto punya URL.
+9. **Tanpa login = app utuh seperti sekarang.** Login hanya membuka sync; tidak
+   ada paywall atau gate fitur analisis.
+
+**Dampak:** `DATABASE_SCHEMA.md` v1.7 (§6–§9.5, §12, §16-skema cloud);
+`ARCHITECTURE_MOBILE.md` (bagian Auth & Sync); `PRD.md` FR-10/FR-11, NFR, AC;
+`mobile/.env.example` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - ~~Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan)~~ → **selesai (D-27)**: species 0.70 · roast 0.45.

@@ -22,7 +22,10 @@ class BrewCatalogScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Seduh'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Seduh',
+        onSettings: () => context.push('/profile'),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         child: Column(
@@ -41,7 +44,9 @@ class BrewCatalogScreen extends ConsumerWidget {
               )
             else if (state.errorMessage != null)
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: RoastmateSpacing.xl),
+                padding: const EdgeInsets.symmetric(
+                  vertical: RoastmateSpacing.xl,
+                ),
                 child: Center(
                   child: Column(
                     children: [
@@ -54,7 +59,8 @@ class BrewCatalogScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: RoastmateSpacing.md),
                       OutlinedButton(
-                        onPressed: () => ref.read(brewCatalogProvider.notifier).load(),
+                        onPressed: () =>
+                            ref.read(brewCatalogProvider.notifier).load(),
                         child: const Text('Coba Lagi'),
                       ),
                     ],
@@ -79,8 +85,9 @@ class BrewCatalogScreen extends ConsumerWidget {
               const SizedBox(height: RoastmateSpacing.sm),
               if (state.userRecipes.isEmpty)
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: RoastmateSpacing.sm),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: RoastmateSpacing.sm,
+                  ),
                   child: Text(
                     'Belum ada resep buatanmu — ketuk tombol + di pojok '
                     'kanan bawah untuk menambah.',

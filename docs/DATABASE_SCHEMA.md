@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.6 (skema DB `schema_version` = 6 — rebuild `user_brew_recipes`: metode "Lainnya", `steps`, `video_url`; kolom `video_url` di `brew_recipes`; KB seed 1.2)
+Versi: 1.7 (skema DB `schema_version` = 7 — kolom sync `uuid`/`user_id`/`sync_status`/`updated_at` pada tabel sync; + skema cloud Supabase §16 — D-29)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -19,17 +19,21 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 
 ## 2. Daftar Tabel
 
-| Tabel               | Kelompok       | Keterangan                     |
-| ------------------- | -------------- | ------------------------------ |
-| `brew_methods`      | Knowledge Base | Metadata metode                |
-| `brew_tools`        | Knowledge Base | Master alat seduh              |
-| `brew_method_tools` | Knowledge Base | Relasi metode ↔ alat seduh     |
-| `brew_recipes`      | Knowledge Base | Parameter seduh + provenance   |
-| `analyses`          | Riwayat        | Satu sesi analisis batch       |
-| `analysis_defects`  | Riwayat        | Rincian defect per analisis    |
-| `recommendations`   | Riwayat        | Rekomendasi per analisis       |
-| `user_brew_recipes` | User Data      | Resep buatan user (di luar KB) |
-| `meta`              | Internal       | `schema_version`, `kb_version` |
+| Tabel               | Kelompok       | Keterangan                                     |
+| ------------------- | -------------- | ---------------------------------------------- |
+| `brew_methods`      | Knowledge Base | Metadata metode                                |
+| `brew_tools`        | Knowledge Base | Master alat seduh                              |
+| `brew_method_tools` | Knowledge Base | Relasi metode ↔ alat seduh                     |
+| `brew_recipes`      | Knowledge Base | Parameter seduh + provenance                   |
+| `analyses`          | Riwayat (sync) | Satu sesi analisis batch                       |
+| `analysis_defects`  | Riwayat (sync) | Rincian defect per analisis                    |
+| `recommendations`   | Riwayat (sync) | Rekomendasi per analisis                       |
+| `user_brew_recipes` | User Data (sync) | Resep buatan user (di luar KB)               |
+| `meta`              | Internal       | `schema_version`, `kb_version`                 |
+
+> Tabel bertanda **sync** membawa kolom tambahan untuk sinkronisasi antar device
+> (D-29): `uuid` (kunci identitas lintas device), `user_id` (pemilik, dari auth),
+> `sync_status` (`local` · `pending` · `synced`), dan `updated_at`. Lihat §16.
 
 ---
 
@@ -157,6 +161,11 @@ Satu sesi analisis batch.
 ```sql
 CREATE TABLE analyses (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid                  TEXT UNIQUE,
+  user_id               TEXT,
+  sync_status           TEXT NOT NULL DEFAULT 'local'
+                          CHECK (sync_status IN ('local','pending','synced')),
+  updated_at            TEXT,
   created_at            TEXT NOT NULL,
   name                  TEXT,
   image_path            TEXT,
@@ -190,6 +199,7 @@ Catatan:
 - `species` = **satu jenis biji kopi dominan** (`Arabica`/`Robusta`/`Liberika`/`Mixed`). Tidak ada kolom sebaran maupun confidence species (D-15).
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 - Kolom `name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path` dijamin eksis pada DB lama oleh migrasi v5 (defensif per kolom — lihat §12).
+- Kolom sync (v7, D-29): `uuid` = UUID v4 kunci identitas lintas device (di-backfill saat pertama sync untuk baris lama); `user_id` = ID user auth (Supabase `auth.users.id`), terisi saat login; `sync_status` = `local` (belum login/tak ikut sync) · `pending` (menunggu dikirim) · `synced` (sudah di cloud); `updated_at` = ISO-8601 untuk audit.
 
 ---
 
@@ -200,6 +210,9 @@ Rincian defect per analisis.
 ```sql
 CREATE TABLE analysis_defects (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid          TEXT UNIQUE,
+  sync_status   TEXT NOT NULL DEFAULT 'local'
+                  CHECK (sync_status IN ('local','pending','synced')),
   analysis_id   INTEGER NOT NULL REFERENCES analyses(id) ON DELETE CASCADE,
   defect_class  TEXT NOT NULL CHECK (defect_class IN ('Normal','Quaker','Broken','Severe')),
   count         INTEGER NOT NULL DEFAULT 0,
@@ -220,6 +233,9 @@ Rekomendasi per analisis. Parameter seduh **tidak diduplikasi** — cukup `prima
 ```sql
 CREATE TABLE recommendations (
   id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+  uuid                  TEXT UNIQUE,
+  sync_status           TEXT NOT NULL DEFAULT 'local'
+                          CHECK (sync_status IN ('local','pending','synced')),
   analysis_id           INTEGER NOT NULL UNIQUE
                           REFERENCES analyses(id) ON DELETE CASCADE,
   primary_method_id     TEXT NOT NULL REFERENCES brew_methods(method_id),
@@ -255,6 +271,11 @@ recommendation engine** (lookup rekomendasi hanya `brew_recipes`).
 ```sql
 CREATE TABLE user_brew_recipes (
   recipe_id        TEXT PRIMARY KEY,
+  uuid             TEXT UNIQUE,
+  user_id          TEXT,
+  sync_status      TEXT NOT NULL DEFAULT 'local'
+                     CHECK (sync_status IN ('local','pending','synced')),
+  updated_at       TEXT,
   name             TEXT NOT NULL,
   method_id        TEXT REFERENCES brew_methods(method_id) ON DELETE SET NULL,
   method_name      TEXT NOT NULL,
@@ -352,8 +373,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 | v3   | v4  | Tabel `user_brew_recipes` (resep user, kelompok User Data) | Tercatat |
 | v4   | v5  | Jaminan kolom legacy `analyses` (`name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path`) — cek per kolom via `PRAGMA table_info`, idempoten | Tercatat |
 | v5   | v6  | Rebuild `user_brew_recipes` (pola resmi SQLite; foreign_keys OFF selama rebuild): `method_id` nullable + `ON DELETE SET NULL`, kolom baru `method_name`, `steps`, `video_url`; data lama dipindah, `method_name` di-resolve dari join `brew_methods`. `brew_recipes` + kolom `video_url` (ALTER, guarded idempoten) | Tercatat |
+| v6   | v7  | Kolom sync (D-29, ALTER guarded idempoten per kolom): `analyses` + `user_brew_recipes` → `uuid`, `user_id`, `sync_status DEFAULT 'local'`, `updated_at`; `analysis_defects` + `recommendations` → `uuid`, `sync_status DEFAULT 'local'`. Index `idx_analyses_sync` (`sync_status`). Baris lama tetap `sync_status='local'`; backfill `uuid` dilakukan saat pertama sync, bukan di migrasi | Tercatat |
 
-`kSchemaVersion` terkini = **6**.
+`kSchemaVersion` terkini = **7**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
@@ -452,3 +474,108 @@ Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bil
 | `defect_interpretation` | `counts.Severe` + `analyses.roast` (`underdeveloped`/`overroasted`/`contamination`) | Tidak — diturunkan saat render |
 | `defect_rate`           | hitung saat analisis (snapshot)                                                     | Ya                             |
 | `roast_distribution`    | agregasi batch saat analisis                                                        | Ya (JSON)                      |
+
+---
+
+## 16. Skema Cloud — Supabase (D-29)
+
+Satu project Supabase (Postgres). Struktur tabel cloud **cermin** dari tabel sync
+lokal, dengan perbedaan kunci: **PK cloud = `uuid`** (TEXT) — bukan AUTOINCREMENT
+lokal. Baris di-upsert berdasarkan `uuid` (union by uuid, append-only).
+
+```sql
+create table analyses (
+  uuid                 text primary key,
+  user_id              uuid not null references auth.users(id) on delete cascade,
+  created_at           text not null,
+  name                 text,
+  image_path           text,            -- URL Cloudinary atau path lokal (lihat D-29)
+  annotated_image_path text,
+  batch_label          text,
+  batch_name           text,
+  model_version        text,
+  species              text check (species in ('Arabica','Robusta','Liberika','Mixed')),
+  roast                text check (roast in ('Green','Light','Medium','Dark')),
+  roast_confidence     real,
+  roast_distribution   text,
+  visible_beans        integer,
+  defect_rate          real,
+  shape_uniformity     real,
+  size_uniformity      real,
+  roast_uniformity     real,
+  quality_score        integer,
+  quality_profile      text check (quality_profile in ('High','Medium','Low'))
+);
+
+create table analysis_defects (
+  uuid          text primary key,
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  analysis_uuid text not null references analyses(uuid) on delete cascade,
+  defect_class  text not null check (defect_class in ('Normal','Quaker','Broken','Severe')),
+  count         integer not null default 0,
+  unique (analysis_uuid, defect_class)
+);
+
+create table recommendations (
+  uuid                  text primary key,
+  user_id               uuid not null references auth.users(id) on delete cascade,
+  analysis_uuid         text not null unique references analyses(uuid) on delete cascade,
+  primary_method_id     text not null,
+  primary_recipe_id     text not null,
+  alternative_method_id text,
+  reason                text
+);
+
+create table user_brew_recipes (
+  uuid             text primary key,
+  user_id          uuid not null references auth.users(id) on delete cascade,
+  recipe_id        text not null,       -- ID lokal asal (tetap disimpan untuk provenance)
+  name             text not null,
+  method_id        text,
+  method_name      text not null,
+  species          text check (species in ('Arabica','Robusta','Liberika','Mixed')),
+  quality_profile  text check (quality_profile in ('High','Medium','Low')),
+  roast_context    text check (roast_context in
+                     ('Green','Light','Medium','Dark','Light/Medium','Medium/Dark')),
+  dose_g           real,
+  water_volume_ml  integer,
+  grind_size       text,
+  temperature_c    integer,
+  brewing_time_s   integer,
+  steps            text,
+  video_url        text,
+  notes            text,
+  created_at       text not null
+);
+
+create index idx_cloud_analyses_user on analyses(user_id, created_at);
+create index idx_cloud_defects_analysis on analysis_defects(analysis_uuid);
+```
+
+### Row Level Security (wajib)
+
+```sql
+alter table analyses            enable row level security;
+alter table analysis_defects    enable row level security;
+alter table recommendations     enable row level security;
+alter table user_brew_recipes   enable row level security;
+
+-- pola yang sama untuk keempat tabel (contoh: analyses)
+create policy "own rows all" on analyses
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+### Aturan cloud
+
+1. **RLS wajib aktif** di semua tabel sync; anon key tanpa login tidak melihat
+   apa pun.
+2. Referensi KB (`primary_method_id`, `primary_recipe_id`, dst.) disimpan sebagai
+   **ID mentah tanpa FK** — device lain meresolusi dari knowledge base lokalnya
+   (versi KB dijamin ≥ seed 1.2 yang mencakup semua kombinasi species × roast).
+3. Push = upsert by `uuid`; pull = ambil baris `user_id` milik sendiri yang
+   `uuid`-nya belum ada di SQLite lokal. Data riwayat immutable → tidak ada
+   konflik update; `updated_at` hanya untuk audit.
+4. Hapus di cloud = `DELETE by uuid` best-effort saat user menghapus riwayat;
+   tanpa tombstone (delete di device lain tidak di-pull — keterbatasan D-29).
+5. Baris dengan `image_path` lokal tidak diubah; device lain menampilkan
+   placeholder bila path bukan URL.

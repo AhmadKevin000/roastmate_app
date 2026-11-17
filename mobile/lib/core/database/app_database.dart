@@ -122,9 +122,9 @@ class AppDatabase {
     // di alur scan). Cek per kolom via PRAGMA, tambah hanya yang hilang
     // (idempoten, aman untuk semua kondisi legacy).
     if (oldVersion < 5) {
-      final analysisCols = (await db.rawQuery('PRAGMA table_info(analyses)'))
-          .map((r) => r['name'] as String)
-          .toSet();
+      final analysisCols = (await db.rawQuery(
+        'PRAGMA table_info(analyses)',
+      )).map((r) => r['name'] as String).toSet();
       // Kolom yang sudah dijadwalkan langkah v2 (masih di batch belum
       // commit — tak terlihat oleh PRAGMA di atas): jangan dobel.
       if (oldVersion < 2) {
@@ -158,14 +158,12 @@ class AppDatabase {
       await db.execute('PRAGMA foreign_keys = OFF');
       // Cek bentuk aktual (defensif, idempoten — pola v5): DB dev bisa
       // sudah punya bentuk baru tanpa bump versi.
-      final userRecipeCols =
-          (await db.rawQuery('PRAGMA table_info(user_brew_recipes)'))
-              .map((r) => r['name'] as String)
-              .toSet();
-      final brewRecipeCols =
-          (await db.rawQuery('PRAGMA table_info(brew_recipes)'))
-              .map((r) => r['name'] as String)
-              .toSet();
+      final userRecipeCols = (await db.rawQuery(
+        'PRAGMA table_info(user_brew_recipes)',
+      )).map((r) => r['name'] as String).toSet();
+      final brewRecipeCols = (await db.rawQuery(
+        'PRAGMA table_info(brew_recipes)',
+      )).map((r) => r['name'] as String).toSet();
       if (!userRecipeCols.contains('method_name')) {
         batch.execute('''
           CREATE TABLE user_brew_recipes_v6 (
@@ -218,6 +216,54 @@ class AppDatabase {
       }
     }
 
+    // v6 → v7: kolom sync D-29 (guarded idempoten per kolom, pola v5).
+    if (oldVersion < 7) {
+      Map<String, Set<String>> cols = {};
+      for (final table in const [
+        'analyses',
+        'analysis_defects',
+        'recommendations',
+        'user_brew_recipes',
+      ]) {
+        cols[table] = (await db.rawQuery(
+          'PRAGMA table_info($table)',
+        )).map((r) => r['name'] as String).toSet();
+      }
+      // analyses & user_brew_recipes: uuid, user_id, sync_status, updated_at.
+      // Tabel yang belum ada (DB dev sangat lama) di-skip — dibuat lengkap
+      // oleh onCreate di instalasi baru.
+      for (final col in const [
+        'uuid',
+        'user_id',
+        'sync_status',
+        'updated_at',
+      ]) {
+        if (cols['analyses']!.isNotEmpty && !cols['analyses']!.contains(col)) {
+          batch.execute('ALTER TABLE analyses ADD COLUMN $col TEXT');
+        }
+        if (cols['user_brew_recipes']!.isNotEmpty &&
+            !cols['user_brew_recipes']!.contains(col)) {
+          batch.execute('ALTER TABLE user_brew_recipes ADD COLUMN $col TEXT');
+        }
+      }
+      // analysis_defects & recommendations: uuid + sync_status saja.
+      for (final col in const ['uuid', 'sync_status']) {
+        if (cols['analysis_defects']!.isNotEmpty &&
+            !cols['analysis_defects']!.contains(col)) {
+          batch.execute('ALTER TABLE analysis_defects ADD COLUMN $col TEXT');
+        }
+        if (cols['recommendations']!.isNotEmpty &&
+            !cols['recommendations']!.contains(col)) {
+          batch.execute('ALTER TABLE recommendations ADD COLUMN $col TEXT');
+        }
+      }
+      if (cols['analyses']!.isNotEmpty) {
+        batch.execute(
+          'CREATE INDEX IF NOT EXISTS idx_analyses_sync ON analyses(sync_status)',
+        );
+      }
+    }
+
     await batch.commit(noResult: true);
 
     if (oldVersion < 6) {
@@ -243,5 +289,3 @@ class AppDatabase {
     _db = null;
   }
 }
-
-

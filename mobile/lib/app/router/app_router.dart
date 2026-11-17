@@ -1,5 +1,8 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/auth/presentation/views/login_screen.dart';
+import '../../features/auth/presentation/views/profile_screen.dart';
+import '../../features/auth/presentation/views/register_screen.dart';
 import '../../features/analysis/presentation/views/analysis_history_screen.dart';
 import '../../features/brew/presentation/views/brew_catalog_screen.dart';
 import '../../features/brew/presentation/views/recipe_detail_screen.dart';
@@ -29,10 +32,7 @@ final GoRouter appRouter = GoRouter(
     ShellRoute(
       builder: (context, state, child) => MainShell(child: child),
       routes: <RouteBase>[
-        GoRoute(
-          path: '/home',
-          builder: (context, state) => const HomePage(),
-        ),
+        GoRoute(path: '/home', builder: (context, state) => const HomePage()),
         GoRoute(
           path: '/history',
           builder: (context, state) => const AnalysisHistoryScreen(),
@@ -47,10 +47,7 @@ final GoRouter appRouter = GoRouter(
       path: '/scan/setup',
       builder: (context, state) => const ScanSetupView(),
     ),
-    GoRoute(
-      path: '/scan',
-      builder: (context, state) => const CameraScreen(),
-    ),
+    GoRoute(path: '/scan', builder: (context, state) => const CameraScreen()),
     GoRoute(
       path: '/result/:analysisId',
       builder: (context, state) => InspectionDetailScreen(
@@ -74,15 +71,23 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       // Detail resep user — harus sebelum `/brewing/:methodId`.
       path: '/brewing/user/:recipeId',
-      builder: (context, state) => UserRecipeDetailScreen(
-        recipeId: state.pathParameters['recipeId']!,
-      ),
+      builder: (context, state) =>
+          UserRecipeDetailScreen(recipeId: state.pathParameters['recipeId']!),
     ),
     GoRoute(
       path: '/brewing/:methodId',
-      builder: (context, state) => RecipeDetailScreen(
-        methodId: state.pathParameters['methodId']!,
-      ),
+      builder: (context, state) =>
+          RecipeDetailScreen(methodId: state.pathParameters['methodId']!),
+    ),
+    // Auth (D-29): layar penuh, bukan tab.
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+    GoRoute(
+      path: '/register',
+      builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => const ProfileScreen(),
     ),
   ],
 );

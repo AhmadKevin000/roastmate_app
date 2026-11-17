@@ -158,7 +158,7 @@ void main() {
   // §10 Index
   // ==========================================================================
   group('§10 Index', () {
-    test('berisi tepat 6 index dengan nama kanonik', () async {
+    test('berisi tepat 7 index dengan nama kanonik', () async {
       const expected = {
         'idx_recipes_method',
         'idx_recipes_lookup',
@@ -166,6 +166,7 @@ void main() {
         'idx_analyses_created',
         'idx_defects_analysis',
         'idx_recommendations_analysis',
+        'idx_analyses_sync',
       };
       expect(await indexNames(db), expected);
     });
@@ -354,12 +355,7 @@ void main() {
       analysisId = await insertAnalysis(db);
     });
 
-    for (final cls in const [
-      'Normal',
-      'Quaker',
-      'Broken',
-      'Severe',
-    ]) {
+    for (final cls in const ['Normal', 'Quaker', 'Broken', 'Severe']) {
       test('menerima defect_class "$cls"', () async {
         await db.insert('analysis_defects', {
           'analysis_id': analysisId,
@@ -618,6 +614,10 @@ void main() {
       final cols = (await columnsOf(db, 'analyses')).keys.toSet();
       expect(cols, {
         'id',
+        'uuid',
+        'user_id',
+        'sync_status',
+        'updated_at',
         'created_at',
         'name',
         'image_path',
@@ -707,6 +707,10 @@ void main() {
       final cols = (await columnsOf(db, 'user_brew_recipes')).keys.toSet();
       expect(cols, {
         'recipe_id',
+        'uuid',
+        'user_id',
+        'sync_status',
+        'updated_at',
         'name',
         'method_id',
         'method_name',
@@ -761,8 +765,7 @@ void main() {
 
     for (final profile in const ['High', 'Medium', 'Low']) {
       test('menerima quality_profile "$profile"', () async {
-        await insertUserRecipe(db,
-            overrides: {'quality_profile': profile});
+        await insertUserRecipe(db, overrides: {'quality_profile': profile});
       });
     }
 

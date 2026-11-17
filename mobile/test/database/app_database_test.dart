@@ -33,9 +33,7 @@ Future<Set<String>> indexNames(Database db) async {
 
 Future<Map<String, String>> metaValues(Database db) async {
   final rows = await db.query('meta');
-  return {
-    for (final r in rows) r['key'] as String: r['value'] as String,
-  };
+  return {for (final r in rows) r['key'] as String: r['value'] as String};
 }
 
 void main() {
@@ -75,7 +73,7 @@ void main() {
       });
     });
 
-    test('onCreate membentuk tepat 6 index (§10)', () async {
+    test('onCreate membentuk tepat 7 index (§10)', () async {
       final db = await AppDatabase.instance.database;
       expect(await indexNames(db), {
         'idx_recipes_method',
@@ -84,6 +82,7 @@ void main() {
         'idx_analyses_created',
         'idx_defects_analysis',
         'idx_recommendations_analysis',
+        'idx_analyses_sync',
       });
     });
 
@@ -205,10 +204,7 @@ void main() {
               key   TEXT PRIMARY KEY,
               value TEXT NOT NULL
             )''');
-            await db.insert('meta', {
-              'key': kMetaSchemaVersion,
-              'value': '1',
-            });
+            await db.insert('meta', {'key': kMetaSchemaVersion, 'value': '1'});
           },
         ),
       );
@@ -216,77 +212,86 @@ void main() {
 
       // Buka dengan versi skema terkini: onUpgrade harus menjalankan migrasi.
       final db = await AppDatabase.instance.database;
-      final columns = (await db.rawQuery('PRAGMA table_info(analyses)'))
-          .map((row) => row['name'] as String)
-          .toSet();
+      final columns = (await db.rawQuery(
+        'PRAGMA table_info(analyses)',
+      )).map((row) => row['name'] as String).toSet();
 
       expect(columns, contains('name'));
-      expect((await metaValues(db))[kMetaSchemaVersion], kSchemaVersion.toString());
+      expect(
+        (await metaValues(db))[kMetaSchemaVersion],
+        kSchemaVersion.toString(),
+      );
     });
 
-    test('migrasi v3 → v4 menambah tabel user_brew_recipes, data v3 utuh', () async {
-      final path = p.join(await getDatabasesPath(), kDatabaseName);
+    test(
+      'migrasi v3 → v4 menambah tabel user_brew_recipes, data v3 utuh',
+      () async {
+        final path = p.join(await getDatabasesPath(), kDatabaseName);
 
-      // Bangun database skema v3 seperti instalasi sebelum Plan 4:
-      // seluruh DDL v4 kecuali tabel user_brew_recipes.
-      final v3 = await databaseFactoryFfi.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: 3,
-          onCreate: (db, version) async {
-            for (final stmt in kCreateTableStatements) {
-              if (stmt.contains('user_brew_recipes')) continue;
-              await db.execute(stmt);
-            }
-            // Data v3 yang harus tetap utuh setelah migrasi.
-            await db.insert('brew_methods', {
-              'method_id': 'M001',
-              'method_name': 'V60 / Pour Over',
-              'method_type': 'pour_over',
-            });
-            await db.insert('analyses', {
-              'created_at': '2026-01-01T00:00:00Z',
-              'batch_name': 'Batch Uji Migrasi',
-              'species': 'Arabica',
-            });
-            await db.insert('meta', {
-              'key': kMetaSchemaVersion,
-              'value': '3',
-            });
-          },
-        ),
-      );
-      await v3.close();
+        // Bangun database skema v3 seperti instalasi sebelum Plan 4:
+        // seluruh DDL v4 kecuali tabel user_brew_recipes.
+        final v3 = await databaseFactoryFfi.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: 3,
+            onCreate: (db, version) async {
+              for (final stmt in kCreateTableStatements) {
+                if (stmt.contains('user_brew_recipes')) continue;
+                await db.execute(stmt);
+              }
+              // Data v3 yang harus tetap utuh setelah migrasi.
+              await db.insert('brew_methods', {
+                'method_id': 'M001',
+                'method_name': 'V60 / Pour Over',
+                'method_type': 'pour_over',
+              });
+              await db.insert('analyses', {
+                'created_at': '2026-01-01T00:00:00Z',
+                'batch_name': 'Batch Uji Migrasi',
+                'species': 'Arabica',
+              });
+              await db.insert('meta', {
+                'key': kMetaSchemaVersion,
+                'value': '3',
+              });
+            },
+          ),
+        );
+        await v3.close();
 
-      // Buka dengan versi skema terkini: onUpgrade menjalankan v3 → v4.
-      final db = await AppDatabase.instance.database;
-      expect(await tableNames(db), contains('user_brew_recipes'));
+        // Buka dengan versi skema terkini: onUpgrade menjalankan v3 → v4.
+        final db = await AppDatabase.instance.database;
+        expect(await tableNames(db), contains('user_brew_recipes'));
 
-      // Data v3 utuh (riwayat tak disentuh migrasi/seeder).
-      final analyses = await db.query(
-        'analyses',
-        where: 'batch_name = ?',
-        whereArgs: ['Batch Uji Migrasi'],
-      );
-      expect(analyses, hasLength(1));
-      final methods = await db.query(
-        'brew_methods',
-        where: 'method_id = ?',
-        whereArgs: ['M001'],
-      );
-      expect(methods, hasLength(1));
-      expect((await metaValues(db))[kMetaSchemaVersion],
-          kSchemaVersion.toString());
-    });
+        // Data v3 utuh (riwayat tak disentuh migrasi/seeder).
+        final analyses = await db.query(
+          'analyses',
+          where: 'batch_name = ?',
+          whereArgs: ['Batch Uji Migrasi'],
+        );
+        expect(analyses, hasLength(1));
+        final methods = await db.query(
+          'brew_methods',
+          where: 'method_id = ?',
+          whereArgs: ['M001'],
+        );
+        expect(methods, hasLength(1));
+        expect(
+          (await metaValues(db))[kMetaSchemaVersion],
+          kSchemaVersion.toString(),
+        );
+      },
+    );
 
-    test('migrasi v4 → v5 menambal kolom analyses legacy (data utuh)',
-        () async {
-      final path = p.join(await getDatabasesPath(), kDatabaseName);
+    test(
+      'migrasi v4 → v5 menambal kolom analyses legacy (data utuh)',
+      () async {
+        final path = p.join(await getDatabasesPath(), kDatabaseName);
 
-      // Simulasi DB v4 era dev/bon: versi file 4, tabel lengkap, tetapi
-      // `analyses` tanpa kolom identitas (name, batch_label, batch_name,
-      // model_version) — persis kondisi device yang crash di alur scan.
-      const legacyAnalyses = '''
+        // Simulasi DB v4 era dev/bon: versi file 4, tabel lengkap, tetapi
+        // `analyses` tanpa kolom identitas (name, batch_label, batch_name,
+        // model_version) — persis kondisi device yang crash di alur scan.
+        const legacyAnalyses = '''
         CREATE TABLE analyses (
           id                    INTEGER PRIMARY KEY AUTOINCREMENT,
           created_at            TEXT NOT NULL,
@@ -305,66 +310,70 @@ void main() {
           quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low'))
         )
       ''';
-      final v4 = await databaseFactoryFfi.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: 4,
-          onCreate: (db, version) async {
-            for (final stmt in kCreateTableStatements) {
-              if (stmt.contains('CREATE TABLE analyses')) continue;
-              await db.execute(stmt);
-            }
-            await db.execute(legacyAnalyses);
-            await db.insert('analyses', {
-              'created_at': '2026-11-01T00:00:00Z',
-              'image_path': '/cache/legacy.jpg',
-              'species': 'Liberika',
-              'roast': 'Light',
-            });
-            await db.insert('meta', {
-              'key': kMetaSchemaVersion,
-              'value': '4',
-            });
-          },
-        ),
-      );
-      await v4.close();
+        final v4 = await databaseFactoryFfi.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: 4,
+            onCreate: (db, version) async {
+              for (final stmt in kCreateTableStatements) {
+                if (stmt.contains('CREATE TABLE analyses')) continue;
+                await db.execute(stmt);
+              }
+              await db.execute(legacyAnalyses);
+              await db.insert('analyses', {
+                'created_at': '2026-11-01T00:00:00Z',
+                'image_path': '/cache/legacy.jpg',
+                'species': 'Liberika',
+                'roast': 'Light',
+              });
+              await db.insert('meta', {
+                'key': kMetaSchemaVersion,
+                'value': '4',
+              });
+            },
+          ),
+        );
+        await v4.close();
 
-      final db = await AppDatabase.instance.database;
-      final cols = (await db.rawQuery('PRAGMA table_info(analyses)'))
-          .map((r) => r['name'] as String)
-          .toSet();
-      expect(
-        cols,
-        containsAll({
-          'name',
-          'batch_label',
-          'batch_name',
-          'model_version',
-          'image_path',
-          'annotated_image_path',
-        }),
-      );
+        final db = await AppDatabase.instance.database;
+        final cols = (await db.rawQuery(
+          'PRAGMA table_info(analyses)',
+        )).map((r) => r['name'] as String).toSet();
+        expect(
+          cols,
+          containsAll({
+            'name',
+            'batch_label',
+            'batch_name',
+            'model_version',
+            'image_path',
+            'annotated_image_path',
+          }),
+        );
 
-      // Baris legacy utuh (INSERT alur scan kini bisa lewat).
-      final rows = await db.query(
-        'analyses',
-        where: 'species = ?',
-        whereArgs: ['Liberika'],
-      );
-      expect(rows, hasLength(1));
-      expect(rows.single['image_path'], '/cache/legacy.jpg');
-      expect((await metaValues(db))[kMetaSchemaVersion],
-          kSchemaVersion.toString());
-    });
+        // Baris legacy utuh (INSERT alur scan kini bisa lewat).
+        final rows = await db.query(
+          'analyses',
+          where: 'species = ?',
+          whereArgs: ['Liberika'],
+        );
+        expect(rows, hasLength(1));
+        expect(rows.single['image_path'], '/cache/legacy.jpg');
+        expect(
+          (await metaValues(db))[kMetaSchemaVersion],
+          kSchemaVersion.toString(),
+        );
+      },
+    );
 
-    test('migrasi v5 → v6 rebuild user_brew_recipes + video_url (data utuh)',
-        () async {
-      final path = p.join(await getDatabasesPath(), kDatabaseName);
+    test(
+      'migrasi v5 → v6 rebuild user_brew_recipes + video_url (data utuh)',
+      () async {
+        final path = p.join(await getDatabasesPath(), kDatabaseName);
 
-      // Bentuk v5-era: `user_brew_recipes` lama (method_id NOT NULL, tanpa
-      // method_name/steps/video_url) + `brew_recipes` tanpa video_url.
-      const legacyUserRecipes = '''
+        // Bentuk v5-era: `user_brew_recipes` lama (method_id NOT NULL, tanpa
+        // method_name/steps/video_url) + `brew_recipes` tanpa video_url.
+        const legacyUserRecipes = '''
         CREATE TABLE user_brew_recipes (
           recipe_id        TEXT PRIMARY KEY,
           name             TEXT NOT NULL,
@@ -384,7 +393,7 @@ void main() {
           created_at       TEXT NOT NULL
         )
       ''';
-      const legacyBrewRecipes = '''
+        const legacyBrewRecipes = '''
         CREATE TABLE brew_recipes (
           recipe_id        TEXT PRIMARY KEY,
           method_id        TEXT NOT NULL REFERENCES brew_methods(method_id),
@@ -405,154 +414,166 @@ void main() {
         )
       ''';
 
-      final v5 = await databaseFactoryFfi.openDatabase(
-        path,
-        options: OpenDatabaseOptions(
-          version: 5,
-          onCreate: (db, version) async {
-            for (final stmt in kCreateTableStatements) {
-              if (stmt.contains('user_brew_recipes')) continue;
-              if (stmt.contains('CREATE TABLE brew_recipes')) continue;
-              await db.execute(stmt);
-            }
-            await db.execute(legacyUserRecipes);
-            await db.execute(legacyBrewRecipes);
-            await db.insert('brew_methods', {
-              'method_id': 'M001',
-              'method_name': 'V60 / Pour Over',
-              'method_type': 'pour_over',
-            });
-            await db.insert('user_brew_recipes', {
-              'recipe_id': 'U_legacy',
-              'name': 'Resep Legacy',
-              'method_id': 'M001',
-              'species': 'Arabica',
-              'quality_profile': 'High',
-              'roast_context': 'Light',
-              'dose_g': 15.0,
-              'water_volume_ml': 240,
-              'created_at': '2026-01-01T00:00:00.000',
-            });
-            await db.insert('brew_recipes', {
-              'recipe_id': 'R004',
-              'method_id': 'M001',
-              'species': 'Arabica',
-              'quality_profile': 'High',
-              'roast_context': 'Medium',
-              'source': 'KB',
-              'is_default': 1,
-            });
-            await db.insert('meta', {
-              'key': kMetaSchemaVersion,
-              'value': '5',
-            });
-            // DB dev v5 realistis: KB sudah di-seed versi 1.2 — reseed
-            // tidak ikut jalan, agar uji fokus ke migrasi.
-            await db.insert('meta', {
-              'key': kMetaKbVersion,
-              'value': '1.2',
-            });
-          },
-        ),
-      );
-      await v5.close();
+        final v5 = await databaseFactoryFfi.openDatabase(
+          path,
+          options: OpenDatabaseOptions(
+            version: 5,
+            onCreate: (db, version) async {
+              for (final stmt in kCreateTableStatements) {
+                if (stmt.contains('user_brew_recipes')) continue;
+                if (stmt.contains('CREATE TABLE brew_recipes')) continue;
+                await db.execute(stmt);
+              }
+              await db.execute(legacyUserRecipes);
+              await db.execute(legacyBrewRecipes);
+              await db.insert('brew_methods', {
+                'method_id': 'M001',
+                'method_name': 'V60 / Pour Over',
+                'method_type': 'pour_over',
+              });
+              await db.insert('user_brew_recipes', {
+                'recipe_id': 'U_legacy',
+                'name': 'Resep Legacy',
+                'method_id': 'M001',
+                'species': 'Arabica',
+                'quality_profile': 'High',
+                'roast_context': 'Light',
+                'dose_g': 15.0,
+                'water_volume_ml': 240,
+                'created_at': '2026-01-01T00:00:00.000',
+              });
+              await db.insert('brew_recipes', {
+                'recipe_id': 'R004',
+                'method_id': 'M001',
+                'species': 'Arabica',
+                'quality_profile': 'High',
+                'roast_context': 'Medium',
+                'source': 'KB',
+                'is_default': 1,
+              });
+              await db.insert('meta', {
+                'key': kMetaSchemaVersion,
+                'value': '5',
+              });
+              // DB dev v5 realistis: KB sudah di-seed versi 1.2 — reseed
+              // tidak ikut jalan, agar uji fokus ke migrasi.
+              await db.insert('meta', {'key': kMetaKbVersion, 'value': '1.2'});
+            },
+          ),
+        );
+        await v5.close();
 
-      final db = await AppDatabase.instance.database;
+        final db = await AppDatabase.instance.database;
 
-      // Tabel ter-rebuild: kolom baru ada, method_id kini nullable.
-      final userCols = (await db.rawQuery('PRAGMA table_info(user_brew_recipes)'))
-          .map((c) => c['name'] as String)
-          .toSet();
-      expect(
-        userCols,
-        containsAll({'method_name', 'steps', 'video_url'}),
-      );
-      final methodIdCol = (await db.rawQuery('PRAGMA table_info(user_brew_recipes)'))
-          .firstWhere((c) => c['name'] == 'method_id');
-      expect(methodIdCol['notnull'], 0,
-          reason: 'v6: method_id nullable (metode "Lainnya")');
+        // Tabel ter-rebuild: kolom baru ada, method_id kini nullable.
+        final userCols = (await db.rawQuery(
+          'PRAGMA table_info(user_brew_recipes)',
+        )).map((c) => c['name'] as String).toSet();
+        expect(userCols, containsAll({'method_name', 'steps', 'video_url'}));
+        final methodIdCol = (await db.rawQuery(
+          'PRAGMA table_info(user_brew_recipes)',
+        )).firstWhere((c) => c['name'] == 'method_id');
+        expect(
+          methodIdCol['notnull'],
+          0,
+          reason: 'v6: method_id nullable (metode "Lainnya")',
+        );
 
-      // Data legacy utuh + method_name di-resolve dari join brew_methods.
-      final rows = await db.query(
-        'user_brew_recipes',
-        where: 'recipe_id = ?',
-        whereArgs: ['U_legacy'],
-      );
-      expect(rows, hasLength(1));
-      expect(rows.single['name'], 'Resep Legacy');
-      expect(rows.single['method_id'], 'M001');
-      expect(rows.single['method_name'], 'V60 / Pour Over');
-      expect(rows.single['dose_g'], 15.0);
-      expect(rows.single['water_volume_ml'], 240);
+        // Data legacy utuh + method_name di-resolve dari join brew_methods.
+        final rows = await db.query(
+          'user_brew_recipes',
+          where: 'recipe_id = ?',
+          whereArgs: ['U_legacy'],
+        );
+        expect(rows, hasLength(1));
+        expect(rows.single['name'], 'Resep Legacy');
+        expect(rows.single['method_id'], 'M001');
+        expect(rows.single['method_name'], 'V60 / Pour Over');
+        expect(rows.single['dose_g'], 15.0);
+        expect(rows.single['water_volume_ml'], 240);
 
-      // FK tetap aktif setelah rebuild.
-      await expectLater(
-        db.insert('user_brew_recipes', {
-          'recipe_id': 'U_bad',
-          'name': 'Resep FK',
-          'method_id': 'M999',
-          'method_name': 'X',
+        // FK tetap aktif setelah rebuild.
+        await expectLater(
+          db.insert('user_brew_recipes', {
+            'recipe_id': 'U_bad',
+            'name': 'Resep FK',
+            'method_id': 'M999',
+            'method_name': 'X',
+            'species': 'Arabica',
+            'quality_profile': 'High',
+            'roast_context': 'Light',
+            'created_at': '2026-01-01T00:00:00.000',
+          }),
+          throwsA(isA<DatabaseException>()),
+        );
+
+        // brew_recipes dapat video_url, data legacy utuh.
+        final brewCols = (await db.rawQuery(
+          'PRAGMA table_info(brew_recipes)',
+        )).map((c) => c['name'] as String).toSet();
+        expect(brewCols, contains('video_url'));
+        final recipes = await db.query(
+          'brew_recipes',
+          where: 'recipe_id = ?',
+          whereArgs: ['R004'],
+        );
+        expect(recipes, hasLength(1));
+        expect(
+          (await metaValues(db))[kMetaSchemaVersion],
+          kSchemaVersion.toString(),
+        );
+      },
+    );
+
+    test(
+      'reseed KB tak menghancurkan resep user (ON DELETE SET NULL)',
+      () async {
+        // DB v6 segar (KB terisi 1.2) + resep user yang merujuk M001.
+        final db = await AppDatabase.instance.database;
+        await db.insert('user_brew_recipes', {
+          'recipe_id': 'U_reseed',
+          'name': 'Resep User',
+          'method_id': 'M001',
+          'method_name': 'V60 / Pour Over',
           'species': 'Arabica',
           'quality_profile': 'High',
           'roast_context': 'Light',
           'created_at': '2026-01-01T00:00:00.000',
-        }),
-        throwsA(isA<DatabaseException>()),
-      );
+        });
 
-      // brew_recipes dapat video_url, data legacy utuh.
-      final brewCols = (await db.rawQuery('PRAGMA table_info(brew_recipes)'))
-          .map((c) => c['name'] as String)
-          .toSet();
-      expect(brewCols, contains('video_url'));
-      final recipes = await db.query(
-        'brew_recipes',
-        where: 'recipe_id = ?',
-        whereArgs: ['R004'],
-      );
-      expect(recipes, hasLength(1));
-      expect((await metaValues(db))[kMetaSchemaVersion],
-          kSchemaVersion.toString());
-    });
+        // Simulasikan DB lama yang belum kenal kb_version 1.2 → reseed jalan
+        // (DELETE brew_methods) saat dibuka ulang.
+        await db.update(
+          'meta',
+          <String, Object?>{'value': '1.1'},
+          where: 'key = ?',
+          whereArgs: <Object?>[kMetaKbVersion],
+        );
+        await AppDatabase.instance.close();
 
-    test('reseed KB tak menghancurkan resep user (ON DELETE SET NULL)',
-        () async {
-      // DB v6 segar (KB terisi 1.2) + resep user yang merujuk M001.
-      final db = await AppDatabase.instance.database;
-      await db.insert('user_brew_recipes', {
-        'recipe_id': 'U_reseed',
-        'name': 'Resep User',
-        'method_id': 'M001',
-        'method_name': 'V60 / Pour Over',
-        'species': 'Arabica',
-        'quality_profile': 'High',
-        'roast_context': 'Light',
-        'created_at': '2026-01-01T00:00:00.000',
-      });
-
-      // Simulasikan DB lama yang belum kenal kb_version 1.2 → reseed jalan
-      // (DELETE brew_methods) saat dibuka ulang.
-      await db.update(
-        'meta',
-        <String, Object?>{'value': '1.1'},
-        where: 'key = ?',
-        whereArgs: <Object?>[kMetaKbVersion],
-      );
-      await AppDatabase.instance.close();
-
-      final db2 = await AppDatabase.instance.database;
-      final rows = await db2.query(
-        'user_brew_recipes',
-        where: 'recipe_id = ?',
-        whereArgs: ['U_reseed'],
-      );
-      expect(rows, hasLength(1),
-          reason: 'resep user tidak boleh ikut terhapus saat reseed');
-      expect(rows.single['method_id'], isNull,
-          reason: 'referensi metode di-SET NULL saat KB di-reseed');
-      expect(rows.single['method_name'], 'V60 / Pour Over',
-          reason: 'nama display tetap ada — UI tak rusak');
-      expect((await metaValues(db2))[kMetaKbVersion], '1.2');
-    });
+        final db2 = await AppDatabase.instance.database;
+        final rows = await db2.query(
+          'user_brew_recipes',
+          where: 'recipe_id = ?',
+          whereArgs: ['U_reseed'],
+        );
+        expect(
+          rows,
+          hasLength(1),
+          reason: 'resep user tidak boleh ikut terhapus saat reseed',
+        );
+        expect(
+          rows.single['method_id'],
+          isNull,
+          reason: 'referensi metode di-SET NULL saat KB di-reseed',
+        );
+        expect(
+          rows.single['method_name'],
+          'V60 / Pour Over',
+          reason: 'nama display tetap ada — UI tak rusak',
+        );
+        expect((await metaValues(db2))[kMetaKbVersion], '1.2');
+      },
+    );
   });
 }
