@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/widgets/analysis_image.dart';
+import '../../../../core/widgets/personal_rating_stars.dart';
 import '../../../../core/widgets/roastmate_app_header.dart';
 import '../../../../shared/enums/indicative_grade.dart';
 import '../../domain/entities/home_summary.dart';
@@ -815,6 +816,14 @@ class HomePage extends ConsumerWidget {
                           ],
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PersonalRatingStars(
+                        stars: item.personalRating,
+                        size: 13,
+                      ),
                     ),
                   ],
                 ),

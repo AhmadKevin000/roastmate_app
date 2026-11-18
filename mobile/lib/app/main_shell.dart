@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/roastmate_colors.dart';
 import '../core/widgets/roastmate_bottom_nav.dart';
+import '../features/home/presentation/viewmodels/home_view_model.dart';
 
 /// Shell navigasi bawah (3 tab) untuk route di dalam `ShellRoute`.
 ///
 /// Bottom bar memakai komponen bersama [RoastmateBottomNav] (core) agar
 /// konsisten dengan tema; pemilihan tab mengikuti lokasi GoRouter.
-class MainShell extends StatelessWidget {
+class MainShell extends ConsumerWidget {
   const MainShell({super.key, required this.child});
 
   /// Konten route aktif dari [ShellRoute].
@@ -28,7 +30,7 @@ class MainShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _indexFor(context);
     final isBrewCatalog = GoRouterState.of(context).uri.path == '/brewing';
 
@@ -54,7 +56,12 @@ class MainShell extends StatelessWidget {
         ),
         child: RoastmateBottomNav(
           currentIndex: selectedIndex,
-          onTap: (index) => context.go(_tabLocations[index]),
+          onTap: (index) {
+            // Beranda selalu membaca ulang ringkasan (skor & bintang
+            // penilaian pribadi bisa berubah dari tab lain).
+            if (index == 0) ref.invalidate(homeViewModelProvider);
+            context.go(_tabLocations[index]);
+          },
         ),
       ),
     );

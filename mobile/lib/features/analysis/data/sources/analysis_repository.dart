@@ -116,6 +116,32 @@ class AnalysisRepository {
         whereArgs: [analysisId],
       );
 
+  /// Simpan penilaian pribadi user (bintang 1–5 + catatan opsional) pada
+  /// satu baris `analyses` (v8, D-31).
+  ///
+  /// Rentang bintang divalidasi di sini karena kolom hasil `ALTER TABLE`
+  /// tidak membawa CHECK. Catatan kosong disimpan sebagai NULL.
+  Future<void> savePersonalRating(
+    int analysisId, {
+    required int stars,
+    String? note,
+  }) async {
+    if (stars < 1 || stars > 5) {
+      throw ArgumentError.value(stars, 'stars', 'harus 1–5');
+    }
+    final trimmed = note?.trim();
+    await _db.update(
+      'analyses',
+      {
+        'personal_rating': stars,
+        'personal_rating_note':
+            (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+      },
+      where: 'id = ?',
+      whereArgs: [analysisId],
+    );
+  }
+
   /// Daftar riwayat, terbaru dulu. Filter [species] opsional
   /// (`Arabica` / `Robusta` / `Mixed`).
   Future<List<AnalysisHistoryItem>> getHistory({String? species}) async {
@@ -136,6 +162,8 @@ class AnalysisRepository {
           dateLabel: formatHistoryDate(createdAt),
           detail: _fromRow(row, defects, createdAt),
           imagePath: row['image_path'] as String?,
+          personalRating: (row['personal_rating'] as num?)?.toInt(),
+          personalRatingNote: row['personal_rating_note'] as String?,
         ),
       );
     }
@@ -159,6 +187,8 @@ class AnalysisRepository {
       dateLabel: formatHistoryDate(createdAt),
       detail: _fromRow(row, defects, createdAt),
       imagePath: row['image_path'] as String?,
+      personalRating: (row['personal_rating'] as num?)?.toInt(),
+      personalRatingNote: row['personal_rating_note'] as String?,
     );
   }
 
@@ -218,6 +248,8 @@ class AnalysisRepository {
       recommendation: recommendation,
       alternatives: alternatives,
       summaryText: buildAnalysisSummary(result),
+      personalRating: (row['personal_rating'] as num?)?.toInt(),
+      personalRatingNote: row['personal_rating_note'] as String?,
     );
   }
 

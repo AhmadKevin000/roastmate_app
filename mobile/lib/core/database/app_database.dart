@@ -264,6 +264,21 @@ class AppDatabase {
       }
     }
 
+    // v7 → v8: penilaian pribadi user (bintang 1–5 + catatan) pada
+    // `analyses`. ALTER guarded idempoten per kolom (pola v5). CHECK rentang
+    // 1–5 tidak bisa ditambahkan lewat ALTER; validasi di repository.
+    if (oldVersion < 8) {
+      final analysisCols = (await db.rawQuery(
+        'PRAGMA table_info(analyses)',
+      )).map((r) => r['name'] as String).toSet();
+      if (!analysisCols.contains('personal_rating')) {
+        batch.execute('ALTER TABLE analyses ADD COLUMN personal_rating INTEGER');
+      }
+      if (!analysisCols.contains('personal_rating_note')) {
+        batch.execute('ALTER TABLE analyses ADD COLUMN personal_rating_note TEXT');
+      }
+    }
+
     await batch.commit(noResult: true);
 
     if (oldVersion < 6) {

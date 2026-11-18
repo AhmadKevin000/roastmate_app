@@ -346,6 +346,23 @@ void main() {
       );
       expect(id, greaterThan(0));
     });
+
+    test('personal_rating menerima 1–5 dan NULL, menolak di luar itu (v8)', () async {
+      for (final stars in const [1, 3, 5, null]) {
+        final id = await insertAnalysis(
+          db,
+          overrides: {'personal_rating': stars},
+        );
+        expect(id, greaterThan(0), reason: 'personal_rating=$stars harus sah');
+      }
+      for (final stars in const [0, 6, -1]) {
+        expect(
+          () => insertAnalysis(db, overrides: {'personal_rating': stars}),
+          throwsA(isA<DatabaseException>()),
+          reason: 'personal_rating=$stars harus ditolak CHECK',
+        );
+      }
+    });
   });
 
   group('§7/§11 CHECK analysis_defects.defect_class', () {
@@ -636,6 +653,8 @@ void main() {
         'roast_uniformity',
         'quality_score',
         'quality_profile',
+        'personal_rating',
+        'personal_rating_note',
       });
     });
   });

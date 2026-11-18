@@ -595,6 +595,45 @@ login opsional di dalam dashboard.
 
 ---
 
+## D-31 — Penilaian pribadi (bintang 1–5) disimpan di `analyses` dan tampil di kartu ringkasan
+
+**Konteks:** Sejak awal, kartu "Penilaian Pribadi Anda" di Detail Inspeksi hanya
+menyimpan bintang + catatan di state sesi (`personalRatingProvider`), sehingga
+hilang saat app ditutup dan tidak bisa ditampilkan di tempat lain. Permintaan
+produk: penilaian itu harus langsung terlihat di kartu "Analisis Terakhir"
+(Beranda) dan kartu riwayat (tab Analisis).
+
+**Keputusan:**
+
+1. **Persistensi di tabel `analyses`**, bukan tabel baru: `personal_rating`
+   (`INTEGER`, `NULL` = belum dinilai) + `personal_rating_note` (`TEXT`).
+   Kunci penilaian = baris analisis itu sendiri, tidak lagi `batchLabel`
+   (label hanya dipakai sebagai kunci state sesi).
+2. **Skema naik ke v8**, migrasi `ALTER TABLE` guarded idempoten per kolom.
+   CHECK rentang 1–5 tidak bisa ditambahkan lewat `ALTER TABLE`; validasi
+   dilakukan di `AnalysisRepository.savePersonalRating` (melempar
+   `ArgumentError` di luar 1–5) dan di CHECK tabel `onCreate` untuk instalasi
+   baru.
+3. **Bukan bagian quality score.** Penilaian ini subjektif user dan tidak
+   dipakai rule engine, recommendation engine, maupun agregat Beranda.
+4. **Hasil scan yang belum tersimpan** (`analysisId` null, route draft) tetap
+   boleh dinilai, tetapi hanya di state sesi — tidak ada baris DB untuk ditulis.
+5. **Tampilan:** komponen bersama `core/widgets/personal_rating_stars.dart`
+   dipakai kartu Beranda (Beranda menampilkan 3 analisis terakhir) dan kartu
+   riwayat. Belum dinilai ditampilkan redup (`Belum dinilai`), bukan
+   disembunyikan, agar fitur terbaca.
+6. **Refresh:** kartu riwayat dimuat ulang setelah kembali dari Detail
+   Inspeksi; Beranda memuat ulang ringkasan setiap tab Beranda dibuka.
+
+**Dampak:** `DATABASE_SCHEMA.md` §6 & §12 (`kSchemaVersion` = 8);
+`mobile/lib/core/database/schema.dart`, `app_database.dart`,
+`analysis_repository.dart`, entity `AnalysisHistoryItem`/`AnalysisDetail`/
+`HomeAnalysisSummary`, `analysis_summary_source.dart`, widget
+`PersonalRatingCard` (menulis DB), `history_card.dart`, `home_view.dart`,
+`main_shell.dart`.
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - ~~Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan)~~ → **selesai (D-27)**: species 0.70 · roast 0.45.

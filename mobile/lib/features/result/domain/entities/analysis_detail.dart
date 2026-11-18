@@ -15,6 +15,8 @@ class AnalysisDetail {
     this.recommendation,
     this.alternatives = const [],
     required this.summaryText,
+    this.personalRating,
+    this.personalRatingNote,
   });
 
   final int analysisId;
@@ -34,6 +36,12 @@ class AnalysisDetail {
 
   /// Satu kalimat deterministic, di-generate runtime (D-20).
   final String summaryText;
+
+  /// Penilaian pribadi user (bintang 1–5), null = belum dinilai.
+  final int? personalRating;
+
+  /// Catatan penilaian pribadi (opsional).
+  final String? personalRatingNote;
 
   /// [result] dengan rekomendasi, alternatif, dan ringkasan terisi —
   /// satu bentuk data untuk layar detail dan seluruh kartunya.

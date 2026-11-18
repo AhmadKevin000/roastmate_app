@@ -84,11 +84,14 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
     };
   }
 
-  void _openDetail(AnalysisHistoryItem item) {
+  Future<void> _openDetail(AnalysisHistoryItem item) async {
     // Navigasi per id (Plan 3): detail dibaca dari SQLite. Item mock
     // (tanpa id) → segmen non-int + extra in-memory (fallback router).
     final id = item.detail.analysisId;
-    context.push('/history/${id ?? 'mock'}', extra: item.detail);
+    await context.push('/history/${id ?? 'mock'}', extra: item.detail);
+    // Penilaian pribadi bisa berubah di Detail Inspeksi (v8) — muat ulang
+    // supaya bintang di kartu langsung ikut terbarui.
+    if (mounted && widget.items == null) await _loadItems();
   }
 
   /// Hapus satu analisis + children (cascade) lalu muat ulang (v6).
