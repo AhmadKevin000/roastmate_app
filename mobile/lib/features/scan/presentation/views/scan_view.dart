@@ -363,7 +363,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       await templateSource.loadAll(),
       math.Random(),
     );
-    final batchName = ref.read(scanBatchNameProvider).trim();
+    final nameFromWidget = widget.coffeeName?.trim();
+    final nameFromProvider = ref.read(scanBatchNameProvider).trim();
+    final batchName = (nameFromWidget != null && nameFromWidget.isNotEmpty)
+        ? nameFromWidget
+        : nameFromProvider;
     final displayName = batchName.isEmpty ? 'Kopi Tanpa Nama' : batchName;
 
     // 2) DB dulu: analyses + analysis_defects + recommendations satu
