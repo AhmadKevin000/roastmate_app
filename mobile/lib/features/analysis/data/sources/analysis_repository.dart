@@ -1,6 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../../domain/entities/analysis_history_item.dart';
+import '../../../result/domain/entities/analysis_detail.dart';
 import '../../../../shared/models/analysis_result.dart';
 
 /// Referensi rekomendasi yang sudah terikat ke knowledge base.
@@ -45,24 +49,32 @@ class AnalysisRepository {
     RecommendationRef? recommendation,
   }) async {
     return _db.transaction((txn) async {
+      final distribution = result.roastDistribution;
       final id = await txn.insert('analyses', {
         'created_at': createdAt.toIso8601String(),
         'image_path': imagePath,
         'annotated_image_path': annotatedImagePath,
+        'name': result.batchName,
         'batch_label': result.batchLabel,
         'batch_name': result.batchName,
         'model_version': result.modelVersion,
         'species': result.species,
         'roast': result.roast,
+        'roast_confidence': result.roastConfidence,
+        'roast_distribution':
+            distribution == null ? null : jsonEncode(distribution),
         'visible_beans': result.visibleBeans,
         'defect_rate': result.defectRate,
+        'shape_uniformity': result.shapeUniformity,
+        'size_uniformity': result.sizeUniformity,
+        'roast_uniformity': result.roastUniformity,
         'quality_score': result.qualityScore,
         'quality_profile': _profileName(result.qualityProfile),
       });
 
       final batch = txn.batch();
       for (final entry in result.defectCounts.entries) {
-        if (entry.value == 0 && entry.key == DefectClass.healthy) continue;
+        if (entry.value == 0 && entry.key == DefectClass.normal) continue;
         batch.insert('analysis_defects', {
           'analysis_id': id,
           'defect_class': _defectClassName(entry.key),
@@ -85,6 +97,25 @@ class AnalysisRepository {
     });
   }
 
+  /// Label batch berikutnya gaya mockup: `Batch #001` (urut dari jumlah
+  /// baris `analyses` + 1, 3 digit).
+  Future<String> nextBatchLabel() async {
+    final count = Sqflite.firstIntValue(
+      await _db.rawQuery('SELECT COUNT(*) FROM analyses'),
+    ) ??
+        0;
+    return 'Batch #${(count + 1).toString().padLeft(3, '0')}';
+  }
+
+  /// Perbarui `image_path` setelah upload Cloudinary sukses (Plan 2).
+  Future<void> updateImagePath(int analysisId, String imageUrl) =>
+      _db.update(
+        'analyses',
+        {'image_path': imageUrl},
+        where: 'id = ?',
+        whereArgs: [analysisId],
+      );
+
   /// Daftar riwayat, terbaru dulu. Filter [species] opsional
   /// (`Arabica` / `Robusta` / `Mixed`).
   Future<List<AnalysisHistoryItem>> getHistory({String? species}) async {
@@ -104,6 +135,7 @@ class AnalysisRepository {
         AnalysisHistoryItem(
           dateLabel: formatHistoryDate(createdAt),
           detail: _fromRow(row, defects, createdAt),
+          imagePath: row['image_path'] as String?,
         ),
       );
     }
@@ -126,13 +158,90 @@ class AnalysisRepository {
     return AnalysisHistoryItem(
       dateLabel: formatHistoryDate(createdAt),
       detail: _fromRow(row, defects, createdAt),
+      imagePath: row['image_path'] as String?,
+    );
+  }
+
+  /// Detail lengkap satu analisis per id untuk layar Detail Inspeksi
+  /// (Plan 3): baris `analyses` + counts defect + foto + rekomendasi
+  /// (join knowledge base). Null bila id tidak ada.
+  Future<AnalysisDetail?> getDetail(int id) async {
+    final rows = await _db.query(
+      'analyses',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+
+    final row = rows.first;
+    final createdAt = DateTime.parse(row['created_at'] as String);
+    final defects = await _defectCounts(id);
+    final result = _fromRow(row, defects, createdAt);
+
+    final recRows = await _db.rawQuery('''
+      SELECT rec.*,
+             pm.method_name  AS primary_method_name,
+             pm.subtitle     AS primary_method_subtitle,
+             pr.recipe_id    AS primary_recipe_id,
+             pr.method_id    AS primary_method_id_r,
+             pr.dose_g, pr.water_volume_ml, pr.grind_size,
+             pr.temperature_c, pr.brewing_time_s,
+             am.method_name  AS alt_method_name,
+             am.subtitle     AS alt_method_subtitle,
+             ar.dose_g AS a_dose, ar.water_volume_ml AS a_water,
+             ar.grind_size AS a_grind,
+             ar.temperature_c AS a_temp, ar.brewing_time_s AS a_time
+      FROM recommendations rec
+      JOIN brew_methods pm ON pm.method_id = rec.primary_method_id
+      JOIN brew_recipes pr ON pr.recipe_id = rec.primary_recipe_id
+      LEFT JOIN brew_methods am ON am.method_id = rec.alternative_method_id
+      LEFT JOIN brew_recipes ar
+             ON ar.method_id = rec.alternative_method_id
+            AND ar.species = (SELECT species FROM analyses WHERE id = ?)
+            AND ar.is_default = 1
+      WHERE rec.analysis_id = ?
+    ''', [id, id]);
+
+    BrewRecommendation? recommendation;
+    List<AlternativeMethod> alternatives = const [];
+    if (recRows.isNotEmpty) {
+      final recRow = recRows.first;
+      recommendation = toBrewRecommendation(recRow);
+      alternatives = [?toAlternativeMethod(recRow)];
+    }
+
+    return AnalysisDetail(
+      analysisId: id,
+      result: result,
+      imagePath: row['image_path'] as String?,
+      recommendation: recommendation,
+      alternatives: alternatives,
+      summaryText: buildAnalysisSummary(result),
     );
   }
 
   /// Menghapus satu analisis. Defects & recommendations ikut lewat
-  /// `ON DELETE CASCADE`.
+  /// `ON DELETE CASCADE`. File foto lokal (bila `image_path` masih path
+  /// device, bukan URL Cloudinary) dihapus best-effort — kegagalan
+  /// diabaikan (cache device akan membersihkannya).
   Future<void> deleteAnalysis(int id) async {
+    final rows = await _db.query(
+      'analyses',
+      columns: ['image_path'],
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
     await _db.delete('analyses', where: 'id = ?', whereArgs: [id]);
+
+    final path = rows.isEmpty ? null : rows.first['image_path'] as String?;
+    if (path == null || path.isEmpty || path.startsWith('http')) return;
+    try {
+      await File(path).delete();
+    } catch (_) {
+      // Best-effort: file mungkin sudah hilang.
+    }
   }
 
   Future<Map<DefectClass, int>> _defectCounts(int analysisId) async {
@@ -144,7 +253,7 @@ class AnalysisRepository {
     );
     final counts = {for (final c in DefectClass.values) c: 0};
     for (final row in rows) {
-      final cls = _defectClassFromName(row['defect_class'] as String);
+      final cls = defectClassFromName(row['defect_class'] as String);
       if (cls != null) counts[cls] = row['count'] as int;
     }
     return counts;
@@ -156,6 +265,15 @@ class AnalysisRepository {
     DateTime createdAt,
   ) {
     final visibleBeans = (row['visible_beans'] as int?) ?? 0;
+    final distributionRaw = row['roast_distribution'] as String?;
+    Map<String, double>? distribution;
+    if (distributionRaw != null && distributionRaw.isNotEmpty) {
+      distribution = <String, double>{
+        for (final e in (jsonDecode(distributionRaw) as Map<String, dynamic>)
+            .entries)
+          e.key: (e.value as num).toDouble(),
+      };
+    }
     return InspectionResult(
       batchLabel: (row['batch_label'] as String?) ?? '-',
       batchName: (row['batch_name'] as String?) ?? 'Tanpa nama',
@@ -170,6 +288,12 @@ class AnalysisRepository {
       alternatives: const [],
       detections: const [], // per-biji tidak disimpan (D-20)
       modelVersion: (row['model_version'] as String?) ?? '-',
+      analysisId: row['id'] as int?,
+      shapeUniformity: (row['shape_uniformity'] as num?)?.toDouble() ?? 0,
+      sizeUniformity: (row['size_uniformity'] as num?)?.toDouble() ?? 0,
+      roastUniformity: (row['roast_uniformity'] as num?)?.toDouble() ?? 0,
+      roastConfidence: (row['roast_confidence'] as num?)?.toDouble(),
+      roastDistribution: distribution,
     );
   }
 }
@@ -191,26 +315,15 @@ String _profileName(QualityProfile profile) {
 
 String _defectClassName(DefectClass cls) {
   switch (cls) {
-    case DefectClass.healthy:
-      return 'Healthy';
-    case DefectClass.broken:
-      return 'Broken';
-    case DefectClass.insectDamage:
-      return 'Insect Damage';
+    case DefectClass.normal:
+      return 'Normal';
     case DefectClass.quaker:
       return 'Quaker';
-    case DefectClass.scorched:
-      return 'Scorched';
-    case DefectClass.foreignMatter:
-      return 'Foreign Matter';
+    case DefectClass.broken:
+      return 'Broken';
+    case DefectClass.severe:
+      return 'Severe';
   }
-}
-
-DefectClass? _defectClassFromName(String name) {
-  for (final c in DefectClass.values) {
-    if (_defectClassName(c) == name) return c;
-  }
-  return null;
 }
 
 const List<String> _monthAbbrev = [

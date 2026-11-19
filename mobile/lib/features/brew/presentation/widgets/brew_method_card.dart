@@ -35,16 +35,26 @@ class BrewMethodCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
                   color: RoastmateColors.espressoSoft,
                   borderRadius: BorderRadius.circular(RoastmateRadius.medium),
                 ),
-                child: const Icon(
-                  Icons.coffee_maker_outlined,
-                  color: RoastmateColors.primary,
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: method.imageAsset != null && method.imageAsset!.isNotEmpty
+                    ? Image.asset(
+                        method.imageAsset!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => const Icon(
+                          Icons.coffee_maker_outlined,
+                          color: RoastmateColors.primary,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.coffee_maker_outlined,
+                        color: RoastmateColors.primary,
+                      ),
               ),
               const SizedBox(width: RoastmateSpacing.md),
               Expanded(

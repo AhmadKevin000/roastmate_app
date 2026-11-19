@@ -12,6 +12,7 @@ import '../viewmodels/brew_view_model.dart';
 import '../widgets/brewing_step_list.dart';
 import '../widgets/preparation_list.dart';
 import '../widgets/recipe_summary_card.dart';
+import '../widgets/recipe_video_card.dart';
 import '../widgets/tasting_notes_card.dart';
 
 /// Layar "Detail Resep" — panduan langkah statis (FR-07).
@@ -88,9 +89,16 @@ class RecipeDetailScreen extends ConsumerWidget {
               children: [
                 RecipeSummaryCard(method: method, recipe: recipe),
                 const SizedBox(height: RoastmateSpacing.xl),
-                PreparationList(steps: recipe.prepSteps),
+                PreparationList(
+                  steps: recipe.prepSteps,
+                  tools: method.tools,
+                ),
                 const SizedBox(height: RoastmateSpacing.xl),
                 BrewingStepList(steps: recipe.brewSteps),
+                if (recipe.videoUrl != null && recipe.videoUrl!.isNotEmpty) ...[
+                  const SizedBox(height: RoastmateSpacing.xl),
+                  RecipeVideoCard(videoUrl: recipe.videoUrl!),
+                ],
                 const SizedBox(height: RoastmateSpacing.xl),
                 TastingNotesCard(intro: recipe.notes),
                 const SizedBox(height: RoastmateSpacing.xl),

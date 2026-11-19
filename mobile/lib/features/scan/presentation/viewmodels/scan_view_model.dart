@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// State immutable untuk fitur Kamera.
@@ -16,11 +17,8 @@ class CameraState {
   final double currentZoom;
   final double maxZoom;
   final double minZoom;
-  
+
   /// File foto yang berhasil diambil oleh kamera.
-  /// CATATAN UNTUK TIM MACHINE LEARNING:
-  /// Gunakan `capturedImage?.path` untuk mendapatkan path file lokal gambar
-  /// hasil jepretan kamera yang siap di-input ke dalam model YOLOv8-Nano.
   final XFile? capturedImage;
 
   const CameraState({
@@ -146,10 +144,7 @@ class CameraViewModel extends StateNotifier<CameraState> {
 
     try {
       await controller.setZoomLevel(targetZoom);
-      state = state.copyWith(
-        selectedZoom: zoomLabel,
-        currentZoom: targetZoom,
-      );
+      state = state.copyWith(selectedZoom: zoomLabel, currentZoom: targetZoom);
     } catch (e) {
       debugPrint('Error setting zoom: $e');
     }
@@ -198,10 +193,7 @@ class CameraViewModel extends StateNotifier<CameraState> {
       // Mengambil gambar dari umpan langsung kamera
       final XFile image = await controller.takePicture();
 
-      state = state.copyWith(
-        isTakingPicture: false,
-        capturedImage: image,
-      );
+      state = state.copyWith(isTakingPicture: false, capturedImage: image);
 
       debugPrint('=== ML PIPELINE READY ===');
       debugPrint('Foto Biji Kopi Berhasil Diambil!');
@@ -272,5 +264,5 @@ class CameraViewModel extends StateNotifier<CameraState> {
 /// Riverpod StateNotifierProvider untuk ViewModel Kamera.
 final cameraViewModelProvider =
     StateNotifierProvider.autoDispose<CameraViewModel, CameraState>((ref) {
-  return CameraViewModel();
-});
+      return CameraViewModel();
+    });

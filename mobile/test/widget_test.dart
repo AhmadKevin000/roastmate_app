@@ -1,25 +1,78 @@
+// Smoke test aplikasi: shell navigasi tampil dan Beranda membaca data
+// lewat provider (repository di-fake agar test tidak menyentuh SQLite).
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:pbl_sem5/app/app.dart';
 import 'package:pbl_sem5/app/main_shell.dart';
+import 'package:pbl_sem5/core/auth/auth_controller.dart';
+import 'package:pbl_sem5/features/home/data/repositories/home_repository.dart';
+import 'package:pbl_sem5/features/home/data/sources/analysis_summary_source.dart';
+import 'package:pbl_sem5/features/home/presentation/viewmodels/home_view_model.dart';
+
+/// Auth sudah login — auth gate (D-30) harus mengizinkan /home.
+class _LoggedInAuthController extends AuthController {
+  @override
+  AuthState build() =>
+      const AuthState(userId: 'user-1', email: 'user@example.com');
+}
+
+class _EmptySummarySource implements AnalysisSummarySource {
+  @override
+  Future<AnalysisSummarySnapshot> fetchSummary({
+    int recentLimit = kHomeRecentLimit,
+  }) async {
+    return const AnalysisSummarySnapshot(
+      totalAnalyses: 0,
+      averageScore: null,
+      speciesCounts: <String, int>{},
+      recentRows: <Map<String, Object?>>[],
+    );
+  }
+}
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  testWidgets('App loads detail screen test', (WidgetTester tester) async {
-    // Build our app wrapped with ProviderScope and trigger a frame.
+  testWidgets('Aplikasi menampilkan shell navigasi dan Beranda', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: RoastmateApp(),
+      ProviderScope(
+        overrides: [
+          homeRepositoryProvider.overrideWithValue(
+            HomeRepository(_EmptySummarySource()),
+          ),
+          authControllerProvider.overrideWith(_LoggedInAuthController.new),
+        ],
+        child: const RoastmateApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
-    // Verify that the app displays its home page.
     expect(find.byType(MainShell), findsOneWidget);
+    expect(find.text('Belum ada analisis tersimpan'), findsOneWidget);
   });
+
+  testWidgets('Auth gate (D-30): tanpa sesi → app berawal di layar login', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authControllerProvider.overrideWith(_LoggedOutAuthController.new),
+        ],
+        child: const RoastmateApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(MainShell), findsNothing);
+    expect(find.text('Masuk'), findsWidgets);
+  });
+}
+
+/// Auth belum login — gate harus redirect ke /login.
+class _LoggedOutAuthController extends AuthController {
+  @override
+  AuthState build() => const AuthState();
 }

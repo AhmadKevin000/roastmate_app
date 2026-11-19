@@ -17,10 +17,9 @@ class BeanOverlayPainter extends CustomPainter {
         det.normalizedRect.height * size.height,
       );
 
-      final colorName = det.classLabel.name == 'insectDamage' ? 'insect' : (det.classLabel.name == 'foreignMatter' ? 'foreign' : det.classLabel.name);
-      final color = RoastmateColors.defect[colorName] ?? RoastmateColors.primary;
+      final color = RoastmateColors.defect[det.classLabel.name] ?? RoastmateColors.primary;
 
-      if (det.classLabel == DefectClass.healthy) {
+      if (det.classLabel == DefectClass.normal) {
         final paint = Paint()
           ..color = color.withOpacity(0.5)
           ..style = PaintingStyle.stroke
@@ -68,12 +67,10 @@ class BeanOverlayPainter extends CustomPainter {
 
   String _getLabelName(DefectClass c) {
     switch (c) {
-      case DefectClass.healthy: return "Healthy";
-      case DefectClass.broken: return "Broken";
-      case DefectClass.insectDamage: return "Insect";
+      case DefectClass.normal: return "Normal";
       case DefectClass.quaker: return "Quaker";
-      case DefectClass.scorched: return "Scorched";
-      case DefectClass.foreignMatter: return "Foreign";
+      case DefectClass.broken: return "Broken";
+      case DefectClass.severe: return "Severe";
     }
   }
 

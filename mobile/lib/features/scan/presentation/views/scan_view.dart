@@ -1,18 +1,21 @@
-﻿import 'dart:math' as math;
+import 'dart:io';
+import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/database/app_database.dart';
+import '../../../../core/network/cloudinary_service.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/widgets/roastmate_app_bar.dart';
-import '../../../../inference/analysis_pipeline.dart';
-import '../../../../inference/bean_detector.dart';
-import '../../../../inference/image_quality_checker.dart';
-import '../../../../shared/models/analysis_result.dart';
-import '../../../result/data/sources/mock_inspection_source.dart';
+import '../../../analysis/data/sources/analysis_repository.dart';
+import '../../../analysis/data/sources/analysis_template_source.dart';
+import '../../../analysis/data/sources/reason_template_source.dart';
+import '../../../analysis/data/sources/recommendation_resolver.dart';
+import '../../../analysis/domain/analysis_result_builder.dart';
+import '../../../brew/data/repositories/brewing_repository_impl.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
 import '../widgets/analyzing_overlay.dart';
@@ -20,7 +23,8 @@ import '../widgets/analyzing_overlay.dart';
 /// Screen UI untuk "Scan Kamera" pada aplikasi Roastmate.
 /// Terintegrasi dengan Riverpod 2.x & CameraController (MVVM Architecture).
 class CameraScreen extends ConsumerStatefulWidget {
-  const CameraScreen({super.key});
+  final String? coffeeName;
+  const CameraScreen({super.key, this.coffeeName});
 
   @override
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
@@ -43,115 +47,260 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         fit: StackFit.expand,
         children: [
           SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(
-              color: const Color(0xFF231A16),
-              borderRadius: BorderRadius.circular(32),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: RoastmateColors.surfaceInverse,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              children: [
-                // Area Pemindaian Kamera (Viewfinder + Overlay)
-                Expanded(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // 1. Tampilan Kamera Asli (CameraPreview) atau Placeholder Latar Belakang
-                      Positioned.fill(
-                        child: _CameraLivePreview(
-                          state: cameraState,
-                        ),
-                      ),
+                child: Column(
+                  children: [
+                    // Area Pemindaian Kamera (Viewfinder + Overlay)
+                    Expanded(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // 1. Tampilan Kamera Asli (CameraPreview) atau Placeholder Latar Belakang
+                          Positioned.fill(
+                            child: _CameraLivePreview(state: cameraState),
+                          ),
 
-                      // 2. Baris Tombol Atas (Close, Batch Pill, Light)
-                      Positioned(
-                        top: 16,
-                        left: 16,
-                        right: 16,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Tombol Close (X)
-                            _IconButtonCircle(
-                              icon: Icons.close,
-                              onTap: () {
-                                if (context.canPop()) {
-                                  context.pop();
-                                }
-                              },
-                            ),
-
-                            // Badge "Scan Batch Kopi"
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2C231E).withValues(alpha: 0.75),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.15),
+                          // 2. Baris Tombol Atas (Close, Batch Pill, Light)
+                          Positioned(
+                            top: 16,
+                            left: 16,
+                            right: 16,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Tombol Close (X)
+                                _IconButtonCircle(
+                                  icon: Icons.close,
+                                  onTap: () {
+                                    if (context.canPop()) {
+                                      context.pop();
+                                    }
+                                  },
                                 ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 8,
-                                    height: 8,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF4ADE80),
-                                      shape: BoxShape.circle,
+
+                                // Badge "Scan Batch Kopi"
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF2C231E,
+                                    ).withValues(alpha: 0.75),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Scan Batch Kopi',
-                                    style: RoastmateText.labelMd.copyWith(
-                                      color: Colors.white,
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF4ADE80),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Scan Batch Kopi',
+                                        style: RoastmateText.labelMd.copyWith(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Tombol Lightbulb / Lampu Pencerah
+                                _IconButtonCircle(
+                                  icon: cameraState.isLightOn
+                                      ? Icons.lightbulb
+                                      : Icons.lightbulb_outline,
+                                  iconColor: cameraState.isLightOn
+                                      ? const Color(0xFFFDE047)
+                                      : Colors.white,
+                                  onTap: () => cameraVM.toggleLight(),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // 3. Petunjuk & Indikator Pencahayaan (Di Atas Frame Kotak)
+                          Positioned(
+                            top: 72,
+                            child: Column(
+                              children: [
+                                // Teks Instruksi: "Arahkan kamera ke biji kopi..."
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF231B17,
+                                    ).withValues(alpha: 0.8),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.15,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.crop_free_rounded,
+                                        color: Colors.white70,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Arahkan kamera ke biji kopi yang terlihat',
+                                        style: RoastmateText.bodySm.copyWith(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                // Badge Indikator "Pencahayaan Baik"
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF166534,
+                                    ).withValues(alpha: 0.65),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF22C55E,
+                                      ).withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.check_circle_outline_rounded,
+                                        color: Color(0xFF86EFAC),
+                                        size: 15,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Pencahayaan Baik',
+                                        style: RoastmateText.bodySm.copyWith(
+                                          color: const Color(0xFF86EFAC),
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // 4. Frame Area Pemindaian (Cutout Siku Putih & Target Circle)
+                          Center(
+                            child: Container(
+                              width: 260,
+                              height: 260,
+                              margin: const EdgeInsets.only(top: 10),
+                              child: Stack(
+                                children: [
+                                  // Siku-siku Putih di 4 Sudut Viewfinder
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: ViewfinderCornerPainter(),
+                                    ),
+                                  ),
+
+                                  // Dotted Target Circle di Tengah
+                                  Center(
+                                    child: CustomPaint(
+                                      size: const Size(60, 60),
+                                      painter: TargetReticlePainter(),
+                                    ),
+                                  ),
+
+                                  // Highlight Spot Transparan (Detail visual dari gambar)
+                                  Positioned(
+                                    top: 75,
+                                    left: 75,
+                                    child: Container(
+                                      width: 44,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFFEAB308,
+                                        ).withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: const Color(
+                                            0xFFEAB308,
+                                          ).withValues(alpha: 0.4),
+                                        ),
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.topRight,
+                                        child: Container(
+                                          width: 5,
+                                          height: 5,
+                                          margin: const EdgeInsets.all(4),
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFFEAB308),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
+                          ),
 
-                            // Tombol Lightbulb / Lampu Pencerah
-                            _IconButtonCircle(
-                              icon: cameraState.isLightOn
-                                  ? Icons.lightbulb
-                                  : Icons.lightbulb_outline,
-                              iconColor: cameraState.isLightOn
-                                  ? const Color(0xFFFDE047)
-                                  : Colors.white,
-                              onTap: () => cameraVM.toggleLight(),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // 3. Petunjuk & Indikator Pencahayaan (Di Atas Frame Kotak)
-                      Positioned(
-                        top: 72,
-                        child: Column(
-                          children: [
-                            // Teks Instruksi: "Arahkan kamera ke biji kopi..."
-                            Container(
+                          // 5. Teks Instruksi Bawah Viewfinder: "Tidak perlu menata..."
+                          Positioned(
+                            bottom: 24,
+                            child: Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
                                 vertical: 8,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF231B17).withValues(alpha: 0.8),
+                                color: const Color(
+                                  0xFF231B17,
+                                ).withValues(alpha: 0.8),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.15),
@@ -161,13 +310,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.crop_free_rounded,
-                                    color: Colors.white70,
+                                    Icons.grain,
+                                    color: Color(0xFFD4C8BE),
                                     size: 16,
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Arahkan kamera ke biji kopi yang terlihat',
+                                    'Tidak perlu menata satu per satu biji',
                                     style: RoastmateText.bodySm.copyWith(
                                       color: Colors.white,
                                       fontWeight: FontWeight.w500,
@@ -176,244 +325,111 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
                                 ],
                               ),
                             ),
-
-                            const SizedBox(height: 8),
-
-                            // Badge Indikator "Pencahayaan Baik"
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF166534).withValues(alpha: 0.65),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: const Color(0xFF22C55E).withValues(alpha: 0.5),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle_outline_rounded,
-                                    color: Color(0xFF86EFAC),
-                                    size: 15,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Pencahayaan Baik',
-                                    style: RoastmateText.bodySm.copyWith(
-                                      color: const Color(0xFF86EFAC),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
+                    ),
 
-                      // 4. Frame Area Pemindaian (Cutout Siku Putih & Target Circle)
-                      Center(
-                        child: Container(
-                          width: 260,
-                          height: 260,
-                          margin: const EdgeInsets.only(top: 10),
-                          child: Stack(
-                            children: [
-                              // Siku-siku Putih di 4 Sudut Viewfinder
-                              Positioned.fill(
-                                child: CustomPaint(
-                                  painter: ViewfinderCornerPainter(),
-                                ),
-                              ),
-
-                              // Dotted Target Circle di Tengah
-                              Center(
-                                child: CustomPaint(
-                                  size: const Size(60, 60),
-                                  painter: TargetReticlePainter(),
-                                ),
-                              ),
-
-                              // Highlight Spot Transparan (Detail visual dari gambar)
-                              Positioned(
-                                top: 75,
-                                left: 75,
-                                child: Container(
-                                  width: 44,
-                                  height: 32,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEAB308).withValues(alpha: 0.25),
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: const Color(0xFFEAB308).withValues(alpha: 0.4),
-                                    ),
-                                  ),
-                                  child: Align(
-                                    alignment: Alignment.topRight,
-                                    child: Container(
-                                      width: 5,
-                                      height: 5,
-                                      margin: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Color(0xFFEAB308),
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // 5. Teks Instruksi Bawah Viewfinder: "Tidak perlu menata..."
-                      Positioned(
-                        bottom: 24,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF231B17).withValues(alpha: 0.8),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.15),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.grain,
-                                color: Color(0xFFD4C8BE),
-                                size: 16,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Tidak perlu menata satu per satu biji',
-                                style: RoastmateText.bodySm.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    // Panel Kontrol Bawah (Bottom Controls Panel)
+                    _BottomControlPanel(
+                      state: cameraState,
+                      onZoomChanged: (zoom) => cameraVM.setZoom(zoom),
+                      onFlashToggled: () => cameraVM.toggleFlash(),
+                      onShutterPressed: () => _analyzeAndOpenResult(),
+                    ),
+                  ],
                 ),
-
-                // Panel Kontrol Bawah (Bottom Controls Panel)
-                _BottomControlPanel(
-                  state: cameraState,
-                  onZoomChanged: (zoom) => cameraVM.setZoom(zoom),
-                  onFlashToggled: () => cameraVM.toggleFlash(),
-                  onShutterPressed: _analyzeAndOpenResult,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
           if (_isAnalyzing) const Positioned.fill(child: AnalyzingOverlay()),
         ],
       ),
     );
   }
 
-  /// Menjalankan pipeline ML on-device lalu membuka halaman Detail Inspeksi.
-  ///
-  /// Urutan:
-  ///   1. Tampilkan overlay analisis
-  ///   2. Ambil foto via kamera (fallback ke sample bila di lingkungan uji)
-  ///   3. Jalankan AnalysisPipeline (quality check â†’ detect â†’ classify â†’ score â†’ recommend)
-  ///   4. Navigasi ke /result/... dengan InspectionResult nyata
-  ///
-  /// Bila gambar buruk atau bukan biji kopi, tampilkan bottom sheet error
-  /// dan biarkan kamera tetap aktif agar pengguna bisa mencoba lagi.
-    Future<void> _analyzeAndOpenResult() async {
+  /// Menjalankan alur shutter: pilih template analisis acak (pengganti
+  /// sementara pipeline ML), simpan data lengkap ke SQLite **dulu**
+  /// (offline-first, AC-02), lalu upload foto ke Cloudinary best-effort
+  /// dan membuka Detail Inspeksi.
+  Future<void> _analyzeAndOpenResult() async {
     final cameraVM = ref.read(cameraViewModelProvider.notifier);
     final image = await cameraVM.takePicture();
     if (!mounted) return;
 
-    if (image != null) {
-      debugPrint('=== ML PIPELINE READY ===');
-      debugPrint('Path File Foto untuk YOLOv8-Nano: ${image.path}');
+    // 1) Template acak + identitas batch dari form setup.
+    final templateSource = ref.read(analysisTemplateSourceProvider);
+    final template = templateSource.pick(
+      await templateSource.loadAll(),
+      math.Random(),
+    );
+    final batchName = ref.read(scanBatchNameProvider).trim();
+    final displayName = batchName.isEmpty ? 'Kopi Tanpa Nama' : batchName;
+
+    // 2) DB dulu: analyses + analysis_defects + recommendations satu
+    //    transaksi (AC-01/AC-03). Gagal (mis. device rusak) → snackbar,
+    //    layar hasil tetap terbuka dari data in-memory (AC-04).
+    String batchLabel = '';
+    int? analysisId;
+    try {
+      final db = await AppDatabase.instance.database;
+      final analysisRepo = AnalysisRepository(db);
+      batchLabel = await analysisRepo.nextBatchLabel();
+      final recommendation = await RecommendationResolver(
+        BrewingRepositoryImpl(database: db),
+        const ReasonTemplateSource(),
+      ).resolve(species: template.species, roast: template.roast);
+      analysisId = await analysisRepo.insertResult(
+        buildResultFromTemplate(template, displayName, batchLabel),
+        createdAt: DateTime.now(),
+        imagePath: image?.path,
+        recommendation: recommendation,
+      );
+    } catch (e) {
+      debugPrint('[Scan] Gagal menyimpan analisis ke SQLite: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(content: Text('Gagal menyimpan ke riwayat')));
+      }
     }
 
+    // 3) Overlay analisis menutup latensi: pratinjau kamera berhenti,
+    //    upload berjalan paralel dengan jeda minimal 2 detik.
     setState(() => _isAnalyzing = true);
     await cameraVM.stopPreview();
-    await Future.delayed(const Duration(seconds: 2));
+
+    final minimumDelay = Future<void>.delayed(const Duration(seconds: 2));
+    final uploadFuture = image != null
+        ? ref.read(cloudinaryServiceProvider).uploadImage(File(image.path))
+        : Future<String?>.value(null);
+    final uploadUrl = await uploadFuture;
+    await minimumDelay;
     if (!mounted) return;
 
-    final batchName = ref.read(scanBatchNameProvider).trim();
-    final effectiveBatchName =
-        batchName.isEmpty ? 'Batch Tanpa Nama' : batchName;
-
-    InspectionResult result;
-    try {
-      if (image != null) {
+    // 4) Upload sukses → perbarui `image_path` ke URL Cloudinary.
+    //    Gagal/offline → `image_path` tetap path lokal (tanpa error UI).
+    if (uploadUrl != null && analysisId != null) {
+      try {
         final db = await AppDatabase.instance.database;
-        final pipeline = AnalysisPipeline(db: db);
-        result = await pipeline.analyze(
-          image,
-          batchName: effectiveBatchName,
-        );
-      } else {
-        // Fallback untuk lingkungan pengujian / emulator tanpa kamera fisik
-        result = mockInspectionResult.copyWith(
-          batchName: batchName.isEmpty
-              ? mockInspectionResult.batchName
-              : batchName,
-        );
+        await AnalysisRepository(db).updateImagePath(analysisId, uploadUrl);
+      } catch (e) {
+        debugPrint('[Scan] Gagal memperbarui image_path: $e');
       }
-    } on NoBeanDetectedException {
-      if (!mounted) return;
-      setState(() => _isAnalyzing = false);
-      await cameraVM.resumePreview();
-      _showRejectionBottomSheet(
-        'Tidak ada biji kopi yang terdeteksi.\n'
-        'Pastikan biji kopi mengisi sebagian besar frame kamera.',
-      );
-      return;
-    } on ImageQualityException catch (e) {
-      if (!mounted) return;
-      setState(() => _isAnalyzing = false);
-      await cameraVM.resumePreview();
-      _showRejectionBottomSheet(e.reason);
-      return;
-    } catch (e) {
-      debugPrint('[CameraScreen] Analysis fallback to mock: $e');
-      result = mockInspectionResult.copyWith(
-        batchName: batchName.isEmpty
-            ? mockInspectionResult.batchName
-            : batchName,
-      );
     }
 
-    if (!mounted) return;
     setState(() => _isAnalyzing = false);
-
-    // pushReplacement agar layar kamera keluar dari stack.
+    // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
+    // `analysisId` null (DB gagal) → segmen `draft` (fallback extra, Plan 3);
+    // detail fallback memakai path lokal foto capture (imagePath).
+    final result = buildResultFromTemplate(
+      template,
+      displayName,
+      batchLabel,
+    ).copyWith(imagePath: image?.path);
     context.pushReplacement(
-      '/result/scan-${DateTime.now().millisecondsSinceEpoch}',
+      '/result/${analysisId ?? 'draft'}',
       extra: result,
-    );
-  }
-
-  /// Menampilkan bottom sheet pesan error beserta tombol "Coba Lagi".
-  void _showRejectionBottomSheet(String message) {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _RejectionBottomSheet(message: message),
     );
   }
 }
@@ -426,14 +442,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 class _CameraLivePreview extends StatelessWidget {
   final CameraState state;
 
-  const _CameraLivePreview({
-    required this.state,
-  });
+  const _CameraLivePreview({required this.state});
 
   @override
   Widget build(BuildContext context) {
     final controller = state.controller;
-    final isReady = state.isInitialized &&
+    final isReady =
+        state.isInitialized &&
         controller != null &&
         controller.value.isInitialized;
 
@@ -479,9 +494,7 @@ class _CameraLivePreview extends StatelessWidget {
               ),
               if (state.isLoading)
                 const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF86EFAC),
-                  ),
+                  child: CircularProgressIndicator(color: Color(0xFF86EFAC)),
                 ),
             ],
           ),
@@ -528,15 +541,9 @@ class _IconButtonCircle extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xFF2C231E).withValues(alpha: 0.75),
           shape: BoxShape.circle,
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.15),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
-        child: Icon(
-          icon,
-          color: iconColor,
-          size: 22,
-        ),
+        child: Icon(icon, color: iconColor, size: 22),
       ),
     );
   }
@@ -704,15 +711,9 @@ class _BottomControlPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0xFF382A23).withValues(alpha: 0.8),
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 22,
-            ),
+            child: Icon(icon, color: Colors.white, size: 22),
           ),
           const SizedBox(height: 6),
           Text(
@@ -720,90 +721,6 @@ class _BottomControlPanel extends StatelessWidget {
             style: RoastmateText.bodySm.copyWith(
               color: Colors.white70,
               fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// BOTTOM SHEET ERROR
-// =============================================================================
-
-/// Bottom sheet yang muncul ketika analisis gagal (gambar buruk / bukan kopi).
-class _RejectionBottomSheet extends StatelessWidget {
-  final String message;
-
-  const _RejectionBottomSheet({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2C1E1A),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF8B3A2F).withValues(alpha: 0.6),
-        ),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Ikon peringatan
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: const Color(0xFF7F1D1D).withValues(alpha: 0.4),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.warning_amber_rounded,
-              color: Color(0xFFFCA5A5),
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Analisis Gagal',
-            style: RoastmateText.titleMd.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: RoastmateText.bodySm.copyWith(
-              color: const Color(0xFFD6C5BC),
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF8B4513),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              child: Text(
-                'Coba Lagi',
-                style: RoastmateText.labelMd.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ),
         ],
@@ -828,28 +745,28 @@ class ViewfinderCornerPainter extends CustomPainter {
 
     const cornerLength = 28.0;
 
-    // Top-Left Corner â”Œ
+    // Top-Left Corner ┌
     final topLeftPath = Path()
       ..moveTo(0, cornerLength)
       ..lineTo(0, 0)
       ..lineTo(cornerLength, 0);
     canvas.drawPath(topLeftPath, paint);
 
-    // Top-Right Corner â”
+    // Top-Right Corner ┐
     final topRightPath = Path()
       ..moveTo(size.width - cornerLength, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width, cornerLength);
     canvas.drawPath(topRightPath, paint);
 
-    // Bottom-Left Corner â””
+    // Bottom-Left Corner └
     final bottomLeftPath = Path()
       ..moveTo(0, size.height - cornerLength)
       ..lineTo(0, size.height)
       ..lineTo(cornerLength, size.height);
     canvas.drawPath(bottomLeftPath, paint);
 
-    // Bottom-Right Corner â”˜
+    // Bottom-Right Corner ┘
     final bottomRightPath = Path()
       ..moveTo(size.width - cornerLength, size.height)
       ..lineTo(size.width, size.height)

@@ -77,17 +77,21 @@ Aplikasi memiliki 3 tab utama.
 - Riwayat analisis (daftar + filter Semua / Arabica / Robusta / Liberika / Mixed).
 - Setiap item: nama, tanggal, jenis, jumlah biji terlihat, jumlah defect, skor, grade.
 - Buka detail inspeksi (hasil analisis lengkap).
+- Hapus satu analisis (dengan konfirmasi; defects & rekomendasi ikut terhapus).
 - Ekspor CSV.
 
 ### Tab Seduh
 - Katalog metode seduh.
 - Ringkasan tiap metode (rasio, waktu, grind, suhu).
-- Buka detail resep (panduan langkah statis).
+- Buka detail resep (panduan langkah statis + video panduan bila ada).
+- Seksi **Resep Kamu**: kartu tappable → Detail Resep Kamu; tambah via **FAB** (hanya di katalog Seduh) & hapus (dengan konfirmasi).
 
 ### Layar pendukung
 - Scan Kamera (kamera + overlay deteksi + indikator pencahayaan).
 - Detail Inspeksi (hasil analisis lengkap).
-- Detail Resep (panduan langkah).
+- Detail Resep (panduan langkah + video panduan bila ada).
+- Detail Resep Kamu (resep buatan user: parameter, langkah, video, catatan).
+- Akun (login/daftar email-sandi + profil/logout).
 
 ---
 
@@ -123,6 +127,9 @@ Seduh
 - Kontrol zoom (0.5x / 1x / 2x), galeri, flash.
 - Tombol capture (target sentuh ≥ 48×48 dp).
 - Catatan: hanya biji yang terlihat pada permukaan foto yang dinilai.
+- Catatan: hasil analisis disimpan ke SQLite **dulu** (offline-first); upload foto
+  ke Cloudinary bersifat **best-effort** — gagal/offline tidak memblokir alur
+  inti (AC-02 aman).
 
 ### FR-02 Image Quality Check
 - Menolak/memperingatkan bila foto gelap, blur, atau tidak ada biji terdeteksi.
@@ -149,17 +156,28 @@ Seduh
 - Daftar seluruh analisis tersimpan.
 - Filter berdasarkan species.
 - Ringkasan: total analisis, rata-rata skor, komposisi jenis.
+- Hapus satu analisis (dengan dialog konfirmasi); `analysis_defects` & `recommendations` ikut terhapus via `ON DELETE CASCADE`; file foto lokal (bila `image_path` masih path device) dihapus best-effort.
 - Ekspor CSV.
 
 ### FR-06 Katalog Metode Seduh
 - Daftar metode (mis. V60, French Press, Kopi Tubruk).
 - Ringkasan parameter tiap metode.
 - Buka detail resep.
+- Tombol tambah resep = **FAB** di katalog Seduh (di atas bottom nav; ikon `+` di header dihapus).
+- Seksi **Resep Kamu**: tambah (form `/brewing/new`), hapus (dengan konfirmasi), dan
+  buka detail (`/brewing/user/:recipeId`) resep buatan user; tersimpan di
+  `user_brew_recipes`, aman dari reseed KB, tidak dipakai recommendation engine.
+- Form v6: metode KB atau **"Lainnya"** (nama bebas, `method_id` = NULL),
+  parameter penuh, **langkah seduh dinamis** (judul wajib, deskripsi & target
+  waktu opsional, tambah/hapus baris), dan **link video YouTube** opsional.
 
 ### FR-07 Detail Resep
 - Ringkasan resep (berat, total air, suhu, grind, total waktu, metode).
 - Daftar persiapan & alat.
 - **Panduan langkah statis** (bernomor, dengan label target waktu sebagai informasi).
+- **Video panduan** (bila tersedia di `video_url`): thumbnail YouTube + tombol
+  buka aplikasi YouTube (tanpa player embed). Tampil di Detail Resep KB maupun
+  Detail Resep Kamu.
 - Tips kalibrasi rasa.
 - Tidak ada timer interaktif.
 
@@ -173,6 +191,20 @@ Seduh
 - Bila confidence roast di bawah ambang (0.45) → status `uncertain`.
 - Tidak memaksakan satu kelas.
 
+### FR-10 Akun (Login/Daftar)
+- **Auth gate:** pertama kali membuka aplikasi, user **wajib** sign in/sign up (email + sandi, Supabase Auth) sebelum masuk fitur utama. Tidak ada mode guest.
+- Profil: email tercatat + tombol logout. Logout kembali ke layar login (riwayat lokal device tetap ada; data riwayat per device terikat akun yang login).
+- Kredensial & URL project Supabase dikonfigurasi via `.env` (tidak di-hardcode).
+- Sesi tersimpan oleh Supabase (session persistence) — login hanya sekali, kecuali logout/token kadaluarsa.
+
+### FR-11 Sinkronisasi Riwayat Antar Device
+- Saat login & online: riwayat analisis (`analyses` + defects + rekomendasi) dan resep user di-sync ke Supabase (best-effort di background).
+- Pergantian device: setelah login di device baru, riwayat yang sudah tersimpan di cloud **muncul kembali** (merge union by `uuid`).
+- Data riwayat bersifat **append-only** — tidak ada konflik update; hapus riwayat di-propagate ke cloud best-effort.
+- Offline atau gagal sync tidak memblokir alur inti; baris ditandai `pending` dan dikirim saat online berikutnya.
+- Foto dengan URL Cloudinary tampil di device lain; foto ber-path lokal hanya tampil di device asal.
+- Akses data ditegakkan Row Level Security: user hanya melihat baris miliknya sendiri.
+
 ---
 
 ## 7. Non-Functional Requirements
@@ -180,12 +212,12 @@ Seduh
 | Aspek | Target |
 |---|---|
 | Platform | Android & iOS (Flutter) |
-| Mode operasi | On-device, offline (tanpa internet) |
+| Mode operasi | Offline-first untuk alur analisis; butuh internet untuk login & sync (FR-10/11, auth gate) |
 | Latensi inference | < ~1 detik per foto |
 | Penggunaan RAM | < ~120 MB |
 | Ukuran model total | ~17 MB (detector fp16 6.1 + 3× classifier fp32) |
-| Privasi | Foto tidak pernah dikirim ke server |
-| Riwayat | Tersimpan lokal (SQLite) |
+| Privasi | Foto best-effort ke Cloudinary (URL tersimpan di riwayat); metadata riwayat tersinkron hanya milik user terkait (RLS) |
+| Riwayat | Tersimpan lokal (SQLite); tersinkron ke Supabase saat login (D-29) |
 | Bahasa UI | Indonesia |
 | Aksesibilitas | Target sentuh ≥ 48×48 dp, kontras teks ≥ 4.5:1 |
 
@@ -225,7 +257,7 @@ Quality score dihitung dari **defect only** (bukan multicomponent):
 ```
 defect_rate   = Σ(count[c] × weight[c]) / n_crop   (soft: expected weight per biji)
 quality_score = round(100 × (1 − defect_rate))
-profile: High ≥ 90 (dr ≤ 0.10) · Medium ≥ 70 (dr ≤ 0.30) · Low < 70
+profile: High ≥ 75 (dr ≤ 0.25) · Medium ≥ 60 (dr ≤ 0.40) · Low < 60
 ```
 
 Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** masuk rumus score.
@@ -270,6 +302,9 @@ Uniformity (bentuk/ukuran/roast) tetap dihitung & ditampilkan, tetapi **tidak** 
 | AC-08 | Riwayat analisis tersimpan lokal dan dapat diekspor CSV. |
 | AC-09 | Grade ditentukan dari pemetaan Quality Profile → Grade (bagian 8). |
 | AC-10 | Tidak ada komponen timer interaktif di aplikasi. |
+| AC-11 | Tanpa sesi login, app selalu berawal di layar login/daftar; fitur analisis hanya bisa diakses setelah login (auth gate, revisi D-29). |
+| AC-12 | Setelah login di device baru, riwayat yang ada di cloud muncul kembali (union by `uuid`). |
+| AC-13 | User tidak dapat membaca baris milik user lain (RLS, dites dengan dua akun). |
 
 ---
 

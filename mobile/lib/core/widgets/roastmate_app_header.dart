@@ -10,6 +10,7 @@ import '../theme/roastmate_text.dart';
 /// Dirender sebagai [AppBar] sehingga tetap menempel di atas saat konten
 /// di-scroll (sama seperti layar detail). Menampilkan logo aplikasi, nama
 /// "Roastmate", sublabel tab aktif, dan ikon pengaturan. Tidak memakai avatar.
+/// (Tombol tambah resep Seduh = FAB di [MainShell], v6.)
 class RoastmateAppHeader extends StatelessWidget
     implements PreferredSizeWidget {
   /// Sublabel tab aktif (mis. "Beranda", "Analisis", "Seduh").

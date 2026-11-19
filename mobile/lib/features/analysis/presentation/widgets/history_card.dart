@@ -3,6 +3,7 @@ import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
+import '../../../../core/widgets/analysis_image.dart';
 import '../../domain/entities/analysis_history_item.dart';
 
 /// Kartu satu analisis pada daftar riwayat.
@@ -10,7 +11,15 @@ class HistoryCard extends StatelessWidget {
   final AnalysisHistoryItem item;
   final VoidCallback? onTap;
 
-  const HistoryCard({Key? key, required this.item, this.onTap}) : super(key: key);
+  /// Aksi hapus (v6). Null → ikon hapus tidak dirender (mis. item mock).
+  final VoidCallback? onDelete;
+
+  const HistoryCard({
+    Key? key,
+    required this.item,
+    this.onTap,
+    this.onDelete,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -38,89 +47,119 @@ class HistoryCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(RoastmateRadius.large),
             border: Border.all(color: RoastmateColors.borderDefault),
           ),
-          child: Column(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.batchName,
-                      style: RoastmateText.titleMd.copyWith(color: RoastmateColors.textPrimary),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: AnalysisImage(
+                    imagePath: item.imagePath,
+                    thumbnail: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.batchName,
+                            style: RoastmateText.titleMd.copyWith(color: RoastmateColors.textPrimary),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: RoastmateSpacing.sm),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              item.qualityScore.toString(),
+                              style: RoastmateText.headlineSm.copyWith(color: RoastmateColors.textPrimary),
+                            ),
+                            Text(
+                              '/100',
+                              style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
+                            ),
+                          ],
+                        ),
+                        if (onDelete != null)
+                          IconButton(
+                            tooltip: 'Hapus analisis',
+                            onPressed: onDelete,
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: RoastmateColors.error,
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: RoastmateSpacing.sm),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        item.qualityScore.toString(),
-                        style: RoastmateText.headlineSm.copyWith(color: RoastmateColors.textPrimary),
-                      ),
-                      Text(
-                        '/100',
-                        style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: RoastmateSpacing.xs),
-              Text(
-                item.dateLabel,
-                style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
-              ),
-              const SizedBox(height: RoastmateSpacing.md),
-              Row(
-                children: [
-                  _buildChip(
-                    label: item.species,
-                    background: RoastmateColors.espressoSoft,
-                    foreground: RoastmateColors.secondary,
-                  ),
-                  const SizedBox(width: RoastmateSpacing.sm),
-                  Flexible(
-                    child: _buildChip(
-                      label: gradeDisplayLabel(item.grade),
-                      background: gradeContainer,
-                      foreground: gradeColor,
-                      icon: Icons.verified,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: RoastmateSpacing.md),
-              const Divider(color: RoastmateColors.borderDefault, height: 1),
-              const SizedBox(height: RoastmateSpacing.md),
-              Row(
-                children: [
-                  const Icon(Icons.grid_on, size: 14, color: RoastmateColors.iconMuted),
-                  const SizedBox(width: RoastmateSpacing.xs),
-                  Text(
-                    '${item.visibleBeans} biji terlihat',
-                    style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    hasDefect ? Icons.warning_amber_rounded : Icons.check_circle_outline,
-                    size: 14,
-                    color: hasDefect ? RoastmateColors.secondary : RoastmateColors.tertiary,
-                  ),
-                  const SizedBox(width: RoastmateSpacing.xs),
-                  Flexible(
-                    child: Text(
-                      defectText,
+                    const SizedBox(height: RoastmateSpacing.xs),
+                    Text(
+                      item.dateLabel,
                       style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
-                      textAlign: TextAlign.right,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: RoastmateSpacing.md),
+                    Row(
+                      children: [
+                        _buildChip(
+                          label: item.species,
+                          background: RoastmateColors.espressoSoft,
+                          foreground: RoastmateColors.secondary,
+                        ),
+                        const SizedBox(width: RoastmateSpacing.sm),
+                        Flexible(
+                          child: _buildChip(
+                            label: gradeDisplayLabel(item.grade),
+                            background: gradeContainer,
+                            foreground: gradeColor,
+                            icon: Icons.verified,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: RoastmateSpacing.md),
+                    const Divider(color: RoastmateColors.borderDefault, height: 1),
+                    const SizedBox(height: RoastmateSpacing.md),
+                    Row(
+                      children: [
+                        const Icon(Icons.grid_on, size: 14, color: RoastmateColors.iconMuted),
+                        const SizedBox(width: RoastmateSpacing.xs),
+                        Text(
+                          '${item.visibleBeans} biji terlihat',
+                          style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          hasDefect ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+                          size: 14,
+                          color: hasDefect ? RoastmateColors.secondary : RoastmateColors.tertiary,
+                        ),
+                        const SizedBox(width: RoastmateSpacing.xs),
+                        Flexible(
+                          child: Text(
+                            defectText,
+                            style: RoastmateText.bodySm.copyWith(color: RoastmateColors.textSecondary),
+                            textAlign: TextAlign.right,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

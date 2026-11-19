@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../shared/models/analysis_result.dart';
+import '../viewmodels/result_view_model.dart';
 import '../widgets/inspection_header.dart';
 import '../widgets/quality_score_card.dart';
 import '../widgets/brew_recommendation_card.dart';
@@ -13,16 +15,22 @@ import '../widgets/composition_breakdown_card.dart';
 import '../widgets/disclaimer_banner.dart';
 import '../../../../core/widgets/roastmate_app_bar.dart';
 
-enum ViewState { loading, content, error }
-
+/// Layar Detail Inspeksi (Plan 3): data dibaca **dari SQLite per
+/// [analysisId]** (join knowledge base), bukan dari `state.extra`.
+///
+/// [fallback] dipakai saat [analysisId] null (route `draft` setelah scan)
+/// atau baca DB gagal — data in-memory alur scan tetap tampil (AC-04).
 class InspectionDetailScreen extends StatefulWidget {
-  final InspectionResult? result;
-  final ViewState initialState;
+  /// Id baris `analyses`; null bila belum tersimpan di DB.
+  final int? analysisId;
+
+  /// Data in-memory cadangan (route extra, alur scan).
+  final InspectionResult? fallback;
 
   const InspectionDetailScreen({
     super.key,
-    this.result,
-    this.initialState = ViewState.content,
+    this.analysisId,
+    this.fallback,
   });
 
   @override
@@ -30,12 +38,30 @@ class InspectionDetailScreen extends StatefulWidget {
 }
 
 class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
-  late ViewState _state;
+  late final ResultViewModel _viewModel;
+  late final VoidCallback _removeListener;
 
   @override
   void initState() {
     super.initState();
-    _state = widget.initialState;
+    _viewModel = ResultViewModel(
+      analysisId: widget.analysisId,
+      fallback: widget.fallback,
+    );
+    _removeListener = _viewModel.addListener(
+      (_) {
+        if (mounted) setState(() {});
+      },
+      fireImmediately: false,
+    );
+    _viewModel.load();
+  }
+
+  @override
+  void dispose() {
+    _removeListener();
+    _viewModel.dispose();
+    super.dispose();
   }
 
   @override
@@ -48,27 +74,27 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
   }
 
   Widget _buildBody() {
-    if (_state == ViewState.loading) {
+    final state = _viewModel.viewState;
+
+    if (state.loading) {
       return const Center(
         child: CircularProgressIndicator(color: RoastmateColors.primary),
       );
     }
 
-    if (_state == ViewState.error || widget.result == null) {
+    if (state.error != null) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text("Gagal memuat detail inspeksi", style: RoastmateText.bodyLg),
+            Text(state.error!, style: RoastmateText.bodyLg),
             const SizedBox(height: RoastmateSpacing.md),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: RoastmateColors.primary,
                 foregroundColor: RoastmateColors.surface,
               ),
-              onPressed: () {
-                setState(() => _state = ViewState.content);
-              },
+              onPressed: () => _viewModel.load(),
               child: const Text("Coba lagi"),
             ),
           ],
@@ -76,7 +102,8 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
       );
     }
 
-    final result = widget.result!;
+    final detail = state.content!;
+    final result = detail.displayResult;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -138,9 +165,14 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                         ),
                       ),
                     const SizedBox(height: RoastmateSpacing.xl),
+                    _SummaryCard(text: detail.summaryText),
+                    const SizedBox(height: RoastmateSpacing.xl),
                     PersonalRatingCard(ratingKey: result.batchLabel),
                     const SizedBox(height: RoastmateSpacing.xl),
-                    VisualEvidenceCard(result: result),
+                    VisualEvidenceCard(
+                      result: result,
+                      imagePath: detail.imagePath,
+                    ),
                     const SizedBox(height: RoastmateSpacing.xl),
                     CompositionBreakdownCard(result: result),
                     const SizedBox(height: RoastmateSpacing.xl),
@@ -153,6 +185,55 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Kartu ringkasan analisis — `summaryText` di-generate saat baca dari DB
+/// (D-20), jadi di-render di layar, bukan disimpan.
+class _SummaryCard extends StatelessWidget {
+  const _SummaryCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
+      padding: const EdgeInsets.all(RoastmateSpacing.lg),
+      decoration: BoxDecoration(
+        color: RoastmateColors.surface,
+        borderRadius: BorderRadius.circular(RoastmateRadius.large),
+        border: Border.all(color: RoastmateColors.borderDefault),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.summarize_outlined,
+                size: 16,
+                color: RoastmateColors.textSecondary,
+              ),
+              const SizedBox(width: RoastmateSpacing.sm),
+              Text(
+                "RINGKASAN ANALISIS",
+                style: RoastmateText.labelSm.copyWith(
+                  color: RoastmateColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: RoastmateSpacing.md),
+          Text(
+            text,
+            style: RoastmateText.bodyLg.copyWith(
+              color: RoastmateColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

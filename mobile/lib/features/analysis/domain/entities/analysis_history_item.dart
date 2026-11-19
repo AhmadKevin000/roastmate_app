@@ -3,12 +3,19 @@ import '../../../../shared/models/analysis_result.dart';
 /// Satu baris riwayat analisis untuk daftar di tab Analisis.
 ///
 /// Membungkus [InspectionResult] lengkap (dipakai layar Detail Inspeksi) dan
-/// menambahkan [dateLabel] khusus tampilan daftar.
+/// menambahkan [dateLabel] khusus tampilan daftar. [imagePath] adalah foto
+/// analisis (`analyses.image_path`) untuk thumbnail kartu — null untuk
+/// item mock/data lama tanpa foto.
 class AnalysisHistoryItem {
   final InspectionResult detail;
   final String dateLabel;
+  final String? imagePath;
 
-  const AnalysisHistoryItem({required this.detail, required this.dateLabel});
+  const AnalysisHistoryItem({
+    required this.detail,
+    required this.dateLabel,
+    this.imagePath,
+  });
 
   String get batchName => detail.batchName;
   String get species => detail.species;
@@ -16,16 +23,16 @@ class AnalysisHistoryItem {
   int get visibleBeans => detail.visibleBeans;
   Map<DefectClass, int> get defectCounts => detail.defectCounts;
 
-  int get healthyCount => detail.healthyCount;
+  int get normalCount => detail.normalCount;
 
-  /// Jumlah biji defect = total terlihat - Healthy.
-  int get defectTotal => visibleBeans - healthyCount;
+  /// Jumlah biji defect = total terlihat - Normal.
+  int get defectTotal => visibleBeans - normalCount;
 
-  /// Kelas defect (selain Healthy) yang jumlahnya > 0, urut dari terbanyak.
+  /// Kelas defect (selain Normal) yang jumlahnya > 0, urut dari terbanyak.
   List<DefectClass> get defectClasses {
     final entries =
         defectCounts.entries
-            .where((e) => e.key != DefectClass.healthy && e.value > 0)
+            .where((e) => e.key != DefectClass.normal && e.value > 0)
             .toList()
           ..sort((a, b) => b.value.compareTo(a.value));
     return entries.map((e) => e.key).toList();
@@ -56,18 +63,14 @@ class AnalysisHistoryItem {
 /// Nama pendek kelas defect untuk chip ringkas di kartu riwayat.
 String defectShortLabel(DefectClass defectClass) {
   switch (defectClass) {
-    case DefectClass.healthy:
-      return 'Healthy';
-    case DefectClass.broken:
-      return 'Broken';
-    case DefectClass.insectDamage:
-      return 'Insect';
+    case DefectClass.normal:
+      return 'Normal';
     case DefectClass.quaker:
       return 'Quaker';
-    case DefectClass.scorched:
-      return 'Scorched';
-    case DefectClass.foreignMatter:
-      return 'Foreign';
+    case DefectClass.broken:
+      return 'Broken';
+    case DefectClass.severe:
+      return 'Severe';
   }
 }
 

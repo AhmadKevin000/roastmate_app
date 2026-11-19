@@ -85,10 +85,58 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
   }
 
   void _openDetail(AnalysisHistoryItem item) {
-    context.push(
-      '/history/${Uri.encodeComponent(item.detail.batchLabel)}',
-      extra: item.detail,
+    // Navigasi per id (Plan 3): detail dibaca dari SQLite. Item mock
+    // (tanpa id) → segmen non-int + extra in-memory (fallback router).
+    final id = item.detail.analysisId;
+    context.push('/history/${id ?? 'mock'}', extra: item.detail);
+  }
+
+  /// Hapus satu analisis + children (cascade) lalu muat ulang (v6).
+  Future<void> _confirmDelete(AnalysisHistoryItem item) async {
+    final id = item.detail.analysisId;
+    if (id == null) return; // item mock — tidak ada baris DB
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Analisis?'),
+        content: Text(
+          '"${item.batchName}" akan dihapus permanen dari riwayat. '
+          'Tindakan ini tidak bisa dibatalkan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(color: RoastmateColors.error),
+            ),
+          ),
+        ],
+      ),
     );
+    if (confirmed != true) return;
+
+    try {
+      final db = await AppDatabase.instance.database;
+      await AnalysisRepository(db).deleteAnalysis(id);
+      await _loadItems();
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Analisis dihapus')));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menghapus analisis')),
+        );
+      }
+    }
   }
 
   void _onExportCsv() {
@@ -105,7 +153,10 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Analisis'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Analisis',
+        onSettings: () => context.push('/profile'),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -130,6 +181,9 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
                       HistoryCard(
                         item: items[i],
                         onTap: () => _openDetail(items[i]),
+                        onDelete: items[i].detail.analysisId == null
+                            ? null
+                            : () => _confirmDelete(items[i]),
                       ),
                       if (i < items.length - 1)
                         const SizedBox(height: RoastmateSpacing.md),

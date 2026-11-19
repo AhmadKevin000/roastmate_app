@@ -7,10 +7,83 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:pbl_sem5/app/main_shell.dart';
+import 'package:pbl_sem5/features/brew/data/sources/mock_brewing_source.dart';
+import 'package:pbl_sem5/features/brew/domain/entities/brew_recipe.dart';
+import 'package:pbl_sem5/features/brew/domain/entities/brew_tool.dart';
+import 'package:pbl_sem5/features/brew/domain/repositories/brewing_repository.dart';
+import 'package:pbl_sem5/features/brew/presentation/viewmodels/brew_view_model.dart';
 import 'package:pbl_sem5/features/brew/presentation/views/brew_catalog_screen.dart';
 import 'package:pbl_sem5/features/brew/presentation/views/recipe_detail_screen.dart';
 
-Widget _app() => ProviderScope(
+class _FakeBrewingRepository implements BrewingRepository {
+  @override
+  Future<List<BrewMethod>> getMethods() async => mockBrewMethods;
+
+  @override
+  Future<BrewMethod?> getMethodById(String methodId) async {
+    for (final m in mockBrewMethods) {
+      if (m.methodId == methodId) return m;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BrewRecipe>> getRecipesForMethod(String methodId) async {
+    return mockBrewRecipes.where((r) => r.methodId == methodId).toList();
+  }
+
+  @override
+  Future<BrewRecipe?> getRecipeById(String recipeId) async {
+    for (final r in mockBrewRecipes) {
+      if (r.recipeId == recipeId) return r;
+    }
+    return null;
+  }
+
+  @override
+  Future<BrewRecipe?> getDefaultRecipe(String methodId) async {
+    for (final r in mockBrewRecipes) {
+      if (r.methodId == methodId && r.isDefault) return r;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<BrewTool>> getAllTools() async => const [];
+
+  @override
+  Future<BrewRecipe?> getUserRecipeById(String recipeId) async => null;
+
+  @override
+  Future<List<BrewRecipe>> getUserRecipes() async => const [];
+
+  @override
+  Future<void> insertUserRecipe(BrewRecipe recipe) async {}
+
+  @override
+  Future<void> deleteUserRecipe(String recipeId) async {}
+
+  @override
+  Future<BrewRecipe?> findDefaultRecipe({
+    required String species,
+    required String roastContext,
+  }) async {
+    for (final r in mockBrewRecipes) {
+      if (r.species == species &&
+          r.roastContext == roastContext &&
+          r.isDefault) {
+        return r;
+      }
+    }
+    return null;
+  }
+}
+
+Widget _app({BrewingRepository? repo}) => ProviderScope(
+      overrides: [
+        brewingRepositoryProvider.overrideWithValue(repo ?? _FakeBrewingRepository()),
+      ],
       child: MaterialApp.router(
         routerConfig: GoRouter(
           initialLocation: '/brewing',
@@ -78,5 +151,52 @@ void main() {
     expect(find.byIcon(Icons.play_arrow), findsNothing);
     expect(find.byIcon(Icons.pause), findsNothing);
     expect(find.byIcon(Icons.stop), findsNothing);
+  });
+
+  // FAB tambah resep (v6) — hanya di katalog Seduh, di dalam shell 3-tab.
+  Widget shellApp({String initial = '/brewing'}) => ProviderScope(
+        overrides: [
+          brewingRepositoryProvider
+              .overrideWithValue(_FakeBrewingRepository()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: GoRouter(
+            initialLocation: initial,
+            routes: <RouteBase>[
+              ShellRoute(
+                builder: (context, state, child) => MainShell(child: child),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: '/home',
+                    builder: (context, state) => const Text('Beranda'),
+                  ),
+                  GoRoute(
+                    path: '/history',
+                    builder: (context, state) => const Text('Analisis'),
+                  ),
+                  GoRoute(
+                    path: '/brewing',
+                    builder: (context, state) => const BrewCatalogScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  testWidgets('FAB tambah resep tampil di katalog Seduh', (tester) async {
+    await tester.pumpWidget(shellApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FloatingActionButton), findsOneWidget);
+    expect(find.byTooltip('Tambah resep'), findsOneWidget);
+  });
+
+  testWidgets('FAB tidak tampil di tab lain', (tester) async {
+    await tester.pumpWidget(shellApp(initial: '/home'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(FloatingActionButton), findsNothing);
   });
 }

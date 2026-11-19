@@ -27,6 +27,7 @@ Fokus: peta & keputusan arsitektur (bukan tutorial kode).
 | Kamera | `camera` |
 | Computer vision (shape) | OpenCV (via FFI/binding) |
 | Penyimpanan lokal | `sqflite` (SQLite) |
+| Auth & database cloud | Supabase (`supabase_flutter`) — login + sync riwayat (D-29) |
 | Ikon & font | Material Icons + Inter |
 
 ---
@@ -100,11 +101,11 @@ Alur tiap fitur:
 ```
 Home    → HomeView → HomeViewModel → StatisticsUseCase
 Scan    → ScanView → ScanViewModel → AnalyzeCoffeeBatchUseCase → AnalysisPipeline
-Result  → ResultView → ResultViewModel → AnalysisResult
+Result  → ResultView → ResultViewModel → AnalysisRepository.getDetail(id, join KB)
 Brew    → BrewView → BrewViewModel → BrewingRepository
 ```
 
-Result menampilkan: species, roast, quality score, quality profile, ringkasan defect, rekomendasi seduh, dan parameter resep.
+Result menampilkan: species, roast, quality score, quality profile, ringkasan defect, rekomendasi seduh, parameter resep, foto analisis (`analyses.image_path`), dan `summaryText` (di-generate saat baca, D-20).
 
 ---
 
@@ -129,8 +130,15 @@ Routes (GoRouter):
 /history
 /history/:analysisId
 /brewing
+/brewing/new
+/brewing/user/:recipeId
 /brewing/:methodId
 ```
+
+`/result/:analysisId` & `/history/:analysisId`: segmen di-`int.tryParse`. Id valid → detail dibaca dari SQLite; segmen non-int (mis. `draft` dari alur scan) → data in-memory dari `state.extra` (fallback, AC-04).
+`/brewing/new`: form tambah resep user (di luar shell — push penuh, seperti `/scan`); resep disimpan di `user_brew_recipes` (Plan 4).
+`/brewing/user/:recipeId`: Detail Resep Kamu (di luar shell — push penuh); dibaca dari `user_brew_recipes` per id. Dideklarasikan **sebelum** `/brewing/:methodId`.
+Tombol tambah resep Seduh adalah **FAB** di `MainShell` (hanya saat path eksak `/brewing`); ikon `+` di header sudah dihapus (v6).
 
 ---
 
@@ -187,7 +195,7 @@ AnalysisResult → simpan → ResultView
 Catatan:
 - Jalankan inference di **isolate** agar UI tetap responsif.
 - Proses model **satu per satu** untuk menekan puncak RAM.
-- Species: kolom `Liberika` dibuang saat inference → A/R direnormalisasi; confidence < 0.70 → `Mixed`.
+- Species: kelas output mengikuti taksonomi ML_PBL — `Arabica`/`Liberika`/`Robusta` dipertahankan (D-27); confidence < 0.70 → `Mixed`.
 - Tidak ada timer interaktif di alur mana pun.
 
 ---
@@ -244,16 +252,28 @@ Setelah itu SQLite menjadi satu-satunya sumber query saat runtime. Tidak ada KB 
 
 ## 11. Repository & Providers
 
-Repository:
+Repository (yang sudah ada di kode):
 
 ```
-ScanRepository
-HistoryRepository
-BrewingRepository
-SettingsRepository
+AnalysisRepository   (riwayat: analyses + analysis_defects)
+BrewingRepository    (katalog: brew_methods + brew_tools + brew_recipes;
+                      resep user: user_brew_recipes — Plan 4)
+HomeRepository       (ringkasan Beranda dari analyses)
 ```
 
+`ScanRepository` / `HistoryRepository` / `SettingsRepository` belum ada; alur capture
+(`scan_view`) orkestrasi: template acak → `RecommendationResolver` →
+`AnalysisRepository.insertResult` (analyses + defects + recommendations, satu
+transaksi) → upload foto **best-effort** via `CloudinaryService` (sukses:
+`image_path` di-UPDATE ke `secure_url`; gagal/offline: tetap path lokal).
+`CloudinaryService` (`core/network`) membaca kredensial dari `.env` via
+`flutter_dotenv`; paket `cloudinary` (Dart) dipakai karena `cloudinary_flutter`
+(semu versi) hanya widget/URL-gen tanpa API upload.
 `BrewingRepository` adalah satu-satunya akses ke `brew_methods` + `brew_recipes`. **Katalog dan Recommendation Engine memakai repository & data yang sama** — tidak boleh ada data brewing terpisah.
+
+Sejak v4, `BrewingRepository` juga mengakses `user_brew_recipes` (resep user)
+via `getUserRecipes` / `insertUserRecipe` / `deleteUserRecipe`. Resep user
+**tidak** ikut lookup rekomendasi maupun reseed KB (tabel terpisah).
 
 ```
 BrewingCatalog ─┐
@@ -268,8 +288,11 @@ cameraServiceProvider      mlServiceProvider
 analysisPipelineProvider   qualityEngineProvider
 brewingRepositoryProvider  brewingCatalogProvider
 brewingRecommendationProvider
-scanRepositoryProvider     historyRepositoryProvider
+homeRepositoryProvider
 ```
+
+`AnalysisRepository` saat ini dibangun langsung dari `AppDatabase` di layar
+riwayat (belum ada provider tersendiri).
 
 ---
 
@@ -295,6 +318,10 @@ Parameter seduh pada `BrewingRecommendation` berasal dari `brew_recipes` terpili
 `defectDistribution` memakai **4 kelas** (`Normal`/`Quaker`/`Broken`/`Severe`). Narasi sub-jenis parah (`underdeveloped`/`overroasted`/`contamination`) adalah **nilai turunan** `defect_interpretation` dari `Severe` + `roast` — tidak disimpan (lihat `DATABASE_SCHEMA.md` §15).
 
 `summaryText` **diturunkan saat tampil** dari angka hasil (template lokal, D-21) — tidak ada kolom DB. `reason` disimpan di `recommendations.reason`.
+
+**Pembacaan detail:** layar Detail Inspeksi fetch **per `analysisId`** dari SQLite — `AnalysisRepository.getDetail(id)` → `AnalysisDetail { result (analyses + analysis_defects), imagePath, recommendation + alternatives (join `recommendations` × `brew_methods`/`brew_recipes`), summaryText (runtime, D-20) }`. Route `draft` atau baca DB gagal → fallback in-memory (route extra) dari alur scan.
+
+**Foto analisis** (`analyses.image_path`) dirender lewat widget bersama `AnalysisImage` — support URL Cloudinary + path lokal; thumbnail di list (Beranda/Riwayat) memakai transformasi resize `c_fill` (helper `cloudinaryThumbnailUrl`). **Gambar KB** (metode/alat, `assets/images/`) tetap aset lokal `Image.asset` — tidak di-upload/di-serve Cloudinary.
 
 ---
 
@@ -377,3 +404,52 @@ Flutter App
 - **Integrasi:** Capture → ML → Quality → Recommendation → SQLite → Result.
 - **On-device:** latensi & RAM pada perangkat nyata.
 - **Data:** validasi output terhadap DS010 (custom mobile batch).
+
+---
+
+## 18. Auth & Sync (D-29)
+
+Fitur akun + sinkronisasi riwayat antar device. **Auth gate (D-30):** tanpa
+sesi login, app selalu berawal di layar login/daftar — fitur utama tidak bisa
+diakses sebelum login. Setelah login, alur analisis tetap offline; sync murni
+best-effort.
+
+### Komponen
+
+```
+core/auth/         AuthController (Riverpod) — session Supabase, login/register/logout
+core/network/      SupabaseService — klien Supabase dari .env
+features/auth/     LoginScreen, RegisterScreen, ProfileScreen + ViewModel
+features/sync/     SyncService — push pending + pull remote, dijalankan saat login & app resume
+```
+
+### Alur
+
+```
+App start → AuthGate: sesi Supabase ada?
+  ├─ Ya → route fitur utama (Beranda dkk.)
+  └─ Tidak → redirect /login (auth gate, D-30)
+Login sukses → SyncService.run()
+  ├─ Push: baris sync_status='pending' → upsert cloud by uuid → tandai 'synced'
+  ├─ Backfill: baris lama tanpa uuid → beri UUID v4 + 'pending' sebelum push
+  └─ Pull: baris cloud milik user yang uuid-nya belum ada lokal → insert (sync_status='synced')
+Scan selesai (login aktif) → insert lokal dengan uuid + 'pending' → sync best-effort
+Logout → hapus sesi → redirect /login (riwayat lokal tetap; sync berhenti)
+```
+
+### Aturan
+
+- **Auth gate (D-30):** redirect deklaratif di GoRouter — listen `authControllerProvider`; route fitur memerlukan sesi, `/login` & `/register` hanya untuk tanpa sesi.
+- **Kunci lintas device = `uuid`** (UUID v4). PK lokal `AUTOINCREMENT` tetap.
+- Tabel sync: `analyses`, `analysis_defects`, `recommendations`, `user_brew_recipes`.
+- Merge **union by uuid** (append-only); tidak ada konflik update. Delete di-propagate best-effort, tanpa tombstone.
+- Referensi KB di cloud = ID mentah tanpa FK; resolusi ulang dari KB lokal.
+- RLS Supabase menegakkan kepemilikan per user; UI hanya menyimpan `user_id` = `auth.users.id`.
+- Kredensial di `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`); `.env` gitignored, contoh di `.env.example`.
+- Skema cloud: `DATABASE_SCHEMA.md` §16.
+
+### Testing
+
+- Unit: merge/pull logic (pure Dart, tanpa network), UUID backfill, mapping row ↔ model.
+- Widget: Login/Register/Profile (validasi email-sandi, pesan error).
+- Integrasi: insert pending → push (mock Supabase) → status `synced`; pull idempoten (uuid duplikat tidak diinsert ganda).

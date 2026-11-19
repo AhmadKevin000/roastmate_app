@@ -1,6 +1,6 @@
 # ROASTMATE — DECISION LOG
 
-Versi: 1.5
+Versi: 1.6
 Tujuan: mencatat keputusan & penyelesaian kontradiksi antar dokumen, agar tidak muncul lagi.
 
 ---
@@ -486,6 +486,112 @@ YOLOv8n-cls.
 - Menyempurnakan D-14: `annotated_image_path` tetap ada di skema namun **boleh kosong**; bukti visual riwayat cukup `image_path`.
 - **Rekomendasi alternatif maksimal 1** — skema `recommendations` (satu `alternative_method_id`) tidak berubah; UI membatasi satu alternatif.
 - Tambah kolom `analyses`: **`batch_label`** (label pendek, mis. `Batch #042`), **`batch_name`** (nama batch, mis. `Mandheling Honey Anaerob`), **`model_version`** (provenance model, mis. `Model CV v2.4`). Skema naik ke **versi 2** dengan migrasi `ALTER TABLE`.
+
+---
+
+## D-20 — `analyses.name` untuk label batch
+
+**Konteks:** Form scan setup meminta pengguna memberi nama batch (`batchName` di UI), dan nama itu dipakai judul kartu Beranda serta daftar riwayat. Skema `analyses` tidak punya kolom penyimpan nama, sehingga riwayat berbasis SQLite tidak bisa menampilkan nama batch.
+
+**Keputusan:**
+
+- Tambah kolom **`name TEXT`** (nullable) pada `analyses`.
+- Kolom ini **hanya label tampilan**; tidak dipakai untuk perhitungan quality score, defect rate, atau rekomendasi.
+- Baris lama tanpa nama ditampilkan sebagai `Batch tanpa nama`.
+- `kSchemaVersion` naik **1 → 2** dengan migrasi `ALTER TABLE analyses ADD COLUMN name TEXT`.
+
+**Dampak:** `DATABASE_SCHEMA.md` §6 & §12; `mobile/lib/core/database/schema.dart`; migrasi di `app_database.dart`.
+
+---
+
+## D-28 — Skema v6: metode "Lainnya", langkah & video resep user, hapus riwayat, FAB
+
+**Konteks:** Plan `feat/recipe-enhancements` — form resep user perlu mendukung metode di luar KB ("Lainnya"), langkah seduh, dan link video; detail resep (KB & user) menampilkan video; riwayat analisis bisa dihapus; tombol tambah resep pindah dari ikon header ke FAB.
+
+**Keputusan:**
+
+- `user_brew_recipes` di-**rebuild** (SQLite tak bisa mengubah FK/NOT NULL via `ALTER`): `method_id` jadi **nullable** + `ON DELETE SET NULL`, plus kolom `method_name TEXT NOT NULL`, `steps TEXT` (JSON, shape sama `brew_recipes.steps`), `video_url TEXT`. Data lama dipindah; `method_name` di-resolve dari join `brew_methods` (fallback string `method_id`).
+- **`ON DELETE SET NULL`** (bukan `CASCADE`/`RESTRICT`): reseed KB (`DELETE FROM brew_methods`) tak boleh menghancurkan resep user — `method_id` jadi NULL, `method_name` tetap sehingga UI utuh. Menutup bug laten: device dengan resep user + `kb_version` bump akan crash saat reseed (FK violation).
+- `brew_recipes` cukup `ALTER ADD COLUMN video_url TEXT` (guarded idempoten via `PRAGMA table_info`, pola v5).
+- **Video = thumbnail + buka aplikasi YouTube** (`url_launcher`, `LaunchMode.externalApplication`); tanpa player embed. Link KB diisi belakangan di JSON seed (plumbing `video_url` tanpa bump `kb_version`; saat link actual diisi → bump `kb_version` untuk reseed).
+- **Hapus riwayat**: ikon di `HistoryCard` (hanya item DB, `analysisId` terisi) → dialog konfirmasi → `DELETE` + cascade defects/recommendations + hapus file foto lokal best-effort.
+- **FAB** di `MainShell` (hanya path eksak `/brewing`); param `onAdd` di `RoastmateAppHeader` dihapus.
+- Detail resep user: route `/brewing/user/:recipeId` (sebelum `/brewing/:methodId`), layout selaras Detail Resep KB.
+
+**Dampak:** `DATABASE_SCHEMA.md` v1.6 (§5, §9.5, §12, §14); `ARCHITECTURE_MOBILE.md` §6; `PRD.md` FR-05/06/07; `kSchemaVersion` 5 → 6.
+
+---
+
+## D-29 — Login & sinkronisasi riwayat antar device (Supabase)
+
+**Konteks:** Permintaan fitur: user dapat login sehingga riwayat analisis tetap ada
+saat berganti device. Kondisi awal: seluruh riwayat hanya di SQLite lokal; satu-satunya
+komponen cloud adalah upload foto best-effort ke Cloudinary (D-28-era, `image_path`
+bisa berisi `secure_url`). Aturan non-negotiable "on-device, tanpa upload" perlu
+direvisi secara eksplisit, bukan dilanggar diam-diam.
+
+**Keputusan:**
+
+1. **Provider = Supabase** (auth + Postgres). Dependency baru `supabase_flutter`.
+   Alasan: auth siap pakai, database relasional (mapping dari SQLite mudah), RLS
+   per-user, dan free tier cukup untuk skala project.
+2. **Revisi privasi (supersedes "foto tidak pernah dikirim ke server"):**
+   - Foto batch di-upload ke Cloudinary **best-effort** (sudah ada — keputusan ini
+     hanya mencatatnya agar konsisten dengan dokumen).
+   - **Metadata riwayat** (skor, species, roast, defect, rekomendasi, resep user)
+     di-sync ke Supabase saat user login. Aplikasi tetap **offline-first**: alur
+     inti (scan → hasil → riwayat) tidak pernah membutuhkan internet; sync hanya
+     best-effort di background.
+3. **Lingkup sync:** `analyses`, `analysis_defects`, `recommendations`,
+   `user_brew_recipes`. **Tidak** di-sync: knowledge base (statis, sudah
+   di-bundle), riwayat milik user lain.
+4. **Kunci sync = `uuid`** (UUID v4, di-generate perangkat saat insert). SQLite
+   local PK tetap `AUTOINCREMENT`; `uuid` adalah kunci identitas lintas device.
+   Tanpa ini, ID dari dua device pasti bentrok saat merge.
+5. **Strategi merge = union by `uuid`** (append-only). Data riwayat tidak pernah
+   dimutasi setelah dibuat (D-20: deteksi tidak disimpan; hanya hapus). Delete
+   di-propagate ke cloud best-effort; delete di device lain tidak dipull balik
+   (keterbatasan yang diterima — tidak ada tombstone).
+6. **Kepemilikan data:** setiap baris cloud membawa `user_id UUID` yang identik
+   dengan `auth.users.id`; RLS membatasi akses hanya ke baris milik sendiri.
+7. **Skema lokal v7:** tambah kolom `uuid`, `user_id`, `sync_status`
+   (`local`/`pending`/`synced`), `updated_at` pada keempat tabel sync. Baris lama
+   (pre-v7) di-backfill UUID saat pertama sync, tetap `pending`.
+8. **Foto lintas device:** baris dengan `image_path` berupa URL Cloudinary
+   tampil normal di device lain; baris dengan path lokal hanya tampil di device
+   asal (thumbnail placeholder di device lain). Keterbatasan ini diterima; upload
+   Cloudinary tetap best-effort sehingga tidak semua foto punya URL.
+9. **~~Tanpa login = app utuh seperti sekarang~~ (direvisi — D-30):** sejak D-30,
+   app memakai **auth gate** — tanpa sesi login, app selalu berawal di layar
+   login/daftar dan fitur utama tidak bisa diakses. Mode guest dihapus; riwayat
+   selalu terikat akun.
+
+---
+
+## D-30 — Auth gate: login wajib di first-run (revisi D-29 poin 9)
+
+**Konteks:** Setelah fitur akun rilis (D-29), muncul permintaan UX: pengguna baru
+harus disambung layar sign in/sign up saat pertama membuka app, bukan menemukan
+login opsional di dalam dashboard.
+
+**Keputusan (reversal sebagian D-29):**
+
+1. **Auth gate penuh:** tanpa sesi aktif, semua route fitur (Beranda, Scan,
+   Riwayat, Seduh, dst.) dialihkan ke `/login`. Tidak ada mode guest.
+2. Prinsip **offline-first untuk alur analisis tetap berlaku** — setelah login,
+   scan/analisis/riwayat tidak butuh internet; sync tetap best-effort. Yang
+   berubah: **first-run dan pemakaian awal kini butuh internet** untuk login.
+3. Sesi dipersistensi oleh Supabase SDK; gate hanya berlaku bila tidak ada sesi
+   (first-run atau setelah logout/token kedaluwarsa).
+4. Logout mengembalikan ke layar login. Riwayat lokal device tetap ada; bila
+   akun lain login di device yang sama, riwayat cloud akun baru di-pull dan
+   di-merge by uuid (baris milik akun sebelumnya tetap lokal dan ikut tersinkor
+   ke akun baru — keterbatasan multi-akun single-device yang diterima).
+5. **Dokumen yang menyesuaikan:** PRD FR-10 & AC-11, ARCHITECTURE_MOBILE §18.
+
+**Dampak:** `DATABASE_SCHEMA.md` v1.7 (§6–§9.5, §12, §16-skema cloud);
+`ARCHITECTURE_MOBILE.md` (bagian Auth & Sync); `PRD.md` FR-10/FR-11, NFR, AC;
+`mobile/.env.example` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`).
 
 ---
 

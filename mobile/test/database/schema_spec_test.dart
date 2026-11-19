@@ -138,13 +138,16 @@ void main() {
   // §2 Daftar Tabel
   // ==========================================================================
   group('§2 Daftar tabel', () {
-    test('berisi tepat 6 tabel sesuai dokumen', () async {
+    test('berisi tepat 9 tabel sesuai dokumen', () async {
       const expected = {
         'brew_methods',
+        'brew_tools',
+        'brew_method_tools',
         'brew_recipes',
         'analyses',
         'analysis_defects',
         'recommendations',
+        'user_brew_recipes',
         'meta',
       };
       expect(await tableNames(db), expected);
@@ -155,13 +158,15 @@ void main() {
   // §10 Index
   // ==========================================================================
   group('§10 Index', () {
-    test('berisi tepat 5 index dengan nama kanonik', () async {
+    test('berisi tepat 7 index dengan nama kanonik', () async {
       const expected = {
         'idx_recipes_method',
         'idx_recipes_lookup',
+        'idx_method_tools_tool',
         'idx_analyses_created',
         'idx_defects_analysis',
         'idx_recommendations_analysis',
+        'idx_analyses_sync',
       };
       expect(await indexNames(db), expected);
     });
@@ -199,7 +204,7 @@ void main() {
       await insertMethod(db);
     });
 
-    for (final species in const ['Arabica', 'Robusta', 'Mixed']) {
+    for (final species in const ['Arabica', 'Robusta', 'Liberika', 'Mixed']) {
       test('menerima species "$species"', () async {
         await insertRecipe(
           db,
@@ -214,7 +219,7 @@ void main() {
         () => insertRecipe(
           db,
           methodId: 'M001',
-          overrides: {'species': 'Liberica'},
+          overrides: {'species': 'Excelsa'},
         ),
         throwsA(isA<DatabaseException>()),
       );
@@ -315,7 +320,7 @@ void main() {
   group('§6/§11 CHECK analyses', () {
     test('menolak species di luar daftar', () async {
       expect(
-        () => insertAnalysis(db, overrides: {'species': 'Liberica'}),
+        () => insertAnalysis(db, overrides: {'species': 'Excelsa'}),
         throwsA(isA<DatabaseException>()),
       );
     });
@@ -350,14 +355,7 @@ void main() {
       analysisId = await insertAnalysis(db);
     });
 
-    for (final cls in const [
-      'Healthy',
-      'Broken',
-      'Insect Damage',
-      'Quaker',
-      'Scorched',
-      'Foreign Matter',
-    ]) {
+    for (final cls in const ['Normal', 'Quaker', 'Broken', 'Severe']) {
       test('menerima defect_class "$cls"', () async {
         await db.insert('analysis_defects', {
           'analysis_id': analysisId,
@@ -367,7 +365,7 @@ void main() {
       });
     }
 
-    test('menolak defect_class di luar 6 kelas final', () async {
+    test('menolak defect_class di luar daftar', () async {
       expect(
         () => db.insert('analysis_defects', {
           'analysis_id': analysisId,
@@ -375,7 +373,6 @@ void main() {
           'count': 1,
         }),
         throwsA(isA<DatabaseException>()),
-        reason: 'D-03: burnt/mold/under EXCLUDED dari taxonomy final',
       );
     });
   });
@@ -406,7 +403,7 @@ void main() {
       final analysisId = await insertAnalysis(db);
       await db.insert('analysis_defects', {
         'analysis_id': analysisId,
-        'defect_class': 'Healthy',
+        'defect_class': 'Normal',
       });
       final row = (await db.query(
         'analysis_defects',
@@ -471,7 +468,7 @@ void main() {
       final analysisId = await insertAnalysis(db);
       await db.insert('analysis_defects', {
         'analysis_id': analysisId,
-        'defect_class': 'Healthy',
+        'defect_class': 'Normal',
         'count': 3,
       });
 
@@ -617,7 +614,12 @@ void main() {
       final cols = (await columnsOf(db, 'analyses')).keys.toSet();
       expect(cols, {
         'id',
+        'uuid',
+        'user_id',
+        'sync_status',
+        'updated_at',
         'created_at',
+        'name',
         'image_path',
         'annotated_image_path',
         'batch_label',
@@ -659,7 +661,188 @@ void main() {
         'is_default',
         'steps',
         'notes',
+        'video_url',
       });
+    });
+  });
+
+  // ==========================================================================
+  // §9.5 Tabel user_brew_recipes (resep user)
+  // ==========================================================================
+  group('§9.5 user_brew_recipes', () {
+    /// Baris resep user valid ([methodId] harus sudah ada di `brew_methods`).
+    Future<void> insertUserRecipe(
+      Database db, {
+      String id = 'U1',
+      String? methodId = 'M001',
+      String methodName = 'V60 / Pour Over',
+      Map<String, Object?> overrides = const {},
+    }) async {
+      final row = <String, Object?>{
+        'recipe_id': id,
+        'name': 'Resep Uji',
+        'method_id': methodId,
+        'method_name': methodName,
+        'species': 'Arabica',
+        'quality_profile': 'High',
+        'roast_context': 'Light',
+        'dose_g': 15.0,
+        'water_volume_ml': 240,
+        'grind_size': 'Medium-Fine',
+        'temperature_c': 93,
+        'brewing_time_s': 170,
+        'steps': null,
+        'video_url': null,
+        'notes': null,
+        'created_at': '2026-01-01T00:00:00.000',
+      }..addAll(overrides);
+      await db.insert('user_brew_recipes', row);
+    }
+
+    setUp(() async {
+      await insertMethod(db);
+    });
+
+    test('memuat tepat kolom yang didokumentasikan', () async {
+      final cols = (await columnsOf(db, 'user_brew_recipes')).keys.toSet();
+      expect(cols, {
+        'recipe_id',
+        'uuid',
+        'user_id',
+        'sync_status',
+        'updated_at',
+        'name',
+        'method_id',
+        'method_name',
+        'species',
+        'quality_profile',
+        'roast_context',
+        'dose_g',
+        'water_volume_ml',
+        'grind_size',
+        'temperature_c',
+        'brewing_time_s',
+        'steps',
+        'video_url',
+        'notes',
+        'created_at',
+      });
+    });
+
+    test('insert valid diterima', () async {
+      await insertUserRecipe(db);
+      final rows = await db.query('user_brew_recipes');
+      expect(rows.single['name'], 'Resep Uji');
+    });
+
+    test('name NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'name': null}),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5: nama resep wajib ada',
+      );
+    });
+
+    test('created_at NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'created_at': null}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final species in const ['Arabica', 'Robusta', 'Liberika', 'Mixed']) {
+      test('menerima species "$species"', () async {
+        await insertUserRecipe(db, overrides: {'species': species});
+      });
+    }
+
+    test('menolak species di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'species': 'Excelsa'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final profile in const ['High', 'Medium', 'Low']) {
+      test('menerima quality_profile "$profile"', () async {
+        await insertUserRecipe(db, overrides: {'quality_profile': profile});
+      });
+    }
+
+    test('menolak quality_profile di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'quality_profile': 'Premium'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final ctx in const [
+      'Green',
+      'Light',
+      'Medium',
+      'Dark',
+      'Light/Medium',
+      'Medium/Dark',
+    ]) {
+      test('menerima roast_context "$ctx"', () async {
+        await insertUserRecipe(db, overrides: {'roast_context': ctx});
+      });
+    }
+
+    test('menolak roast_context di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'roast_context': 'Extra Dark'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    for (final grind in const [
+      'Espresso',
+      'Fine',
+      'Medium-Fine',
+      'Medium',
+      'Medium-Coarse',
+      'Coarse',
+    ]) {
+      test('menerima grind_size "$grind"', () async {
+        await insertUserRecipe(db, overrides: {'grind_size': grind});
+      });
+    }
+
+    test('menolak grind_size di luar daftar', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'grind_size': 'Powder'}),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+
+    test('method_id harus ada di brew_methods (FK)', () async {
+      expect(
+        () => insertUserRecipe(db, methodId: 'M999'),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5: method_id merujuk ke KB (di luar reseed)',
+      );
+    });
+
+    test('method_id boleh null (metode "Lainnya" di luar KB)', () async {
+      await insertUserRecipe(
+        db,
+        methodId: null,
+        methodName: 'AeroPress Homemade',
+      );
+      final rows = await db.query(
+        'user_brew_recipes',
+        where: 'method_id IS NULL',
+      );
+      expect(rows.single['method_name'], 'AeroPress Homemade');
+    });
+
+    test('method_name NOT NULL', () async {
+      expect(
+        () => insertUserRecipe(db, overrides: {'method_name': null}),
+        throwsA(isA<DatabaseException>()),
+        reason: '§9.5 v6: nama display metode wajib ada',
+      );
     });
   });
 }
