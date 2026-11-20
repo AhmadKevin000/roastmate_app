@@ -67,7 +67,9 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Login gagal. Periksa koneksi internet.'), findsOneWidget);
+    // Pesan generik lama menyembunyikan penyebab; sekarang penyebabnya tampil.
+    expect(find.textContaining('Login gagal'), findsOneWidget);
+    expect(find.textContaining('invalid_credentials'), findsOneWidget);
   });
 
   testWidgets('tautan daftar → layar register', (tester) async {

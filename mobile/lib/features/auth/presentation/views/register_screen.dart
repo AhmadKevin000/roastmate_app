@@ -45,12 +45,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       // Bila sesi langsung terbentuk → profil; kalau perlu verifikasi email → login.
       final loggedIn = ref.read(authControllerProvider).loggedIn;
       context.go(loggedIn ? '/profile' : '/login');
-    } on AuthApiException catch (e) {
+    } on AuthRetryableFetchException {
+      // Gagal menjangkau server (DNS/offline/timeout) — bukan salah kredensial.
+      setState(
+        () => _errorMessage =
+            'Tidak dapat menghubungi server. Periksa koneksi internet.',
+      );
+    } on AuthException catch (e) {
+      // Mencakup AuthApiException (mis. email sudah terdaftar) sekaligus
+      // AuthRetryableFetchException di atas — pesan asli server ditampilkan.
       setState(() => _errorMessage = e.message);
     } catch (e) {
-      setState(
-        () => _errorMessage = 'Pendaftaran gagal. Periksa koneksi internet.',
-      );
+      setState(() => _errorMessage = 'Pendaftaran gagal: $e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

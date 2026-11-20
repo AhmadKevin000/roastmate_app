@@ -47,6 +47,9 @@ dependencies:
   # punya API upload. Upload signed memakai paket `cloudinary` (SDK Dart murni).
   cloudinary: ^2.0.0
   url_launcher: ^6.3.3
+  tflite_flutter: ^0.12.1
+  image: ^4.5.4
+  path_provider: ^2.1.5
   sqflite_common_ffi: ^2.3.4
   sqflite_common_ffi_web: ^1.1.1
 
@@ -75,6 +78,7 @@ flutter:
     - assets/images/sample_batch.jpg
     - assets/images/methods/
     - assets/images/tools/
+    - assets/models/
 
   fonts:
     - family: Inter

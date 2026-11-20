@@ -530,7 +530,7 @@ create table user_brew_recipes (
   uuid             text primary key,
   user_id          uuid not null references auth.users(id) on delete cascade,
   recipe_id        text not null,       -- ID lokal asal (tetap disimpan untuk provenance)
-  name             text not null,
+  n             text not null,
   method_id        text,
   method_name      text not null,
   species          text check (species in ('Arabica','Robusta','Liberika','Mixed')),
