@@ -49,10 +49,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await _syncBestEffort();
       if (!mounted) return;
       context.go('/profile');
-    } on AuthApiException catch (e) {
+    } on AuthRetryableFetchException {
+      // Gagal menjangkau server (DNS/offline/timeout) — bukan salah kredensial.
+      setState(
+        () => _errorMessage =
+            'Tidak dapat menghubungi server. Periksa koneksi internet.',
+      );
+    } on AuthException catch (e) {
+      // Mencakup AuthApiException (mis. email/sandi salah) sekaligus
+      // AuthRetryableFetchException di atas — pesan asli server ditampilkan.
       setState(() => _errorMessage = e.message);
     } catch (e) {
-      setState(() => _errorMessage = 'Login gagal. Periksa koneksi internet.');
+      setState(() => _errorMessage = 'Login gagal: $e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
