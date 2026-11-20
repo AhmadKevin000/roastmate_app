@@ -50,3 +50,10 @@ Thumbs.db
 
 # Artefak ML lokal (di luar ml/)
 /runs/
+
+# Laporan & dokumen (hasil generate, tidak perlu di repo)
+/documents/
+/plots/
+/docs/assets/
+*.docx
+*.pdf
