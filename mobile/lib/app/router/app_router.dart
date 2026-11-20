@@ -10,6 +10,7 @@ import '../../features/brew/presentation/views/brew_catalog_screen.dart';
 import '../../features/brew/presentation/views/recipe_detail_screen.dart';
 import '../../features/brew/presentation/views/user_recipe_detail_screen.dart';
 import '../../features/brew/presentation/views/user_recipe_form_screen.dart';
+import '../../features/brew/domain/entities/brew_recipe.dart';
 import '../../features/home/presentation/views/home_view.dart';
 import '../../features/result/presentation/views/result_view.dart';
 import '../../features/scan/presentation/views/scan_setup_view.dart';
@@ -90,6 +91,13 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/brewing/new',
       builder: (context, state) => const UserRecipeFormScreen(),
+    ),
+    GoRoute(
+      // Edit resep user — extra berupa BrewRecipe yang akan diedit.
+      path: '/brewing/edit',
+      builder: (context, state) => UserRecipeFormScreen(
+        initialRecipe: state.extra as BrewRecipe?,
+      ),
     ),
     GoRoute(
       // Detail resep user — harus sebelum `/brewing/:methodId`.

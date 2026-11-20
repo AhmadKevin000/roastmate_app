@@ -43,4 +43,7 @@ abstract class BrewingRepository {
 
   /// Menghapus resep user berdasarkan id (no-op bila tidak ada).
   Future<void> deleteUserRecipe(String recipeId);
+
+  /// Memperbarui resep user yang sudah ada. `updated_at` di-set ke now.
+  Future<void> updateUserRecipe(BrewRecipe recipe);
 }

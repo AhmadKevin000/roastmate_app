@@ -47,15 +47,22 @@ void main() {
 
   setUp(() async {
     dotenv.clean();
+    final uniqueId = DateTime.now().microsecondsSinceEpoch;
     tmpFile = File(
-      '${Directory.systemTemp.path}/roastmate_cloudinary_test.jpg',
+      '${Directory.systemTemp.path}/roastmate_cloudinary_test_$uniqueId.jpg',
     );
     // Byte JPEG minimal (magic number) agar source file valid.
     await tmpFile.writeAsBytes(<int>[0xFF, 0xD8, 0xFF, 0xD9]);
   });
 
   tearDown(() async {
-    if (await tmpFile.exists()) await tmpFile.delete();
+    try {
+      if (await tmpFile.exists()) {
+        await tmpFile.delete();
+      }
+    } catch (_) {
+      // Windows lock handling best-effort
+    }
   });
 
   group('CloudinaryService', () {

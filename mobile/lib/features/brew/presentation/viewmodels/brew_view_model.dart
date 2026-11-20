@@ -96,6 +96,12 @@ class BrewViewModel extends StateNotifier<BrewCatalogState> {
     await _repository.deleteUserRecipe(recipeId);
     await load();
   }
+
+  /// Memperbarui resep user yang sudah ada, lalu memuat ulang katalog.
+  Future<void> updateRecipe(BrewRecipe recipe) async {
+    await _repository.updateUserRecipe(recipe);
+    await load();
+  }
 }
 
 /// Provider katalog seduh.
