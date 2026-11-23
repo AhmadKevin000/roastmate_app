@@ -235,6 +235,25 @@ class CameraViewModel extends StateNotifier<CameraState> {
     );
   }
 
+  /// Melanjutkan pratinjau kamera setelah analisis gagal.
+  ///
+  /// Dipanggil bila pipeline melempar error agar pengguna bisa mencoba lagi
+  /// tanpa harus keluar dan masuk kembali ke layar kamera.
+  Future<void> resumePreview() async {
+    // Jika controller sudah di-dispose (stopPreview dipanggil duluan),
+    // inisialisasi ulang dari nol.
+    if (state.controller == null || !state.isInitialized) {
+      await initCamera();
+      return;
+    }
+    try {
+      await state.controller!.resumePreview();
+    } catch (_) {
+      // Bila resume gagal, re-init kamera
+      await initCamera();
+    }
+  }
+
   @override
   void dispose() {
     state.controller?.dispose();
