@@ -417,6 +417,10 @@ class SyncService {
 
   /// Tunda push selama foto masih menunggu upload (maks percobaan).
   bool _imageReadyForPush(Map<String, Object?> row) {
+    // Tanpa Cloudinary terkonfigurasi (build tanpa dart-define), antrean tidak
+    // bisa diproses. Kirim baris dengan image_path=null daripada memblokir
+    // seluruh riwayat selamanya.
+    if (_cloudinary == null) return true;
     final status = row['image_sync_status'] as String? ?? 'none';
     if (status != 'pending') return true;
     final attempts = (row['image_upload_attempts'] as num?)?.toInt() ?? 0;

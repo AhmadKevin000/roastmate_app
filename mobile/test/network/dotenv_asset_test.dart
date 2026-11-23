@@ -1,25 +1,25 @@
-// Verifikasi `.env` sebagai dotfile-asset dapat dibaca `rootBundle` di
-// lingkungan test — dotfile kadang tidak ikut bundle di sebagian versi
-// Flutter. Bila test ini merah, fallback: rename aset ke
-// `assets/env/roastmate.env` (keputusan tercatat di docs/plans Plan 2).
+// Verifikasi kredensial TIDAK ikut ter-bundle sebagai aset APK.
+//
+// Sebelumnya `.env` didaftarkan di pubspec assets dan dibaca flutter_dotenv.
+// Sekarang nilainya disuntikkan lewat `--dart-define-from-file=.env` saat
+// build, jadi file tidak boleh masuk daftar aset.
 
-import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:pbl_sem5/core/config/app_env.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('rootBundle bisa memuat .env (dotfile sebagai asset)', () async {
-    final raw = await rootBundle.loadString('.env');
-    expect(raw, isNotEmpty);
+  test('pubspec tidak mendaftarkan .env sebagai aset', () {
+    final pubspec = File('pubspec.yaml').readAsStringSync();
+    expect(pubspec.contains('- .env'), isFalse);
   });
 
-  test('dotenv.load memuat variabel .env', () async {
-    if (!dotenv.isInitialized) {
-      await dotenv.load(fileName: '.env');
-    }
-    expect(dotenv.env.keys, isNotEmpty);
-    expect(dotenv.env.containsKey('CLOUD_NAME'), isTrue);
+  test('tanpa dart-define, AppEnv kosong & layanan cloud nonaktif', () {
+    expect(AppEnv.hasSupabase, isFalse);
+    expect(AppEnv.hasCloudinary, isFalse);
   });
 }

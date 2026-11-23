@@ -634,6 +634,47 @@ produk: penilaian itu harus langsung terlihat di kartu "Analisis Terakhir"
 
 ---
 
+## D-32 — Sinkronisasi v2: tombstone, LWW, dan kredensial waktu build
+
+**Konteks:** Implementasi D-29 ternyata belum menutup tiga kasus nyata: rating
+pribadi tidak pernah sampai ke cloud (kolom belum ada + `pull` append-only),
+item yang dihapus hidup lagi saat pull, dan foto yang upload-nya gagal tidak
+pernah dicoba ulang. Selain itu `.env` ikut ter-bundle di APK sebagai aset
+(terbukti dari `app-release.apk`, 17 Nov), sehingga kredensial bisa dibaca siapa pun.
+
+**Keputusan:**
+1. `updated_at` dari trigger Postgres dipakai sebagai penentu last-write-wins
+   untuk data mutable (`personal_rating`, `personal_rating_note`, resep user).
+   Client wajib membaca balik nilai server dari respons upsert.
+2. Data immutable tetap union by `uuid`. Pull tidak lagi `continue` saat uuid
+   sudah ada — ia melakukan merge LWW untuk kolom mutable.
+3. Hapus memakai tombstone: `sync_deletes` (lokal) → `deleted_records` (cloud)
+   → delete baris cloud. Tombstone di-pull paling akhir tiap siklus.
+4. Foto: Supabase hanya menyimpan URL teks; byte di Cloudinary. Path lokal
+   dikirim sebagai `NULL` (sanitasi). Upload unsigned memakai preset tanpa
+   API secret; antrean `image_sync_status` dicoba ulang maksimal 5 kali.
+5. Kredensial dibaca dengan `String.fromEnvironment` lewat
+   `flutter build apk --release --dart-define-from-file=.env`. `.env` dihapus
+   dari daftar aset pubspec; `flutter_dotenv` tidak lagi dipakai runtime.
+6. Eksekusi: Fase 0b (navigasi) → 2 → 3 → 6 → 4 → 5 → 7 → 8 pada tiga branch
+   terpisah; merge `--no-ff` ke `development`.
+
+**Konsekuensi:** `kSchemaVersion` = 9; tabel cloud `deleted_records`; index
+`idx_analyses_image_sync`, `idx_recipes_user`; SQL reproducible di
+`supabase/migrations/0001_sync_v2.sql`.
+
+## D-33 — Aset Cloudinary yatim diterima
+
+**Konteks:** Saat analisis dihapus, aset foto di Cloudinary tidak ikut terhapus
+karena tidak ada API secret di klien (lihat D-32 poin 4).
+
+**Keputusan:** Tidak membuat Edge Function penghapus aset pada iterasi ini.
+Aset yatim dibiarkan; biaya storage dianggap dapat diterima untuk skala lokal. `public_id`
+tetap disimpan (`analyses.cloudinary_public_id`) supaya cleanup bisa dilakukan
+kemudian lewat skrip server.
+
+---
+
 ## Catatan terbuka (belum diputuskan)
 
 - ~~Ambang confidence untuk status `uncertain` (angka pasti belum ditetapkan)~~ → **selesai (D-27)**: species 0.70 · roast 0.45.

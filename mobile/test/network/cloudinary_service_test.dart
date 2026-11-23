@@ -6,7 +6,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloudinary/cloudinary.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -46,7 +45,6 @@ void main() {
   late File tmpFile;
 
   setUp(() async {
-    dotenv.clean();
     tmpFile = File(
       '${Directory.systemTemp.path}/roastmate_cloudinary_test.jpg',
     );
@@ -59,48 +57,49 @@ void main() {
   });
 
   group('CloudinaryService', () {
-    test('dotenv belum di-load → null tanpa exception', () async {
-      expect(dotenv.isInitialized, isFalse);
+    test('tanpa dart-define → null tanpa exception', () async {
       final url = await CloudinaryService().uploadImage(tmpFile);
       expect(url, isNull);
     });
 
-    test('kredensial tidak lengkap → null tanpa exception', () async {
-      dotenv.loadFromString(envString: 'CLOUD_NAME=test-cloud');
-      final url = await CloudinaryService().uploadImage(tmpFile);
+    test('preset kosong → null tanpa exception', () async {
+      final url = await CloudinaryService(uploadPreset: '').uploadImage(tmpFile);
       expect(url, isNull);
     });
 
-    test('upload sukses (client fake) → secure_url + request tersign',
+    test('upload unsigned sukses (client fake) → secure_url + upload_preset',
         () async {
       final fake = _FakeHttpClient();
-      final cloudinary = Cloudinary.signed(
+      final cloudinary = Cloudinary.unsigned(
         cloudName: 'test-cloud',
-        apiKey: 'test-key',
-        apiSecret: 'test-secret',
         client: fake,
       );
-      final url = await CloudinaryService(client: cloudinary).uploadImage(
-        tmpFile,
-      );
+      final url = await CloudinaryService(
+        client: cloudinary,
+        uploadPreset: 'test-preset',
+      ).uploadImage(tmpFile);
 
-      expect(url, 'https://res.cloudinary.com/test-cloud/image/upload/v123/test.jpg');
+      expect(
+        url,
+        'https://res.cloudinary.com/test-cloud/image/upload/v123/test.jpg',
+      );
       expect(fake.lastUrl?.path, '/v1_1/test-cloud/image/upload');
-      // Multipart body membawa kredensial + signature signed request.
-      expect(fake.lastBody, contains('api_key'));
-      expect(fake.lastBody, contains('signature'));
+      expect(fake.lastBody, contains('upload_preset'));
+      expect(fake.lastBody, contains('test-preset'));
+      // Unsigned: tidak ada api_key/signature yang ikut terkirim.
+      expect(fake.lastBody, isNot(contains('signature')));
+      expect(fake.lastBody, isNot(contains('api_secret')));
     });
 
     test('respons tanpa secure_url → null (best-effort)', () async {
-      final cloudinary = Cloudinary.signed(
+      final cloudinary = Cloudinary.unsigned(
         cloudName: 'test-cloud',
-        apiKey: 'k',
-        apiSecret: 's',
         client: _HttpClientNoSecureUrl(),
       );
-      final url = await CloudinaryService(client: cloudinary).uploadImage(
-        tmpFile,
-      );
+      final url = await CloudinaryService(
+        client: cloudinary,
+        uploadPreset: 'test-preset',
+      ).uploadImage(tmpFile);
       expect(url, isNull);
     });
   });

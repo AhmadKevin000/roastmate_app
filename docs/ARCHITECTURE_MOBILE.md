@@ -266,9 +266,10 @@ HomeRepository       (ringkasan Beranda dari analyses)
 `AnalysisRepository.insertResult` (analyses + defects + recommendations, satu
 transaksi) → upload foto **best-effort** via `CloudinaryService` (sukses:
 `image_path` di-UPDATE ke `secure_url`; gagal/offline: tetap path lokal).
-`CloudinaryService` (`core/network`) membaca kredensial dari `.env` via
-`flutter_dotenv`; paket `cloudinary` (Dart) dipakai karena `cloudinary_flutter`
-(semu versi) hanya widget/URL-gen tanpa API upload.
+`CloudinaryService` (`core/network`) membaca kredensial dari [AppEnv]
+(`core/config/app_env.dart`, dart-define saat build) dan memakai preset
+**unsigned** — tidak ada API secret di APK. Paket `cloudinary` (Dart) dipakai
+karena `cloudinary_flutter` (semua versi) hanya widget/URL-gen tanpa API upload.
 `BrewingRepository` adalah satu-satunya akses ke `brew_methods` + `brew_recipes`. **Katalog dan Recommendation Engine memakai repository & data yang sama** — tidak boleh ada data brewing terpisah.
 
 Sejak v4, `BrewingRepository` juga mengakses `user_brew_recipes` (resep user)
@@ -418,9 +419,10 @@ best-effort.
 
 ```
 core/auth/         AuthController (Riverpod) — session Supabase, login/register/logout
-core/network/      SupabaseService — klien Supabase dari .env
+core/network/      SupabaseService + CloudinaryService — klien cloud dari dart-define
+core/config/       AppEnv — kredensial waktu build (String.fromEnvironment)
 features/auth/     LoginScreen, RegisterScreen, ProfileScreen + ViewModel
-features/sync/     SyncService — push pending + pull remote, dijalankan saat login & app resume
+features/sync/     SyncCoordinator (single-flight + throttle) + SyncService (push/pull/tombstone/foto)
 ```
 
 ### Alur
@@ -429,12 +431,16 @@ features/sync/     SyncService — push pending + pull remote, dijalankan saat l
 App start → AuthGate: sesi Supabase ada?
   ├─ Ya → route fitur utama (Beranda dkk.)
   └─ Tidak → redirect /login (auth gate, D-30)
-Login sukses → SyncService.run()
-  ├─ Push: baris sync_status='pending' → upsert cloud by uuid → tandai 'synced'
-  ├─ Backfill: baris lama tanpa uuid → beri UUID v4 + 'pending' sebelum push
-  └─ Pull: baris cloud milik user yang uuid-nya belum ada lokal → insert (sync_status='synced')
-Scan selesai (login aktif) → insert lokal dengan uuid + 'pending' → sync best-effort
-Logout → hapus sesi → redirect /login (riwayat lokal tetap; sync berhenti)
+Login sukses → SyncCoordinator.syncNow()
+  ├─ Backfill: baris lama tanpa uuid → UUID v4 + 'pending'
+  ├─ Tombstone lokal (sync_deletes) → deleted_records cloud → delete baris cloud
+  ├─ Retry foto: path lokal → Cloudinary unsigned → image_path = secure_url
+  ├─ Push: upsert by uuid + baca balik updated_at server (LWW untuk rating/resep)
+  ├─ Pull: paging 1000 baris — insert baru; merge rating/resep bila cloud lebih baru
+  └─ Terapkan tombstone cloud (hapus lokal yang sudah dihapus di device lain)
+App resume → syncNow() lagi (throttle 5 menit, single-flight)
+Scan selesai (login aktif) → insert lokal, foto masuk antrean 'pending'
+Logout → hapus sesi → /home (riwayat lokal tetap; sync berhenti)
 ```
 
 ### Aturan
@@ -442,11 +448,22 @@ Logout → hapus sesi → redirect /login (riwayat lokal tetap; sync berhenti)
 - **Auth gate (D-30):** redirect deklaratif di GoRouter — listen `authControllerProvider`; route fitur memerlukan sesi, `/login` & `/register` hanya untuk tanpa sesi.
 - **Kunci lintas device = `uuid`** (UUID v4). PK lokal `AUTOINCREMENT` tetap.
 - Tabel sync: `analyses`, `analysis_defects`, `recommendations`, `user_brew_recipes`.
-- Merge **union by uuid** (append-only); tidak ada konflik update. Delete di-propagate best-effort, tanpa tombstone.
+- Merge immutable **union by uuid**; rating & resep memakai **last-write-wins**
+  `updated_at` dari trigger server. Delete memakai **tombstone** (`sync_deletes`
+  lokal → `deleted_records` cloud) agar tidak hidup lagi saat pull.
 - Referensi KB di cloud = ID mentah tanpa FK; resolusi ulang dari KB lokal.
 - RLS Supabase menegakkan kepemilikan per user; UI hanya menyimpan `user_id` = `auth.users.id`.
-- Kredensial di `.env` (`SUPABASE_URL`, `SUPABASE_ANON_KEY`); `.env` gitignored, contoh di `.env.example`.
-- Skema cloud: `DATABASE_SCHEMA.md` §16.
+- Kredensial disuntikkan saat build lewat dart-define; `.env` tetap gitignored
+  dan **tidak** didaftarkan sebagai aset:
+  ```sh
+  flutter build apk --release --dart-define-from-file=.env
+  flutter run --dart-define-from-file=.env
+  ```
+  Kunci: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `CLOUD_NAME`,
+  `CLOUDINARY_UPLOAD_PRESET` (preset unsigned). Tanpa kredensial, aplikasi
+  tetap jalan offline-first (auth/sync/upload no-op).
+- Skema cloud: `DATABASE_SCHEMA.md` §16. SQL bootstrap:
+  `supabase/migrations/0001_sync_v2.sql`.
 
 ### Testing
 
