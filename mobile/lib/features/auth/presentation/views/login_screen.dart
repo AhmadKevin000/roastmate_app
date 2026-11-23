@@ -48,7 +48,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       await _syncBestEffort();
       if (!mounted) return;
-      context.go('/profile');
+      // Masuk ke Beranda (di dalam MainShell), bukan Profil: Profil berada di
+      // luar ShellRoute dan tidak punya tombol kembali saat stack kosong.
+      context.go('/home');
     } on AuthRetryableFetchException {
       // Gagal menjangkau server (DNS/offline/timeout) — bukan salah kredensial.
       setState(
@@ -68,10 +70,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   /// Sync pertama setelah login — best-effort: gagal tidak memblokir.
   Future<void> _syncBestEffort() async {
-    final auth = ref.read(authControllerProvider);
-    final client = ref.read(supabaseServiceProvider).client;
-    if (client == null || auth.userId == null) return;
     try {
+      final auth = ref.read(authControllerProvider);
+      final client = ref.read(supabaseServiceProvider).client;
+      if (client == null || auth.userId == null) return;
       final db = await AppDatabase.instance.database;
       await SyncService(db, client, auth.userId!).run();
     } catch (_) {
