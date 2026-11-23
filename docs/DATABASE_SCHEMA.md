@@ -1,6 +1,6 @@
 # ROASTMATE — DATABASE SCHEMA
 
-Versi: 1.7 (skema DB `schema_version` = 7 — kolom sync `uuid`/`user_id`/`sync_status`/`updated_at` pada tabel sync; + skema cloud Supabase §16 — D-29)
+Versi: 2.0 (skema DB `schema_version` = 9 — sinkronisasi v2: outbox `sync_deletes`, antrean foto Cloudinary, rating & LWW; + skema cloud Supabase §16 — D-32)
 Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen lain merujuk ke sini.
 
 ---
@@ -29,6 +29,7 @@ Status: Spesifikasi kanonik. Definisi tabel **hanya di dokumen ini**; dokumen la
 | `analysis_defects`  | Riwayat (sync) | Rincian defect per analisis                    |
 | `recommendations`   | Riwayat (sync) | Rekomendasi per analisis                       |
 | `user_brew_recipes` | User Data (sync) | Resep buatan user (di luar KB)               |
+| `sync_deletes`      | Internal (sync) | Outbox tombstone penghapusan (D-32)          |
 | `meta`              | Internal       | `schema_version`, `kb_version`                 |
 
 > Tabel bertanda **sync** membawa kolom tambahan untuk sinkronisasi antar device
@@ -186,7 +187,11 @@ CREATE TABLE analyses (
   quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low')),
   personal_rating       INTEGER
                           CHECK (personal_rating IS NULL OR personal_rating BETWEEN 1 AND 5),
-  personal_rating_note  TEXT
+  personal_rating_note  TEXT,
+  image_sync_status     TEXT NOT NULL DEFAULT 'none'
+                          CHECK (image_sync_status IN ('none','pending','uploaded','failed')),
+  image_upload_attempts INTEGER NOT NULL DEFAULT 0,
+  cloudinary_public_id  TEXT
 );
 ```
 
@@ -204,6 +209,7 @@ Catatan:
 - Kolom `name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path` dijamin eksis pada DB lama oleh migrasi v5 (defensif per kolom — lihat §12).
 - Kolom sync (v7, D-29): `uuid` = UUID v4 kunci identitas lintas device (di-backfill saat pertama sync untuk baris lama); `user_id` = ID user auth (Supabase `auth.users.id`), terisi saat login; `sync_status` = `local` (belum login/tak ikut sync) · `pending` (menunggu dikirim) · `synced` (sudah di cloud); `updated_at` = ISO-8601 untuk audit.
 - Kolom penilaian pribadi (v8, D-31): `personal_rating` = bintang 1–5 yang diisi user di Detail Inspeksi, `NULL` = belum dinilai; `personal_rating_note` = catatan opsional (kosong disimpan `NULL`). Ini penilaian subjektif user, **bukan** bagian quality score dan tidak dipakai rule engine. Kartu Beranda & Riwayat menampilkannya sebagai bintang.
+- Kolom antrean foto (v9, D-32/D-33): `image_sync_status` = `none` (tanpa foto) · `pending` (path lokal menunggu upload Cloudinary) · `uploaded` (sudah URL) · `failed` (gagal setelah 5 percobaan); `image_upload_attempts` = jumlah percobaan; `cloudinary_public_id` = public id aset untuk audit. Payload cloud hanya memuat `image_path` berupa URL (`http...`) — path lokal dikirim `NULL` agar tidak bocor ke device lain.
 
 ---
 
@@ -319,6 +325,23 @@ Catatan:
   → INSERT SELECT → drop → rename → ON); `method_name` data lama
   di-resolve via join `brew_methods`, fallback string `method_id`.
 
+### 9.6 Tabel `sync_deletes` (v9, D-32)
+
+```sql
+CREATE TABLE sync_deletes (
+  uuid       TEXT PRIMARY KEY,
+  table_name TEXT NOT NULL CHECK (table_name IN ('analyses','user_brew_recipes')),
+  deleted_at TEXT NOT NULL,
+  synced     INTEGER NOT NULL DEFAULT 0 CHECK (synced IN (0,1))
+);
+```
+
+Outbox tombstone lokal. `deleteAnalysis` / `deleteUserRecipe` menulis baris
+ini **sebelum** menghapus baris lokal. Sync mendorongnya ke tabel cloud
+`deleted_records`, lalu menghapus baris cloud, lalu menandai `synced = 1`.
+Tanpa outbox ini, penghapusan di satu device akan "hidup lagi" saat pull
+dari device lain.
+
 ---
 
 ## 10. Index
@@ -330,6 +353,8 @@ CREATE INDEX idx_method_tools_tool     ON brew_method_tools(tool_id);
 CREATE INDEX idx_analyses_created      ON analyses(created_at);
 CREATE INDEX idx_defects_analysis      ON analysis_defects(analysis_id);
 CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
+CREATE INDEX idx_analyses_sync         ON analyses(sync_status);
+CREATE INDEX idx_analyses_image_sync   ON analyses(image_sync_status);
 ```
 
 | Index                          | Tujuan                                         |
@@ -340,6 +365,8 @@ CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id);
 | `idx_analyses_created`         | Urut riwayat berdasarkan waktu                 |
 | `idx_defects_analysis`         | Ambil defect per analisis                      |
 | `idx_recommendations_analysis` | Ambil rekomendasi per analisis                 |
+| `idx_analyses_sync`            | Ambil baris `pending` untuk push               |
+| `idx_analyses_image_sync`      | Ambil foto `pending` untuk retry upload        |
 
 ---
 
@@ -482,11 +509,12 @@ Alur seed: `JSON → KnowledgeBaseSeeder → SQLite`. Seeding hanya berjalan bil
 
 ---
 
-## 16. Skema Cloud — Supabase (D-29)
+## 16. Skema Cloud — Supabase (D-29 / D-32)
 
 Satu project Supabase (Postgres). Struktur tabel cloud **cermin** dari tabel sync
 lokal, dengan perbedaan kunci: **PK cloud = `uuid`** (TEXT) — bukan AUTOINCREMENT
-lokal. Baris di-upsert berdasarkan `uuid` (union by uuid, append-only).
+lokal. Baris immutable di-upsert berdasarkan `uuid` (union by uuid); data mutable
+(rating, resep) memakai `updated_at` dari server (last-write-wins).
 
 ```sql
 create table analyses (
@@ -494,7 +522,7 @@ create table analyses (
   user_id              uuid not null references auth.users(id) on delete cascade,
   created_at           text not null,
   name                 text,
-  image_path           text,            -- URL Cloudinary atau path lokal (lihat D-29)
+  image_path           text,            -- HANYA URL Cloudinary (http...); path lokal -> null
   annotated_image_path text,
   batch_label          text,
   batch_name           text,
@@ -509,7 +537,10 @@ create table analyses (
   size_uniformity      real,
   roast_uniformity     real,
   quality_score        integer,
-  quality_profile      text check (quality_profile in ('High','Medium','Low'))
+  quality_profile      text check (quality_profile in ('High','Medium','Low')),
+  personal_rating      integer check (personal_rating is null or personal_rating between 1 and 5),
+  personal_rating_note text,
+  updated_at           timestamptz not null default now()
 );
 
 create table analysis_defects (
@@ -550,11 +581,30 @@ create table user_brew_recipes (
   steps            text,
   video_url        text,
   notes            text,
-  created_at       text not null
+  created_at       text not null,
+  updated_at       timestamptz not null default now()
 );
+
+create table if not exists deleted_records (
+  uuid       text primary key,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  table_name text not null check (table_name in ('analyses','user_brew_recipes')),
+  deleted_at timestamptz not null default now()
+);
+
+create or replace function set_updated_at() returns trigger
+language plpgsql as $$
+begin new.updated_at = now(); return new; end $$;
+
+create trigger trg_analyses_updated before update on analyses
+  for each row execute function set_updated_at();
+create trigger trg_recipes_updated before update on user_brew_recipes
+  for each row execute function set_updated_at();
 
 create index idx_cloud_analyses_user on analyses(user_id, created_at);
 create index idx_cloud_defects_analysis on analysis_defects(analysis_uuid);
+create index idx_recipes_user on user_brew_recipes(user_id);
+create index idx_deleted_user on deleted_records(user_id, deleted_at);
 ```
 
 ### Row Level Security (wajib)
@@ -564,23 +614,36 @@ alter table analyses            enable row level security;
 alter table analysis_defects    enable row level security;
 alter table recommendations     enable row level security;
 alter table user_brew_recipes   enable row level security;
+alter table deleted_records     enable row level security;
 
--- pola yang sama untuk keempat tabel (contoh: analyses)
+-- pola yang sama untuk kelima tabel (contoh: analyses)
 create policy "own rows all" on analyses
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- tombstone: contoh policy (diterapkan via SQL Fase 1)
+create policy "own tombstones" on deleted_records
+  for all to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
 ```
 
 ### Aturan cloud
 
-1. **RLS wajib aktif** di semua tabel sync; anon key tanpa login tidak melihat
-   apa pun.
+1. **RLS wajib aktif** di semua tabel sync + tombstone; anon key tanpa login tidak melihat apa pun.
 2. Referensi KB (`primary_method_id`, `primary_recipe_id`, dst.) disimpan sebagai
    **ID mentah tanpa FK** — device lain meresolusi dari knowledge base lokalnya
    (versi KB dijamin ≥ seed 1.2 yang mencakup semua kombinasi species × roast).
-3. Push = upsert by `uuid`; pull = ambil baris `user_id` milik sendiri yang
-   `uuid`-nya belum ada di SQLite lokal. Data riwayat immutable → tidak ada
-   konflik update; `updated_at` hanya untuk audit.
-4. Hapus di cloud = `DELETE by uuid` best-effort saat user menghapus riwayat;
-   tanpa tombstone (delete di device lain tidak di-pull — keterbatasan D-29).
-5. Baris dengan `image_path` lokal tidak diubah; device lain menampilkan
-   placeholder bila path bukan URL.
+3. Push = upsert by `uuid`, lalu baca balik `updated_at` dari respons
+   (`.select('updated_at').single()`), lalu simpan ke lokal. Pull = paging
+   1000 baris per `user_id`. Data immutable (analisis/defect/rekomendasi) →
+   union by uuid; data mutable (rating, resep) → last-write-wins `updated_at`
+   yang dihasilkan trigger server.
+4. Hapus = **tombstone**: tulis `sync_deletes` lokal → upsert `deleted_records`
+   cloud → delete baris cloud → tandai `synced = 1`. Pull tombstone stadium
+   terakhir, jadi item yang dihapus tidak hidup lagi.
+5. `image_path` yang dikirim ke cloud **hanya URL** (`http...`). Path lokal
+   dikirim `NULL`. Foto diunggah dulu via Cloudinary unsigned preset; retry
+   antrean lokal maksimal 5 percobaan, aset gagal dibiarkan yatim (D-33 —
+   tanpa Edge Function delete).
+6. Trigger DB menimpa `updated_at` yang dikirim client — client **wajib**
+   membaca balik nilai server, bukan memakai jam perangkat.

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../../../core/network/cloudinary_service.dart';
 import '../../domain/entities/analysis_history_item.dart';
 import '../../../result/domain/entities/analysis_detail.dart';
 import '../../../../shared/models/analysis_result.dart';
@@ -70,6 +71,9 @@ class AnalysisRepository {
         'roast_uniformity': result.roastUniformity,
         'quality_score': result.qualityScore,
         'quality_profile': _profileName(result.qualityProfile),
+        // Foto lokal masuk antrean upload Cloudinary (v9). Bila upload
+        // langsung sukses, `updateImagePath` menaikkannya ke 'uploaded'.
+        'image_sync_status': imagePath == null ? 'none' : 'pending',
       });
 
       final batch = txn.batch();
@@ -108,10 +112,19 @@ class AnalysisRepository {
   }
 
   /// Perbarui `image_path` setelah upload Cloudinary sukses (Plan 2).
+  ///
+  /// `public_id` ikut dicatat untuk audit aset di cloud. Baris ditandai
+  /// `pending` agar URL (bukan path lokal) ikut terkirim ke Supabase.
   Future<void> updateImagePath(int analysisId, String imageUrl) =>
       _db.update(
         'analyses',
-        {'image_path': imageUrl},
+        {
+          'image_path': imageUrl,
+          'cloudinary_public_id': cloudinaryPublicIdFromUrl(imageUrl),
+          'image_sync_status': 'uploaded',
+          'image_upload_attempts': 0,
+          'sync_status': 'pending',
+        },
         where: 'id = ?',
         whereArgs: [analysisId],
       );
@@ -136,6 +149,8 @@ class AnalysisRepository {
         'personal_rating': stars,
         'personal_rating_note':
             (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+        // Mutable (LWW D-32): rating ikut terkirim saat sync berikutnya.
+        'sync_status': 'pending',
       },
       where: 'id = ?',
       whereArgs: [analysisId],
@@ -260,11 +275,27 @@ class AnalysisRepository {
   Future<void> deleteAnalysis(int id) async {
     final rows = await _db.query(
       'analyses',
-      columns: ['image_path'],
+      columns: ['image_path', 'uuid'],
       where: 'id = ?',
       whereArgs: [id],
       limit: 1,
     );
+
+    // Tombstone ditulis SEBELUM hapus lokal (D-32): tanpa ini baris cloud
+    // akan hidup lagi saat pull berikutnya ("resurrect").
+    final uuid = rows.isEmpty ? null : rows.first['uuid'] as String?;
+    if (uuid != null) {
+      await _db.insert(
+        'sync_deletes',
+        {
+          'uuid': uuid,
+          'table_name': 'analyses',
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
     await _db.delete('analyses', where: 'id = ?', whereArgs: [id]);
 
     final path = rows.isEmpty ? null : rows.first['image_path'] as String?;

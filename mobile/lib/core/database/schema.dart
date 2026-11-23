@@ -8,6 +8,9 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v9: sinkronisasi dua arah yang lengkap — tabel outbox `sync_deletes`
+/// (tombstone hapus), kolom foto di `analyses` (`image_sync_status`,
+/// `image_upload_attempts`, `cloudinary_public_id`) untuk antrean retry.
 /// v8: penilaian pribadi user pada `analyses` — `personal_rating` (1–5,
 /// NULL = belum dinilai) + `personal_rating_note`.
 /// v7: kolom sync (D-29) — `uuid`/`user_id`/`sync_status`/`updated_at` pada
@@ -22,7 +25,7 @@ library;
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 8;
+const int kSchemaVersion = 9;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -119,7 +122,11 @@ const List<String> kCreateTableStatements = <String>[
     quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low')),
     personal_rating       INTEGER
                             CHECK (personal_rating IS NULL OR personal_rating BETWEEN 1 AND 5),
-    personal_rating_note  TEXT
+    personal_rating_note  TEXT,
+    image_sync_status     TEXT NOT NULL DEFAULT 'none'
+                            CHECK (image_sync_status IN ('none','pending','uploaded','failed')),
+    image_upload_attempts INTEGER NOT NULL DEFAULT 0,
+    cloudinary_public_id  TEXT
   )
   ''',
   // §7 analysis_defects (v7: + kolom sync D-29)
@@ -190,6 +197,16 @@ const List<String> kCreateTableStatements = <String>[
     value  TEXT NOT NULL
   )
   ''',
+  // §9.6 sync_deletes (v9) — outbox tombstone: baris yang sudah dihapus lokal
+  // tapi belum dihapus di cloud. Lihat DATABASE_SCHEMA.md §16.
+  '''
+  CREATE TABLE sync_deletes (
+    uuid        TEXT PRIMARY KEY,
+    table_name  TEXT NOT NULL CHECK (table_name IN ('analyses','user_brew_recipes')),
+    deleted_at  TEXT NOT NULL,
+    synced      INTEGER NOT NULL DEFAULT 0 CHECK (synced IN (0,1))
+  )
+  ''',
 ];
 
 /// DDL seluruh index (mirror `DATABASE_SCHEMA.md` §10).
@@ -201,4 +218,5 @@ const List<String> kCreateIndexStatements = <String>[
   'CREATE INDEX idx_defects_analysis ON analysis_defects(analysis_id)',
   'CREATE INDEX idx_recommendations_analysis ON recommendations(analysis_id)',
   'CREATE INDEX idx_analyses_sync ON analyses(sync_status)',
+  'CREATE INDEX idx_analyses_image_sync ON analyses(image_sync_status)',
 ];

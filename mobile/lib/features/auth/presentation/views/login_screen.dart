@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../core/auth/auth_controller.dart';
-import '../../../../../core/database/app_database.dart';
-import '../../../../../core/network/supabase_service.dart';
 import '../../../../../core/theme/roastmate_colors.dart';
 import '../../../../../core/widgets/roastmate_app_header.dart';
-import '../../../sync/data/sync_service.dart';
+import '../../../sync/data/sync_coordinator.dart';
 
 /// Layar login (FR-10). Email + sandi via Supabase Auth.
 ///
@@ -69,17 +67,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// Sync pertama setelah login — best-effort: gagal tidak memblokir.
-  Future<void> _syncBestEffort() async {
-    try {
-      final auth = ref.read(authControllerProvider);
-      final client = ref.read(supabaseServiceProvider).client;
-      if (client == null || auth.userId == null) return;
-      final db = await AppDatabase.instance.database;
-      await SyncService(db, client, auth.userId!).run();
-    } catch (_) {
-      // Best-effort: baris tetap `pending`, dikirim saat sync berikutnya.
-    }
-  }
+  Future<void> _syncBestEffort() =>
+      ref.read(syncCoordinatorProvider).syncNow(force: true);
 
   @override
   Widget build(BuildContext context) {
