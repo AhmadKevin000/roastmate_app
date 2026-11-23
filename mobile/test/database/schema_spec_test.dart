@@ -138,7 +138,7 @@ void main() {
   // §2 Daftar Tabel
   // ==========================================================================
   group('§2 Daftar tabel', () {
-    test('berisi tepat 9 tabel sesuai dokumen', () async {
+    test('berisi tepat 10 tabel sesuai dokumen', () async {
       const expected = {
         'brew_methods',
         'brew_tools',
@@ -149,6 +149,7 @@ void main() {
         'recommendations',
         'user_brew_recipes',
         'meta',
+        'sync_deletes',
       };
       expect(await tableNames(db), expected);
     });
@@ -158,7 +159,7 @@ void main() {
   // §10 Index
   // ==========================================================================
   group('§10 Index', () {
-    test('berisi tepat 7 index dengan nama kanonik', () async {
+    test('berisi tepat 8 index dengan nama kanonik', () async {
       const expected = {
         'idx_recipes_method',
         'idx_recipes_lookup',
@@ -167,6 +168,7 @@ void main() {
         'idx_defects_analysis',
         'idx_recommendations_analysis',
         'idx_analyses_sync',
+        'idx_analyses_image_sync',
       };
       expect(await indexNames(db), expected);
     });
@@ -655,6 +657,9 @@ void main() {
         'quality_profile',
         'personal_rating',
         'personal_rating_note',
+        'image_sync_status',
+        'image_upload_attempts',
+        'cloudinary_public_id',
       });
     });
   });

@@ -85,3 +85,21 @@ class CloudinaryService {
 final cloudinaryServiceProvider = Provider<CloudinaryService>((ref) {
   return CloudinaryService();
 });
+
+/// Ambil `public_id` dari `secure_url` Cloudinary (audit & cleanup aset).
+///
+/// `.../upload/v1712/roastmate/analyses/abc.jpg` → `roastmate/analyses/abc`.
+String? cloudinaryPublicIdFromUrl(String url) {
+  final marker = '/upload/';
+  final start = url.indexOf(marker);
+  if (start < 0) return null;
+  var rest = url.substring(start + marker.length);
+  if (rest.startsWith('v')) {
+    final slash = rest.indexOf('/');
+    if (slash > 0 && int.tryParse(rest.substring(1, slash)) != null) {
+      rest = rest.substring(slash + 1);
+    }
+  }
+  final dot = rest.lastIndexOf('.');
+  return dot > 0 ? rest.substring(0, dot) : rest;
+}

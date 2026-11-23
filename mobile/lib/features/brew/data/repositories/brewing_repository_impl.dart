@@ -195,6 +195,27 @@ class BrewingRepositoryImpl implements BrewingRepository {
   @override
   Future<void> deleteUserRecipe(String recipeId) async {
     final db = await _db;
+    // Tombstone dulu — sama seperti deleteAnalysis (D-32). Tanpa ini resep
+    // akan muncul lagi saat pull dari device lain.
+    final rows = await db.query(
+      'user_brew_recipes',
+      columns: ['uuid'],
+      where: 'recipe_id = ?',
+      whereArgs: [recipeId],
+      limit: 1,
+    );
+    final uuid = rows.isEmpty ? null : rows.first['uuid'] as String?;
+    if (uuid != null) {
+      await db.insert(
+        'sync_deletes',
+        {
+          'uuid': uuid,
+          'table_name': 'user_brew_recipes',
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     await db.delete(
       'user_brew_recipes',
       where: 'recipe_id = ?',
