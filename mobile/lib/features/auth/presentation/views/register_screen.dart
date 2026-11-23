@@ -42,9 +42,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           .read(authControllerProvider.notifier)
           .signUp(_emailController.text.trim(), _passwordController.text);
       if (!mounted) return;
-      // Bila sesi langsung terbentuk → profil; kalau perlu verifikasi email → login.
+      // Bila sesi langsung terbentuk → Beranda; kalau perlu verifikasi email
+      // → login. Profil bukan tujuan pasca-auth (di luar ShellRoute).
       final loggedIn = ref.read(authControllerProvider).loggedIn;
-      context.go(loggedIn ? '/profile' : '/login');
+      context.go(loggedIn ? '/home' : '/login');
     } on AuthRetryableFetchException {
       // Gagal menjangkau server (DNS/offline/timeout) — bukan salah kredensial.
       setState(

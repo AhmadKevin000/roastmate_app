@@ -55,7 +55,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Akun'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Akun',
+        // Profil dibuka lewat ikon pengaturan (push) → tombol kembali normal.
+        // Fallback ke Beranda bila stack kosong (mis. navigasi programatik).
+        leading: IconButton(
+          tooltip: 'Kembali',
+          icon: const Icon(
+            Icons.arrow_back,
+            color: RoastmateColors.primary,
+          ),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
