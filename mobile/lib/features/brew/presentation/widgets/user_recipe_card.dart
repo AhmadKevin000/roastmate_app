@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
@@ -11,7 +12,7 @@ import '../viewmodels/brew_view_model.dart';
 /// Kartu resep buatan user di seksi "Resep Kamu".
 ///
 /// Menampilkan nama, chip metode/species/roast, baris parameter (reuse label
-/// [BrewRecipe]), notes satu baris, dan aksi hapus dengan dialog konfirmasi.
+/// [BrewRecipe]), notes satu baris, serta aksi edit dan hapus.
 /// [onTap] membuka Detail Resep Kamu (v6).
 class UserRecipeCard extends ConsumerWidget {
   const UserRecipeCard({
@@ -19,6 +20,7 @@ class UserRecipeCard extends ConsumerWidget {
     required this.recipe,
     this.method,
     this.onTap,
+    this.onEdit,
   });
 
   final BrewRecipe recipe;
@@ -29,6 +31,9 @@ class UserRecipeCard extends ConsumerWidget {
 
   /// Buka detail resep (v6).
   final VoidCallback? onTap;
+
+  /// Aksi edit resep (opsional; default membuka `/brewing/edit` dengan data resep).
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,6 +71,16 @@ class UserRecipeCard extends ConsumerWidget {
                       style: RoastmateText.titleMd.copyWith(
                         color: RoastmateColors.textPrimary,
                       ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Edit resep',
+                    onPressed: onEdit ??
+                        () => context.push('/brewing/edit', extra: recipe),
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 20,
+                      color: RoastmateColors.primary,
                     ),
                   ),
                   IconButton(
