@@ -383,4 +383,67 @@ void main() {
       expect(detail.summaryText, contains('skor 86/100'));
     });
   });
+
+  group('Penilaian pribadi (v8, D-31)', () {
+    test('savePersonalRating tersimpan & terbaca di history + detail', () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+      );
+      // Awal: belum dinilai.
+      expect((await repo.getHistory()).first.personalRating, isNull);
+
+      await repo.savePersonalRating(id, stars: 4, note: '  Aroma kuat  ');
+
+      final item = (await repo.getHistory()).first;
+      expect(item.personalRating, 4);
+      expect(item.personalRatingNote, 'Aroma kuat');
+
+      final detail = await repo.getDetail(id);
+      expect(detail!.personalRating, 4);
+      expect(detail.personalRatingNote, 'Aroma kuat');
+    });
+
+    test('catatan kosong/spasi disimpan sebagai NULL', () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+      );
+      await repo.savePersonalRating(id, stars: 5, note: '   ');
+
+      final detail = await repo.getDetail(id);
+      expect(detail!.personalRating, 5);
+      expect(detail.personalRatingNote, isNull);
+    });
+
+    test('bintang di luar 1–5 ditolak sebelum menulis DB', () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+      );
+      expect(
+        () => repo.savePersonalRating(id, stars: 0),
+        throwsArgumentError,
+      );
+      expect(
+        () => repo.savePersonalRating(id, stars: 6),
+        throwsArgumentError,
+      );
+      expect((await repo.getDetail(id))!.personalRating, isNull);
+    });
+
+    test('menimpa penilaian lama (satu nilai per analisis)', () async {
+      final id = await repo.insertResult(
+        fixture,
+        createdAt: DateTime(2025, 3, 12),
+      );
+      await repo.savePersonalRating(id, stars: 2, note: 'asam');
+      await repo.savePersonalRating(id, stars: 5, note: null);
+
+      final history = await repo.getHistory();
+      expect(history, hasLength(1));
+      expect(history.first.personalRating, 5);
+      expect(history.first.personalRatingNote, isNull);
+    });
+  });
 }

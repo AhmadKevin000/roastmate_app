@@ -8,6 +8,8 @@ library;
 
 /// Versi skema saat ini.
 ///
+/// v8: penilaian pribadi user pada `analyses` — `personal_rating` (1–5,
+/// NULL = belum dinilai) + `personal_rating_note`.
 /// v7: kolom sync (D-29) — `uuid`/`user_id`/`sync_status`/`updated_at` pada
 /// `analyses` & `user_brew_recipes`; `uuid`/`sync_status` pada
 /// `analysis_defects` & `recommendations`. Kunci lintas device = `uuid`.
@@ -20,7 +22,7 @@ library;
 /// v3: tambah `brew_tools`, `brew_method_tools`, kolom `image_asset` & `subtitle`
 /// pada `brew_methods`, serta sinkronisasi taksonomi species (+Liberika)
 /// dan defect 4-kelas.
-const int kSchemaVersion = 7;
+const int kSchemaVersion = 8;
 
 /// Nama file database.
 const String kDatabaseName = 'roastmate.db';
@@ -88,7 +90,7 @@ const List<String> kCreateTableStatements = <String>[
     video_url        TEXT
   )
   ''',
-  // §6 analyses (v7: + kolom sync D-29)
+  // §6 analyses (v7: + kolom sync D-29; v8: + personal rating)
   '''
   CREATE TABLE analyses (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,7 +116,10 @@ const List<String> kCreateTableStatements = <String>[
     size_uniformity       REAL,
     roast_uniformity      REAL,
     quality_score         INTEGER,
-    quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low'))
+    quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low')),
+    personal_rating       INTEGER
+                            CHECK (personal_rating IS NULL OR personal_rating BETWEEN 1 AND 5),
+    personal_rating_note  TEXT
   )
   ''',
   // §7 analysis_defects (v7: + kolom sync D-29)

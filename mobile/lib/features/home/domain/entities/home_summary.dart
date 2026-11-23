@@ -25,6 +25,7 @@ class HomeAnalysisSummary {
     required this.visibleBeans,
     required this.qualityScore,
     this.imagePath,
+    this.personalRating,
   });
 
   final int id;
@@ -37,6 +38,9 @@ class HomeAnalysisSummary {
   /// Foto analisis untuk thumbnail kartu (URL Cloudinary / path lokal);
   /// null bila baris lama tanpa foto.
   final String? imagePath;
+
+  /// Penilaian pribadi user (bintang 1–5), null = belum dinilai.
+  final int? personalRating;
 
   IndicativeGrade get grade => gradeForScore(qualityScore);
 

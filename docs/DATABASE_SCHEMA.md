@@ -183,7 +183,10 @@ CREATE TABLE analyses (
   size_uniformity       REAL,
   roast_uniformity      REAL,
   quality_score         INTEGER,
-  quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low'))
+  quality_profile       TEXT CHECK (quality_profile IN ('High','Medium','Low')),
+  personal_rating       INTEGER
+                          CHECK (personal_rating IS NULL OR personal_rating BETWEEN 1 AND 5),
+  personal_rating_note  TEXT
 );
 ```
 
@@ -200,6 +203,7 @@ Catatan:
 - `roast_distribution` = JSON agregat batch (mis. `{"Light": 3, "Medium": 19}`), dipakai Beranda & ML §7.
 - Kolom `name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path` dijamin eksis pada DB lama oleh migrasi v5 (defensif per kolom — lihat §12).
 - Kolom sync (v7, D-29): `uuid` = UUID v4 kunci identitas lintas device (di-backfill saat pertama sync untuk baris lama); `user_id` = ID user auth (Supabase `auth.users.id`), terisi saat login; `sync_status` = `local` (belum login/tak ikut sync) · `pending` (menunggu dikirim) · `synced` (sudah di cloud); `updated_at` = ISO-8601 untuk audit.
+- Kolom penilaian pribadi (v8, D-31): `personal_rating` = bintang 1–5 yang diisi user di Detail Inspeksi, `NULL` = belum dinilai; `personal_rating_note` = catatan opsional (kosong disimpan `NULL`). Ini penilaian subjektif user, **bukan** bagian quality score dan tidak dipakai rule engine. Kartu Beranda & Riwayat menampilkannya sebagai bintang.
 
 ---
 
@@ -374,8 +378,9 @@ Enum yang **disimpan** memakai **Title Case** (kecuali `method_type` snake_case)
 | v4   | v5  | Jaminan kolom legacy `analyses` (`name`, `batch_label`, `batch_name`, `model_version`, `image_path`, `annotated_image_path`) — cek per kolom via `PRAGMA table_info`, idempoten | Tercatat |
 | v5   | v6  | Rebuild `user_brew_recipes` (pola resmi SQLite; foreign_keys OFF selama rebuild): `method_id` nullable + `ON DELETE SET NULL`, kolom baru `method_name`, `steps`, `video_url`; data lama dipindah, `method_name` di-resolve dari join `brew_methods`. `brew_recipes` + kolom `video_url` (ALTER, guarded idempoten) | Tercatat |
 | v6   | v7  | Kolom sync (D-29, ALTER guarded idempoten per kolom): `analyses` + `user_brew_recipes` → `uuid`, `user_id`, `sync_status DEFAULT 'local'`, `updated_at`; `analysis_defects` + `recommendations` → `uuid`, `sync_status DEFAULT 'local'`. Index `idx_analyses_sync` (`sync_status`). Baris lama tetap `sync_status='local'`; backfill `uuid` dilakukan saat pertama sync, bukan di migrasi | Tercatat |
+| v7   | v8  | Kolom penilaian pribadi (D-31, ALTER guarded idempoten per kolom): `analyses` → `personal_rating` (INTEGER, NULL = belum dinilai), `personal_rating_note` (TEXT). Rentang 1–5 divalidasi repository (CHECK tidak bisa ditambahkan lewat ALTER) | Tercatat |
 
-`kSchemaVersion` terkini = **7**.
+`kSchemaVersion` terkini = **8**.
 
 > Skema versi terkini sudah memakai taksonomi final hasil training (species 3 kelas + `Liberika`, defect 4 kelas). Tidak ada migrasi data yang diperlukan karena belum ada rilis dengan taksonomi lama. Saat taksonomi berubah di masa depan, `kSchemaVersion` dinaikkan + migrasi ditambahkan.
 
@@ -530,7 +535,7 @@ create table user_brew_recipes (
   uuid             text primary key,
   user_id          uuid not null references auth.users(id) on delete cascade,
   recipe_id        text not null,       -- ID lokal asal (tetap disimpan untuk provenance)
-  n             text not null,
+  name             text not null,
   method_id        text,
   method_name      text not null,
   species          text check (species in ('Arabica','Robusta','Liberika','Mixed')),
