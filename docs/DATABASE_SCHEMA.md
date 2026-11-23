@@ -644,6 +644,7 @@ create policy "own tombstones" on deleted_records
 5. `image_path` yang dikirim ke cloud **hanya URL** (`http...`). Path lokal
    dikirim `NULL`. Foto diunggah dulu via Cloudinary unsigned preset; retry
    antrean lokal maksimal 5 percobaan, aset gagal dibiarkan yatim (D-33 —
-   tanpa Edge Function delete).
+   tanpa Edge Function delete). Kredensial Cloudinary (`CLOUD_NAME`,
+   `CLOUDINARY_UPLOAD_PRESET`) disuntikkan lewat dart-define saat build.
 6. Trigger DB menimpa `updated_at` yang dikirim client — client **wajib**
    membaca balik nilai server, bukan memakai jam perangkat.

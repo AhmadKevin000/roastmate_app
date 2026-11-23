@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app/app.dart';
@@ -9,15 +8,8 @@ import 'app/router/app_router.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  try {
-    await dotenv.load(fileName: '.env');
-  } catch (e) {
-    // .env tidak ada (mis. mesin tanpa file): upload Cloudinary & auth/sync
-    // nonaktif (no-op) — DB & alur aplikasi tetap jalan (offline-first).
-    debugPrint('[dotenv] .env gagal dimuat: $e — layanan cloud dinonaktifkan.');
-  }
 
-  // Supabase (D-29): no-op bila kredensial tidak lengkap.
+  // Supabase (D-29): no-op bila kredensial dart-define tidak lengkap.
   final supabase = await SupabaseService.ensureInitialized();
 
   // Auth gate (D-30): set state awal SEKARANG (sinkron dari session tersimpan)
