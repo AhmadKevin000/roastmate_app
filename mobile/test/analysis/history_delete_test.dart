@@ -3,14 +3,16 @@
 // + cascade sudah tercakup di `test/data/analysis_repository_test.dart`.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:pbl_sem5/features/analysis/data/sources/mock_analysis_history.dart';
 import 'package:pbl_sem5/features/analysis/domain/entities/analysis_history_item.dart';
 import 'package:pbl_sem5/features/analysis/presentation/views/analysis_history_screen.dart';
 
-Widget _app(List<AnalysisHistoryItem> items) =>
-    MaterialApp(home: AnalysisHistoryScreen(items: items));
+Widget _app(List<AnalysisHistoryItem> items) => ProviderScope(
+  child: MaterialApp(home: AnalysisHistoryScreen(items: items)),
+);
 
 void main() {
   testWidgets('item mock (tanpa analysisId) → tanpa ikon hapus',
