@@ -288,6 +288,46 @@ void main() {
   });
 
   group('Fase 3 — runner lokal', () {
+    test('backfillUuids menandai defect & rekomendasi sebagai pending', () async {
+      final db = await openSchemaDatabase();
+      addTearDown(db.close);
+      await db.insert('brew_methods', {
+        'method_id': 'M001',
+        'method_name': 'V60',
+        'method_type': 'pour_over',
+      });
+      await db.insert('brew_recipes', {
+        'recipe_id': 'R001',
+        'method_id': 'M001',
+        'species': 'Arabica',
+        'quality_profile': 'High',
+        'roast_context': 'Light',
+        'source': 'KB',
+      });
+      final analysisId = await db.insert('analyses', {
+        'created_at': '2026-01-01T00:00:00.000',
+      });
+      await db.insert('analysis_defects', {
+        'analysis_id': analysisId,
+        'defect_class': 'Normal',
+        'count': 10,
+      });
+      await db.insert('recommendations', {
+        'analysis_id': analysisId,
+        'primary_method_id': 'M001',
+        'primary_recipe_id': 'R001',
+      });
+
+      await SyncService(db, null, 'user-1').backfillUuids();
+
+      final defects = await db.query('analysis_defects');
+      final recs = await db.query('recommendations');
+      expect(defects.single['sync_status'], 'pending');
+      expect(defects.single['uuid'], isNotNull);
+      expect(recs.single['sync_status'], 'pending');
+      expect(recs.single['uuid'], isNotNull);
+    });
+
     test('run() tanpa client: backfill uuid tanpa melempar', () async {
       final db = await openSchemaDatabase();
       addTearDown(db.close);
