@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:sqflite/sqflite.dart';
 
+import '../../../../core/network/cloudinary_service.dart';
 import '../../domain/entities/analysis_history_item.dart';
 import '../../../result/domain/entities/analysis_detail.dart';
 import '../../../../shared/models/analysis_result.dart';
@@ -70,6 +71,9 @@ class AnalysisRepository {
         'roast_uniformity': result.roastUniformity,
         'quality_score': result.qualityScore,
         'quality_profile': _profileName(result.qualityProfile),
+        // Foto lokal masuk antrean upload Cloudinary (v9). Bila upload
+        // langsung sukses, `updateImagePath` menaikkannya ke 'uploaded'.
+        'image_sync_status': imagePath == null ? 'none' : 'pending',
       });
 
       final batch = txn.batch();
@@ -108,13 +112,50 @@ class AnalysisRepository {
   }
 
   /// Perbarui `image_path` setelah upload Cloudinary sukses (Plan 2).
+  ///
+  /// `public_id` ikut dicatat untuk audit aset di cloud. Baris ditandai
+  /// `pending` agar URL (bukan path lokal) ikut terkirim ke Supabase.
   Future<void> updateImagePath(int analysisId, String imageUrl) =>
       _db.update(
         'analyses',
-        {'image_path': imageUrl},
+        {
+          'image_path': imageUrl,
+          'cloudinary_public_id': cloudinaryPublicIdFromUrl(imageUrl),
+          'image_sync_status': 'uploaded',
+          'image_upload_attempts': 0,
+          'sync_status': 'pending',
+        },
         where: 'id = ?',
         whereArgs: [analysisId],
       );
+
+  /// Simpan penilaian pribadi user (bintang 1–5 + catatan opsional) pada
+  /// satu baris `analyses` (v8, D-31).
+  ///
+  /// Rentang bintang divalidasi di sini karena kolom hasil `ALTER TABLE`
+  /// tidak membawa CHECK. Catatan kosong disimpan sebagai NULL.
+  Future<void> savePersonalRating(
+    int analysisId, {
+    required int stars,
+    String? note,
+  }) async {
+    if (stars < 1 || stars > 5) {
+      throw ArgumentError.value(stars, 'stars', 'harus 1–5');
+    }
+    final trimmed = note?.trim();
+    await _db.update(
+      'analyses',
+      {
+        'personal_rating': stars,
+        'personal_rating_note':
+            (trimmed == null || trimmed.isEmpty) ? null : trimmed,
+        // Mutable (LWW D-32): rating ikut terkirim saat sync berikutnya.
+        'sync_status': 'pending',
+      },
+      where: 'id = ?',
+      whereArgs: [analysisId],
+    );
+  }
 
   /// Daftar riwayat, terbaru dulu. Filter [species] opsional
   /// (`Arabica` / `Robusta` / `Mixed`).
@@ -136,6 +177,8 @@ class AnalysisRepository {
           dateLabel: formatHistoryDate(createdAt),
           detail: _fromRow(row, defects, createdAt),
           imagePath: row['image_path'] as String?,
+          personalRating: (row['personal_rating'] as num?)?.toInt(),
+          personalRatingNote: row['personal_rating_note'] as String?,
         ),
       );
     }
@@ -159,6 +202,8 @@ class AnalysisRepository {
       dateLabel: formatHistoryDate(createdAt),
       detail: _fromRow(row, defects, createdAt),
       imagePath: row['image_path'] as String?,
+      personalRating: (row['personal_rating'] as num?)?.toInt(),
+      personalRatingNote: row['personal_rating_note'] as String?,
     );
   }
 
@@ -218,6 +263,8 @@ class AnalysisRepository {
       recommendation: recommendation,
       alternatives: alternatives,
       summaryText: buildAnalysisSummary(result),
+      personalRating: (row['personal_rating'] as num?)?.toInt(),
+      personalRatingNote: row['personal_rating_note'] as String?,
     );
   }
 
@@ -228,11 +275,27 @@ class AnalysisRepository {
   Future<void> deleteAnalysis(int id) async {
     final rows = await _db.query(
       'analyses',
-      columns: ['image_path'],
+      columns: ['image_path', 'uuid'],
       where: 'id = ?',
       whereArgs: [id],
       limit: 1,
     );
+
+    // Tombstone ditulis SEBELUM hapus lokal (D-32): tanpa ini baris cloud
+    // akan hidup lagi saat pull berikutnya ("resurrect").
+    final uuid = rows.isEmpty ? null : rows.first['uuid'] as String?;
+    if (uuid != null) {
+      await _db.insert(
+        'sync_deletes',
+        {
+          'uuid': uuid,
+          'table_name': 'analyses',
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
     await _db.delete('analyses', where: 'id = ?', whereArgs: [id]);
 
     final path = rows.isEmpty ? null : rows.first['image_path'] as String?;

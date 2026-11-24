@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/brewing_repository_impl.dart';
 import '../../domain/entities/brew_recipe.dart';
 import '../../domain/repositories/brewing_repository.dart';
+import '../../../sync/data/sync_coordinator.dart';
 
 /// Provider instance repository brewing.
 final brewingRepositoryProvider = Provider<BrewingRepository>((ref) {
@@ -55,8 +56,11 @@ class BrewCatalogState {
 /// Memuat data dari SQLite via [BrewingRepository].
 class BrewViewModel extends StateNotifier<BrewCatalogState> {
   final BrewingRepository _repository;
+  final SyncCoordinator? _syncCoordinator;
 
-  BrewViewModel(this._repository) : super(const BrewCatalogState(isLoading: true)) {
+  BrewViewModel(this._repository, {SyncCoordinator? syncCoordinator})
+    : _syncCoordinator = syncCoordinator,
+      super(const BrewCatalogState(isLoading: true)) {
     load();
   }
 
@@ -88,12 +92,20 @@ class BrewViewModel extends StateNotifier<BrewCatalogState> {
   /// Menyimpan resep user baru, lalu memuat ulang katalog.
   Future<void> addRecipe(BrewRecipe recipe) async {
     await _repository.insertUserRecipe(recipe);
+    _syncCoordinator?.scheduleSync();
     await load();
   }
 
   /// Menghapus resep user, lalu memuat ulang katalog.
   Future<void> removeRecipe(String recipeId) async {
     await _repository.deleteUserRecipe(recipeId);
+    _syncCoordinator?.scheduleSync();
+    await load();
+  }
+
+  /// Memperbarui resep user yang sudah ada, lalu memuat ulang katalog.
+  Future<void> updateRecipe(BrewRecipe recipe) async {
+    await _repository.updateUserRecipe(recipe);
     await load();
   }
 }
@@ -102,7 +114,10 @@ class BrewViewModel extends StateNotifier<BrewCatalogState> {
 final brewCatalogProvider =
     StateNotifierProvider<BrewViewModel, BrewCatalogState>((ref) {
   final repo = ref.watch(brewingRepositoryProvider);
-  return BrewViewModel(repo);
+  return BrewViewModel(
+    repo,
+    syncCoordinator: ref.read(syncCoordinatorProvider),
+  );
 });
 
 /// Metode berdasarkan id (untuk Detail Resep).

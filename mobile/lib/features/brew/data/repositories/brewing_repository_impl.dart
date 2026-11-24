@@ -195,10 +195,58 @@ class BrewingRepositoryImpl implements BrewingRepository {
   @override
   Future<void> deleteUserRecipe(String recipeId) async {
     final db = await _db;
+    // Tombstone dulu — sama seperti deleteAnalysis (D-32). Tanpa ini resep
+    // akan muncul lagi saat pull dari device lain.
+    final rows = await db.query(
+      'user_brew_recipes',
+      columns: ['uuid'],
+      where: 'recipe_id = ?',
+      whereArgs: [recipeId],
+      limit: 1,
+    );
+    final uuid = rows.isEmpty ? null : rows.first['uuid'] as String?;
+    if (uuid != null) {
+      await db.insert(
+        'sync_deletes',
+        {
+          'uuid': uuid,
+          'table_name': 'user_brew_recipes',
+          'deleted_at': DateTime.now().toUtc().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     await db.delete(
       'user_brew_recipes',
       where: 'recipe_id = ?',
       whereArgs: [recipeId],
+    );
+  }
+
+  @override
+  Future<void> updateUserRecipe(BrewRecipe recipe) async {
+    final db = await _db;
+    await db.update(
+      'user_brew_recipes',
+      <String, Object?>{
+        'name': recipe.name,
+        'method_id': recipe.methodId,
+        'method_name': recipe.methodName,
+        'species': recipe.species,
+        'quality_profile': recipe.qualityProfile,
+        'roast_context': recipe.roastContext,
+        'dose_g': recipe.doseG,
+        'water_volume_ml': recipe.waterVolumeMl,
+        'grind_size': recipe.grindSize,
+        'temperature_c': recipe.temperatureC,
+        'brewing_time_s': recipe.brewingTimeS,
+        'steps': recipe.steps.isEmpty ? null : jsonEncode(_stepsToJson(recipe.steps)),
+        'video_url': recipe.videoUrl,
+        'notes': recipe.notes,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'recipe_id = ?',
+      whereArgs: [recipe.recipeId],
     );
   }
 

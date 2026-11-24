@@ -41,6 +41,7 @@ class HomeRepository {
       visibleBeans: (row['visible_beans'] as num?)?.toInt() ?? 0,
       qualityScore: (row['quality_score'] as num?)?.toInt() ?? 0,
       imagePath: row['image_path'] as String?,
+      personalRating: (row['personal_rating'] as num?)?.toInt(),
     );
   }
 }

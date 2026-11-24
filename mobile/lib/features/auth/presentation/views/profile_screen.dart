@@ -3,11 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../core/auth/auth_controller.dart';
-import '../../../../../core/database/app_database.dart';
-import '../../../../../core/network/supabase_service.dart';
 import '../../../../../core/theme/roastmate_colors.dart';
 import '../../../../../core/widgets/roastmate_app_header.dart';
-import '../../../sync/data/sync_service.dart';
+import '../../../sync/data/sync_coordinator.dart';
 
 /// Layar profil (FR-10): status login, sinkronisasi manual, logout.
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -22,23 +20,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _syncMessage;
 
   Future<void> _syncNow() async {
-    final auth = ref.read(authControllerProvider);
-    final client = ref.read(supabaseServiceProvider).client;
-    if (client == null || auth.userId == null) return;
-
     setState(() {
       _syncing = true;
       _syncMessage = null;
     });
     try {
-      final db = await AppDatabase.instance.database;
-      final r = await SyncService(db, client, auth.userId!).run();
+      final result = await ref
+          .read(syncCoordinatorProvider)
+          .syncNow(force: true);
+      if (!mounted) return;
       setState(
-        () => _syncMessage =
-            'Sinkron selesai: ${r.pushed} dikirim, ${r.pulled} ditarik.',
+        () => _syncMessage = result?.label ??
+            'Tidak ada akun aktif atau Supabase belum dikonfigurasi.',
       );
-    } catch (e) {
-      setState(() => _syncMessage = 'Sinkron gagal. Periksa koneksi internet.');
+    } catch (_) {
+      if (mounted) {
+        setState(() => _syncMessage = 'Sinkron gagal. Periksa koneksi internet.');
+      }
     } finally {
       if (mounted) setState(() => _syncing = false);
     }
@@ -55,7 +53,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppHeader(subtitle: 'Akun'),
+      appBar: RoastmateAppHeader(
+        subtitle: 'Akun',
+        // Profil dibuka lewat ikon pengaturan (push) → tombol kembali normal.
+        // Fallback ke Beranda bila stack kosong (mis. navigasi programatik).
+        leading: IconButton(
+          tooltip: 'Kembali',
+          icon: const Icon(
+            Icons.arrow_back,
+            color: RoastmateColors.primary,
+          ),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/home'),
+        ),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

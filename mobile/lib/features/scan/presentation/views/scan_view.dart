@@ -10,12 +10,14 @@ import '../../../../core/network/cloudinary_service.dart';
 import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/widgets/roastmate_app_bar.dart';
+import '../../../../inference/batch_aggregation.dart';
+import '../../../../inference/inference_pipeline.dart';
 import '../../../analysis/data/sources/analysis_repository.dart';
-import '../../../analysis/data/sources/analysis_template_source.dart';
 import '../../../analysis/data/sources/reason_template_source.dart';
 import '../../../analysis/data/sources/recommendation_resolver.dart';
-import '../../../analysis/domain/analysis_result_builder.dart';
+import '../../../analysis/domain/batch_result_builder.dart';
 import '../../../brew/data/repositories/brewing_repository_impl.dart';
+import '../../../sync/data/sync_coordinator.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
 import '../widgets/analyzing_overlay.dart';
@@ -348,21 +350,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     );
   }
 
-  /// Menjalankan alur shutter: pilih template analisis acak (pengganti
-  /// sementara pipeline ML), simpan data lengkap ke SQLite **dulu**
-  /// (offline-first, AC-02), lalu upload foto ke Cloudinary best-effort
-  /// dan membuka Detail Inspeksi.
+  /// Menjalankan alur shutter: ambil foto → **inference ML on-device**
+  /// (deteksi + klasifikasi, di isolate) → simpan ke SQLite **dulu**
+  /// (offline-first, AC-02) → upload foto ke Cloudinary best-effort → buka
+  /// Detail Inspeksi.
   Future<void> _analyzeAndOpenResult() async {
     final cameraVM = ref.read(cameraViewModelProvider.notifier);
     final image = await cameraVM.takePicture();
     if (!mounted) return;
+    if (image == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(content: Text('Gagal mengambil foto. Coba lagi.')),
+        );
+      return;
+    }
 
-    // 1) Template acak + identitas batch dari form setup.
-    final templateSource = ref.read(analysisTemplateSourceProvider);
-    final template = templateSource.pick(
-      await templateSource.loadAll(),
-      math.Random(),
-    );
     final nameFromWidget = widget.coffeeName?.trim();
     final nameFromProvider = ref.read(scanBatchNameProvider).trim();
     final batchName = (nameFromWidget != null && nameFromWidget.isNotEmpty)
@@ -370,11 +374,34 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         : nameFromProvider;
     final displayName = batchName.isEmpty ? 'Kopi Tanpa Nama' : batchName;
 
+    // 1) Inference (isolate). Overlay menutup latensi; kamera dilepas dulu
+    //    agar RAM lega untuk model.
+    setState(() => _isAnalyzing = true);
+    await cameraVM.stopPreview();
+    if (!mounted) return;
+
+    final BatchSummary summary;
+    try {
+      summary = await ref.read(inferencePipelineProvider).analyze(image.path);
+    } on NoBeansDetectedException catch (e) {
+      await _abortAnalysis(e.toString());
+      return;
+    } on InferenceException catch (e) {
+      await _abortAnalysis(e.message);
+      return;
+    } catch (e) {
+      debugPrint('[Scan] Inference gagal: $e');
+      await _abortAnalysis('Analisis gagal. Coba ambil foto ulang.');
+      return;
+    }
+    if (!mounted) return;
+
     // 2) DB dulu: analyses + analysis_defects + recommendations satu
     //    transaksi (AC-01/AC-03). Gagal (mis. device rusak) → snackbar,
     //    layar hasil tetap terbuka dari data in-memory (AC-04).
     String batchLabel = '';
     int? analysisId;
+    final result = buildResultFromBatch(summary, displayName, batchLabel);
     try {
       final db = await AppDatabase.instance.database;
       final analysisRepo = AnalysisRepository(db);
@@ -382,32 +409,32 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       final recommendation = await RecommendationResolver(
         BrewingRepositoryImpl(database: db),
         const ReasonTemplateSource(),
-      ).resolve(species: template.species, roast: template.roast);
+      ).resolve(species: summary.species, roast: summary.roast);
       analysisId = await analysisRepo.insertResult(
-        buildResultFromTemplate(template, displayName, batchLabel),
+        buildResultFromBatch(summary, displayName, batchLabel),
         createdAt: DateTime.now(),
-        imagePath: image?.path,
+        imagePath: image.path,
         recommendation: recommendation,
       );
+      // Data sudah aman di SQLite — sinkronisasi menyusul (foto terpisah).
+      ref.read(syncCoordinatorProvider).scheduleSync();
     } catch (e) {
       debugPrint('[Scan] Gagal menyimpan analisis ke SQLite: $e');
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(const SnackBar(content: Text('Gagal menyimpan ke riwayat')));
+          ..showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan ke riwayat')),
+          );
       }
     }
+    if (!mounted) return;
 
-    // 3) Overlay analisis menutup latensi: pratinjau kamera berhenti,
-    //    upload berjalan paralel dengan jeda minimal 2 detik.
-    setState(() => _isAnalyzing = true);
-    await cameraVM.stopPreview();
-
-    final minimumDelay = Future<void>.delayed(const Duration(seconds: 2));
-    final uploadFuture = image != null
-        ? ref.read(cloudinaryServiceProvider).uploadImage(File(image.path))
-        : Future<String?>.value(null);
-    final uploadUrl = await uploadFuture;
+    // 3) Upload Cloudinary paralel dengan jeda minimal overlay.
+    final minimumDelay = Future<void>.delayed(const Duration(seconds: 1));
+    final uploadUrl = await ref
+        .read(cloudinaryServiceProvider)
+        .uploadImage(File(image.path));
     await minimumDelay;
     if (!mounted) return;
 
@@ -426,15 +453,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
     // pushReplacement agar layar kamera keluar dari stack (kamera dilepas).
     // `analysisId` null (DB gagal) → segmen `draft` (fallback extra, Plan 3);
     // detail fallback memakai path lokal foto capture (imagePath).
-    final result = buildResultFromTemplate(
-      template,
-      displayName,
-      batchLabel,
-    ).copyWith(imagePath: image?.path);
     context.pushReplacement(
       '/result/${analysisId ?? 'draft'}',
-      extra: result,
+      extra: result.copyWith(imagePath: image.path, analysisId: analysisId),
     );
+  }
+
+  /// Batalkan analisis: tutup overlay, beri pesan, hidupkan kamera lagi.
+  Future<void> _abortAnalysis(String message) async {
+    if (!mounted) return;
+    setState(() => _isAnalyzing = false);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+    await ref.read(cameraViewModelProvider.notifier).initCamera();
   }
 }
 

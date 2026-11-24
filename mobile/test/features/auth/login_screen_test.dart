@@ -21,16 +21,31 @@ class FakeAuthController extends AuthController {
   }
 }
 
-Widget _wrap() => ProviderScope(
-  overrides: [authControllerProvider.overrideWith(FakeAuthController.new)],
+/// Login sukses tanpa jaringan (Supabase tidak dikonfigurasi di test).
+class SuccessAuthController extends AuthController {
+  @override
+  AuthState build() => const AuthState();
+
+  @override
+  Future<void> signIn(String email, String password) async {}
+}
+
+Widget _wrap({AuthController Function()? auth}) => ProviderScope(
+  overrides: [
+    authControllerProvider.overrideWith(auth ?? FakeAuthController.new),
+  ],
   child: MaterialApp.router(
     routerConfig: GoRouter(
       initialLocation: '/login',
       routes: [
-        GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+        GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
         GoRoute(
           path: '/register',
-          builder: (_, __) => const Scaffold(body: Text('REGISTER')),
+          builder: (_, _) => const Scaffold(body: Text('REGISTER')),
+        ),
+        GoRoute(
+          path: '/home',
+          builder: (_, _) => const Scaffold(body: Text('HOME')),
         ),
       ],
     ),
@@ -67,7 +82,9 @@ void main() {
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Login gagal. Periksa koneksi internet.'), findsOneWidget);
+    // Pesan generik lama menyembunyikan penyebab; sekarang penyebabnya tampil.
+    expect(find.textContaining('Login gagal'), findsOneWidget);
+    expect(find.textContaining('invalid_credentials'), findsOneWidget);
   });
 
   testWidgets('tautan daftar → layar register', (tester) async {
@@ -76,5 +93,19 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('REGISTER'), findsOneWidget);
+  });
+
+  testWidgets('login sukses → Beranda (bukan Profil)', (tester) async {
+    await tester.pumpWidget(_wrap(auth: SuccessAuthController.new));
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'user@example.com',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'rahasia123');
+    await tester.tap(find.byType(FilledButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOME'), findsOneWidget);
+    expect(find.text('Akun'), findsNothing);
   });
 }

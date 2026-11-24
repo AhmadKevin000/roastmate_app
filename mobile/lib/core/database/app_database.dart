@@ -264,7 +264,68 @@ class AppDatabase {
       }
     }
 
+    // v7 → v8: penilaian pribadi user (bintang 1–5 + catatan) pada
+    // `analyses`. ALTER guarded idempoten per kolom (pola v5). CHECK rentang
+    // 1–5 tidak bisa ditambahkan lewat ALTER; validasi di repository.
+    if (oldVersion < 8) {
+      final analysisCols = (await db.rawQuery(
+        'PRAGMA table_info(analyses)',
+      )).map((r) => r['name'] as String).toSet();
+      if (!analysisCols.contains('personal_rating')) {
+        batch.execute('ALTER TABLE analyses ADD COLUMN personal_rating INTEGER');
+      }
+      if (!analysisCols.contains('personal_rating_note')) {
+        batch.execute('ALTER TABLE analyses ADD COLUMN personal_rating_note TEXT');
+      }
+    }
+
+    // v8 → v9: sinkronisasi lengkap. Tabel outbox `sync_deletes` (tombstone)
+    // dan kolom antrean upload foto di `analyses`. ALTER guarded idempoten.
+    if (oldVersion < 9) {
+      batch.execute('''
+        CREATE TABLE IF NOT EXISTS sync_deletes (
+          uuid        TEXT PRIMARY KEY,
+          table_name  TEXT NOT NULL CHECK (table_name IN ('analyses','user_brew_recipes')),
+          deleted_at  TEXT NOT NULL,
+          synced      INTEGER NOT NULL DEFAULT 0 CHECK (synced IN (0,1))
+        )
+      ''');
+      final analysisCols = (await db.rawQuery(
+        'PRAGMA table_info(analyses)',
+      )).map((r) => r['name'] as String).toSet();
+      if (!analysisCols.contains('image_sync_status')) {
+        batch.execute(
+          "ALTER TABLE analyses ADD COLUMN image_sync_status TEXT NOT NULL DEFAULT 'none'",
+        );
+      }
+      if (!analysisCols.contains('image_upload_attempts')) {
+        batch.execute(
+          'ALTER TABLE analyses ADD COLUMN image_upload_attempts INTEGER NOT NULL DEFAULT 0',
+        );
+      }
+      if (!analysisCols.contains('cloudinary_public_id')) {
+        batch.execute(
+          'ALTER TABLE analyses ADD COLUMN cloudinary_public_id TEXT',
+        );
+      }
+      batch.execute(
+        'CREATE INDEX IF NOT EXISTS idx_analyses_image_sync ON analyses(image_sync_status)',
+      );
+    }
+
     await batch.commit(noResult: true);
+
+    // Backfill klasifikasi foto untuk baris lama (v9): URL Cloudinary sudah
+    // terunggah, path lokal masih menunggu antrean retry.
+    if (oldVersion < 9) {
+      await db.rawUpdate('''
+        UPDATE analyses SET image_sync_status = CASE
+          WHEN image_path LIKE 'http%' THEN 'uploaded'
+          WHEN image_path IS NOT NULL AND image_path != '' THEN 'pending'
+          ELSE 'none' END
+        WHERE image_sync_status = 'none'
+      ''');
+    }
 
     if (oldVersion < 6) {
       await db.execute('PRAGMA foreign_keys = ON');

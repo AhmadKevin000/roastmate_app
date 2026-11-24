@@ -4,11 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../core/auth/auth_controller.dart';
-import '../../../../../core/database/app_database.dart';
-import '../../../../../core/network/supabase_service.dart';
 import '../../../../../core/theme/roastmate_colors.dart';
 import '../../../../../core/widgets/roastmate_app_header.dart';
-import '../../../sync/data/sync_service.dart';
+import '../../../sync/data/sync_coordinator.dart';
 
 /// Layar login (FR-10). Email + sandi via Supabase Auth.
 ///
@@ -48,28 +46,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
       await _syncBestEffort();
       if (!mounted) return;
-      context.go('/profile');
-    } on AuthApiException catch (e) {
+      // Masuk ke Beranda (di dalam MainShell), bukan Profil: Profil berada di
+      // luar ShellRoute dan tidak punya tombol kembali saat stack kosong.
+      context.go('/home');
+    } on AuthRetryableFetchException {
+      // Gagal menjangkau server (DNS/offline/timeout) — bukan salah kredensial.
+      setState(
+        () => _errorMessage =
+            'Tidak dapat menghubungi server. Periksa koneksi internet.',
+      );
+    } on AuthException catch (e) {
+      // Mencakup AuthApiException (mis. email/sandi salah) sekaligus
+      // AuthRetryableFetchException di atas — pesan asli server ditampilkan.
       setState(() => _errorMessage = e.message);
     } catch (e) {
-      setState(() => _errorMessage = 'Login gagal. Periksa koneksi internet.');
+      setState(() => _errorMessage = 'Login gagal: $e');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
   /// Sync pertama setelah login — best-effort: gagal tidak memblokir.
-  Future<void> _syncBestEffort() async {
-    final auth = ref.read(authControllerProvider);
-    final client = ref.read(supabaseServiceProvider).client;
-    if (client == null || auth.userId == null) return;
-    try {
-      final db = await AppDatabase.instance.database;
-      await SyncService(db, client, auth.userId!).run();
-    } catch (_) {
-      // Best-effort: baris tetap `pending`, dikirim saat sync berikutnya.
-    }
-  }
+  Future<void> _syncBestEffort() =>
+      ref.read(syncCoordinatorProvider).syncNow(force: true);
 
   @override
   Widget build(BuildContext context) {

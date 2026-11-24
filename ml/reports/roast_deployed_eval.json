@@ -1,0 +1,292 @@
+{
+  "train": {
+    "n": 836,
+    "acc": 0.9019138755980861,
+    "macro_f1": 0.8965505571412108,
+    "cm": [
+      [
+        209,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        208,
+        2,
+        0
+      ],
+      [
+        4,
+        8,
+        130,
+        68
+      ],
+      [
+        0,
+        0,
+        0,
+        207
+      ]
+    ],
+    "per_class": [
+      {
+        "class": "Green",
+        "precision": 0.9812206572769953,
+        "recall": 1.0,
+        "f1": 0.990521327014218,
+        "support": 209
+      },
+      {
+        "class": "Light",
+        "precision": 0.9629629629629629,
+        "recall": 0.9904761904761905,
+        "f1": 0.9765258215962442,
+        "support": 210
+      },
+      {
+        "class": "Medium",
+        "precision": 0.9848484848484849,
+        "recall": 0.6190476190476191,
+        "f1": 0.760233918128655,
+        "support": 210
+      },
+      {
+        "class": "Dark",
+        "precision": 0.7527272727272727,
+        "recall": 1.0,
+        "f1": 0.8589211618257261,
+        "support": 207
+      }
+    ],
+    "conf_mean": 0.882236038205441
+  },
+  "val": {
+    "n": 179,
+    "acc": 0.9162011173184358,
+    "macro_f1": 0.9135922330097087,
+    "cm": [
+      [
+        45,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        45,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        30,
+        15
+      ],
+      [
+        0,
+        0,
+        0,
+        44
+      ]
+    ],
+    "per_class": [
+      {
+        "class": "Green",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 45
+      },
+      {
+        "class": "Light",
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 45
+      },
+      {
+        "class": "Medium",
+        "precision": 1.0,
+        "recall": 0.6666666666666666,
+        "f1": 0.8,
+        "support": 45
+      },
+      {
+        "class": "Dark",
+        "precision": 0.7457627118644068,
+        "recall": 1.0,
+        "f1": 0.8543689320388349,
+        "support": 44
+      }
+    ],
+    "conf_mean": 0.8787114730094399
+  },
+  "test": {
+    "n": 179,
+    "acc": 0.9050279329608939,
+    "macro_f1": 0.898790835219741,
+    "cm": [
+      [
+        45,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        45,
+        0,
+        0
+      ],
+      [
+        1,
+        3,
+        28,
+        13
+      ],
+      [
+        0,
+        0,
+        0,
+        44
+      ]
+    ],
+    "per_class": [
+      {
+        "class": "Green",
+        "precision": 0.9782608695652174,
+        "recall": 1.0,
+        "f1": 0.989010989010989,
+        "support": 45
+      },
+      {
+        "class": "Light",
+        "precision": 0.9375,
+        "recall": 1.0,
+        "f1": 0.967741935483871,
+        "support": 45
+      },
+      {
+        "class": "Medium",
+        "precision": 1.0,
+        "recall": 0.6222222222222222,
+        "f1": 0.7671232876712328,
+        "support": 45
+      },
+      {
+        "class": "Dark",
+        "precision": 0.7719298245614035,
+        "recall": 1.0,
+        "f1": 0.8712871287128713,
+        "support": 44
+      }
+    ],
+    "conf_mean": 0.8864223767259267
+  },
+  "test_errors": [
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (188).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.9495823979377747
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (237).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.7163001894950867
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (220).png",
+      "true": "Medium",
+      "pred": "Light",
+      "conf": 0.6780477166175842
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (294).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.6692095994949341
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (119).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.6686915159225464
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (129).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.6244787573814392
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (109).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.6005910038948059
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (173).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5930348038673401
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (179).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5890170931816101
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (93).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5627842545509338
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (274).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5537004470825195
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (134).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5254825949668884
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (124).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.5179867148399353
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (183).png",
+      "true": "Medium",
+      "pred": "Dark",
+      "conf": 0.4766610562801361
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (226).png",
+      "true": "Medium",
+      "pred": "Light",
+      "conf": 0.4718618094921112
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (14).png",
+      "true": "Medium",
+      "pred": "Light",
+      "conf": 0.4191156029701233
+    },
+    {
+      "file": "ml/data/ds003_dedup/test/Medium/medium (258).png",
+      "true": "Medium",
+      "pred": "Green",
+      "conf": 0.30742591619491577
+    }
+  ]
+}

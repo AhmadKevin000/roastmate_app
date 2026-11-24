@@ -5,18 +5,34 @@ import '../../../../core/theme/roastmate_colors.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_text.dart';
-import '../../../../shared/models/personal_rating.dart';
 import '../viewmodels/personal_rating_view_model.dart';
 
 /// Kartu "Penilaian Pribadi Anda" pada Detail Inspeksi.
 ///
-/// Muncul setelah aplikasi menampilkan kualitas biji & rekomendasi seduh.
-/// Penilaian (bintang 1–5 + catatan) disimpan sebagai state lokal sesi.
+/// Penilaian (bintang 1–5 + catatan) disimpan ke baris `analyses` lewat
+/// [PersonalRatingViewModel] (v8, D-31) sehingga ikut tampil di kartu Beranda
+/// dan Riwayat Analisis. Untuk hasil scan yang belum tersimpan di DB
+/// ([analysisId] null) penilaian hanya hidup di state sesi.
 class PersonalRatingCard extends ConsumerStatefulWidget {
   /// Kunci penilaian, biasanya `batchLabel`.
   final String ratingKey;
 
-  const PersonalRatingCard({super.key, required this.ratingKey});
+  /// Id baris `analyses`; null bila belum tersimpan (draft hasil scan).
+  final int? analysisId;
+
+  /// Nilai awal dari DB (`analyses.personal_rating`); null = belum dinilai.
+  final int? initialStars;
+
+  /// Catatan awal dari DB (`analyses.personal_rating_note`).
+  final String? initialNote;
+
+  const PersonalRatingCard({
+    super.key,
+    required this.ratingKey,
+    this.analysisId,
+    this.initialStars,
+    this.initialNote,
+  });
 
   @override
   ConsumerState<PersonalRatingCard> createState() => _PersonalRatingCardState();
@@ -25,13 +41,21 @@ class PersonalRatingCard extends ConsumerStatefulWidget {
 class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
   late final TextEditingController _noteController;
 
+  /// Bintang aktif di UI: di-seed dari state sesi, lalu dari DB.
+  late int _stars;
+
+  bool _saving = false;
+
   @override
   void initState() {
     super.initState();
-    final saved = ref
+    final session = ref
         .read(personalRatingProvider.notifier)
         .ratingFor(widget.ratingKey);
-    _noteController = TextEditingController(text: saved.note);
+    _stars = session.hasRating ? session.stars : (widget.initialStars ?? 0);
+    _noteController = TextEditingController(
+      text: session.hasRating ? session.note : (widget.initialNote ?? ''),
+    );
   }
 
   @override
@@ -42,11 +66,7 @@ class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
 
   @override
   Widget build(BuildContext context) {
-    final rating = ref.watch(
-      personalRatingProvider.select(
-        (map) => map[widget.ratingKey] ?? const PersonalRating(),
-      ),
-    );
+    final hasRating = _stars > 0;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: RoastmateSpacing.lg),
@@ -92,11 +112,9 @@ class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
             children: [
               ...List.generate(5, (index) {
                 final value = index + 1;
-                final selected = value <= rating.stars;
+                final selected = value <= _stars;
                 return IconButton(
-                  onPressed: () => ref
-                      .read(personalRatingProvider.notifier)
-                      .setStars(widget.ratingKey, value),
+                  onPressed: () => _selectStars(value),
                   tooltip: '$value bintang',
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(
@@ -114,9 +132,9 @@ class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
               }),
               const SizedBox(width: RoastmateSpacing.xs),
               Text(
-                rating.hasRating ? '${rating.stars}/5' : 'Belum dinilai',
+                hasRating ? '$_stars/5' : 'Belum dinilai',
                 style: RoastmateText.labelMd.copyWith(
-                  color: rating.hasRating
+                  color: hasRating
                       ? RoastmateColors.secondary
                       : RoastmateColors.textSecondary,
                 ),
@@ -150,7 +168,7 @@ class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: rating.hasRating ? _save : null,
+              onPressed: hasRating && !_saving ? _save : null,
               icon: const Icon(Icons.check, size: 16),
               label: Text("Simpan Penilaian", style: RoastmateText.labelLg),
               style: ElevatedButton.styleFrom(
@@ -169,13 +187,38 @@ class _PersonalRatingCardState extends ConsumerState<PersonalRatingCard> {
     );
   }
 
-  void _save() {
-    ref
-        .read(personalRatingProvider.notifier)
-        .setNote(widget.ratingKey, _noteController.text.trim());
+  /// Bintang pilihan pengguna: perbarui state UI + cache sesi.
+  void _selectStars(int value) {
+    setState(() => _stars = value);
+    ref.read(personalRatingProvider.notifier).setStars(widget.ratingKey, value);
+  }
+
+  Future<void> _save() async {
+    final notifier = ref.read(personalRatingProvider.notifier);
+    notifier.setNote(widget.ratingKey, _noteController.text.trim());
     FocusScope.of(context).unfocus();
+
+    final analysisId = widget.analysisId;
+    if (analysisId == null) {
+      // Belum ada baris DB (draft hasil scan): cukup state sesi.
+      _showSnack('Penilaian pribadi disimpan');
+      return;
+    }
+
+    setState(() => _saving = true);
+    final saved = await notifier.persist(widget.ratingKey, analysisId);
+    if (!mounted) return;
+    setState(() => _saving = false);
+    _showSnack(
+      saved
+          ? 'Penilaian pribadi disimpan'
+          : 'Penilaian gagal disimpan. Coba lagi.',
+    );
+  }
+
+  void _showSnack(String message) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Penilaian pribadi disimpan')));
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

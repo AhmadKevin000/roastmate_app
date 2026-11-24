@@ -167,7 +167,13 @@ class _InspectionDetailScreenState extends State<InspectionDetailScreen> {
                     const SizedBox(height: RoastmateSpacing.xl),
                     _SummaryCard(text: detail.summaryText),
                     const SizedBox(height: RoastmateSpacing.xl),
-                    PersonalRatingCard(ratingKey: result.batchLabel),
+                    PersonalRatingCard(
+                      ratingKey: result.batchLabel,
+                      analysisId: widget.analysisId ??
+                          (detail.analysisId > 0 ? detail.analysisId : null),
+                      initialStars: detail.personalRating,
+                      initialNote: detail.personalRatingNote,
+                    ),
                     const SizedBox(height: RoastmateSpacing.xl),
                     VisualEvidenceCard(
                       result: result,

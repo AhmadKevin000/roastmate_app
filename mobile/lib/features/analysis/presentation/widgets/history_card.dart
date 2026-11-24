@@ -4,6 +4,7 @@ import '../../../../core/theme/roastmate_text.dart';
 import '../../../../core/theme/roastmate_spacing.dart';
 import '../../../../core/theme/roastmate_radius.dart';
 import '../../../../core/widgets/analysis_image.dart';
+import '../../../../core/widgets/personal_rating_stars.dart';
 import '../../domain/entities/analysis_history_item.dart';
 
 /// Kartu satu analisis pada daftar riwayat.
@@ -157,6 +158,14 @@ class HistoryCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: RoastmateSpacing.sm),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: PersonalRatingStars(
+                        stars: item.personalRating,
+                        size: 14,
+                      ),
                     ),
                   ],
                 ),

@@ -138,7 +138,7 @@ void main() {
   // §2 Daftar Tabel
   // ==========================================================================
   group('§2 Daftar tabel', () {
-    test('berisi tepat 9 tabel sesuai dokumen', () async {
+    test('berisi tepat 10 tabel sesuai dokumen', () async {
       const expected = {
         'brew_methods',
         'brew_tools',
@@ -149,6 +149,7 @@ void main() {
         'recommendations',
         'user_brew_recipes',
         'meta',
+        'sync_deletes',
       };
       expect(await tableNames(db), expected);
     });
@@ -158,7 +159,7 @@ void main() {
   // §10 Index
   // ==========================================================================
   group('§10 Index', () {
-    test('berisi tepat 7 index dengan nama kanonik', () async {
+    test('berisi tepat 8 index dengan nama kanonik', () async {
       const expected = {
         'idx_recipes_method',
         'idx_recipes_lookup',
@@ -167,6 +168,7 @@ void main() {
         'idx_defects_analysis',
         'idx_recommendations_analysis',
         'idx_analyses_sync',
+        'idx_analyses_image_sync',
       };
       expect(await indexNames(db), expected);
     });
@@ -345,6 +347,23 @@ void main() {
         overrides: {'species': null, 'roast': null, 'quality_profile': null},
       );
       expect(id, greaterThan(0));
+    });
+
+    test('personal_rating menerima 1–5 dan NULL, menolak di luar itu (v8)', () async {
+      for (final stars in const [1, 3, 5, null]) {
+        final id = await insertAnalysis(
+          db,
+          overrides: {'personal_rating': stars},
+        );
+        expect(id, greaterThan(0), reason: 'personal_rating=$stars harus sah');
+      }
+      for (final stars in const [0, 6, -1]) {
+        expect(
+          () => insertAnalysis(db, overrides: {'personal_rating': stars}),
+          throwsA(isA<DatabaseException>()),
+          reason: 'personal_rating=$stars harus ditolak CHECK',
+        );
+      }
     });
   });
 
@@ -636,6 +655,11 @@ void main() {
         'roast_uniformity',
         'quality_score',
         'quality_profile',
+        'personal_rating',
+        'personal_rating_note',
+        'image_sync_status',
+        'image_upload_attempts',
+        'cloudinary_public_id',
       });
     });
   });

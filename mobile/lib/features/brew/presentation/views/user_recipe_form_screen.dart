@@ -11,14 +11,22 @@ import '../../../../shared/utils/brew_label_helpers.dart';
 import '../../domain/entities/brew_recipe.dart';
 import '../viewmodels/brew_view_model.dart';
 
-/// Form tambah resep seduh buatan user (route `/brewing/new`).
+/// Form tambah/edit resep seduh buatan user.
+///
+/// Mode tambah → route `/brewing/new` (tanpa `extra`).
+/// Mode edit   → route `/brewing/edit` dengan `extra` berupa [BrewRecipe]
+///              yang sudah ada. Field di-prefill, judul berubah, tombol
+///              simpan memanggil `updateRecipe()` alih-alih `addRecipe()`.
 ///
 /// v6: metode KB atau "Lainnya" (nama bebas), langkah seduh dinamis, dan
 /// link video YouTube opsional. Validasi: nama wajib (≥ 3 karakter),
 /// nama metode wajib saat "Lainnya", judul langkah wajib, angka opsional
 /// ≥ 0 (suhu 0–100).
 class UserRecipeFormScreen extends ConsumerStatefulWidget {
-  const UserRecipeFormScreen({super.key});
+  /// Resep yang akan diedit. `null` berarti mode tambah resep baru.
+  final BrewRecipe? initialRecipe;
+
+  const UserRecipeFormScreen({super.key, this.initialRecipe});
 
   @override
   ConsumerState<UserRecipeFormScreen> createState() =>
@@ -26,6 +34,8 @@ class UserRecipeFormScreen extends ConsumerStatefulWidget {
 }
 
 class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
+  bool get _isEditMode => widget.initialRecipe != null;
+
   /// Sentinel dropdown untuk metode di luar KB (v6).
   static const String _otherMethod = 'OTHER';
 
@@ -58,10 +68,10 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
   late final TextEditingController _timeController;
   late final TextEditingController _notesController;
 
-  String _methodId = 'M001';
-  String _species = 'Arabica';
-  String _roastContext = 'Light';
-  String _profile = 'High';
+  late String _methodId;
+  late String _species;
+  late String _roastContext;
+  late String _profile;
   String? _grind;
   bool _submitting = false;
 
@@ -71,14 +81,51 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController();
-    _otherNameController = TextEditingController();
-    _videoController = TextEditingController();
-    _doseController = TextEditingController();
-    _waterController = TextEditingController();
-    _tempController = TextEditingController();
-    _timeController = TextEditingController();
-    _notesController = TextEditingController();
+    final r = widget.initialRecipe;
+
+    // Prefill dari resep yang ada (mode edit), atau default kosong (mode tambah).
+    _nameController = TextEditingController(text: r?.name ?? '');
+    _videoController = TextEditingController(text: r?.videoUrl ?? '');
+    _doseController = TextEditingController(
+      text: r?.doseG != null ? r!.doseG!.toString() : '',
+    );
+    _waterController = TextEditingController(
+      text: r?.waterVolumeMl != null ? r!.waterVolumeMl!.toString() : '',
+    );
+    _tempController = TextEditingController(
+      text: r?.temperatureC != null ? r!.temperatureC!.toString() : '',
+    );
+    _timeController = TextEditingController(
+      text: r?.brewingTimeS != null ? r!.brewingTimeS!.toString() : '',
+    );
+    _notesController = TextEditingController(text: r?.notes ?? '');
+
+    // Metode: bila mode edit dan methodId null → "Lainnya" (OTHER).
+    if (r != null) {
+      _methodId = r.methodId ?? _otherMethod;
+      _otherNameController = TextEditingController(
+        text: r.methodId == null ? (r.methodName) : '',
+      );
+    } else {
+      _methodId = 'M001';
+      _otherNameController = TextEditingController();
+    }
+
+    _species = r?.species ?? 'Arabica';
+    _roastContext = r?.roastContext ?? 'Light';
+    _profile = r?.qualityProfile ?? 'High';
+    _grind = r?.grindSize;
+
+    // Prefill langkah seduh (mode edit).
+    if (r != null && r.brewSteps.isNotEmpty) {
+      for (final step in r.brewSteps) {
+        final draft = _StepDraft();
+        draft.title.text = step.title;
+        draft.description.text = step.description ?? '';
+        draft.time.text = step.targetTime ?? '';
+        _steps.add(draft);
+      }
+    }
   }
 
   void _addStep() {
@@ -140,8 +187,6 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
   }
 
   Widget _ratioPreview() {
-    // Reaktif terhadap perubahan teks dose/air (controller = Listenable);
-    // build induk tidak ter-trigger oleh perubahan controller.
     return ListenableBuilder(
       listenable: Listenable.merge(<Listenable>[
         _doseController,
@@ -182,42 +227,72 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
       }
     }
 
-    final recipe = BrewRecipe(
-      recipeId: '', // di-generate repo: U<epoch-micros>
-      name: _nameController.text.trim(),
-      methodId: isOther ? null : _methodId,
-      methodName: isOther
-          ? _otherNameController.text.trim()
-          : kbMethodName,
-      species: _species,
-      qualityProfile: _profile,
-      roastContext: _roastContext,
-      doseG: _parseDouble(_doseController.text),
-      waterVolumeMl: _parseInt(_waterController.text),
-      grindSize: _grind,
-      temperatureC: _parseInt(_tempController.text),
-      brewingTimeS: _parseInt(_timeController.text),
-      source: 'USER',
-      notes: notes.isEmpty ? null : notes,
-      videoUrl: _videoController.text.trim().isEmpty
-          ? null
-          : _videoController.text.trim(),
-      steps: [
-        for (var i = 0; i < _steps.length; i++)
-          BrewStep(
-            stepNo: i + 1,
-            phase: BrewStepPhase.brew,
-            title: _steps[i].title.text.trim(),
-            description: _steps[i].description.text.trim(),
-            targetTime: _steps[i].time.text.trim().isEmpty
-                ? null
-                : _steps[i].time.text.trim(),
-          ),
-      ],
-    );
+    final steps = [
+      for (var i = 0; i < _steps.length; i++)
+        BrewStep(
+          stepNo: i + 1,
+          phase: BrewStepPhase.brew,
+          title: _steps[i].title.text.trim(),
+          description: _steps[i].description.text.trim(),
+          targetTime: _steps[i].time.text.trim().isEmpty
+              ? null
+              : _steps[i].time.text.trim(),
+        ),
+    ];
 
     try {
-      await ref.read(brewCatalogProvider.notifier).addRecipe(recipe);
+      if (_isEditMode) {
+        // ── MODE EDIT ──────────────────────────────────────────────
+        final updated = BrewRecipe(
+          recipeId: widget.initialRecipe!.recipeId,
+          name: _nameController.text.trim(),
+          methodId: isOther ? null : _methodId,
+          methodName: isOther
+              ? _otherNameController.text.trim()
+              : kbMethodName,
+          species: _species,
+          qualityProfile: _profile,
+          roastContext: _roastContext,
+          doseG: _parseDouble(_doseController.text),
+          waterVolumeMl: _parseInt(_waterController.text),
+          grindSize: _grind,
+          temperatureC: _parseInt(_tempController.text),
+          brewingTimeS: _parseInt(_timeController.text),
+          source: 'USER',
+          notes: notes.isEmpty ? null : notes,
+          videoUrl: _videoController.text.trim().isEmpty
+              ? null
+              : _videoController.text.trim(),
+          steps: steps,
+        );
+        await ref.read(brewCatalogProvider.notifier).updateRecipe(updated);
+      } else {
+        // ── MODE TAMBAH ────────────────────────────────────────────
+        final recipe = BrewRecipe(
+          recipeId: '', // di-generate repo: U<epoch-micros>
+          name: _nameController.text.trim(),
+          methodId: isOther ? null : _methodId,
+          methodName: isOther
+              ? _otherNameController.text.trim()
+              : kbMethodName,
+          species: _species,
+          qualityProfile: _profile,
+          roastContext: _roastContext,
+          doseG: _parseDouble(_doseController.text),
+          waterVolumeMl: _parseInt(_waterController.text),
+          grindSize: _grind,
+          temperatureC: _parseInt(_tempController.text),
+          brewingTimeS: _parseInt(_timeController.text),
+          source: 'USER',
+          notes: notes.isEmpty ? null : notes,
+          videoUrl: _videoController.text.trim().isEmpty
+              ? null
+              : _videoController.text.trim(),
+          steps: steps,
+        );
+        await ref.read(brewCatalogProvider.notifier).addRecipe(recipe);
+      }
+
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
@@ -403,9 +478,31 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
   Widget build(BuildContext context) {
     final methods = ref.watch(brewCatalogProvider).methods;
 
+    // Tentukan initialValue dropdown metode untuk mode edit.
+    // Bila method id dari resep ada di KB → pakai itu; bila null (OTHER) →
+    // 'OTHER'; bila tidak ditemukan di list (KB update) → fallback M001.
+    String dropdownInitialValue;
+    if (_isEditMode) {
+      final rid = widget.initialRecipe!.methodId;
+      if (rid == null) {
+        dropdownInitialValue = _otherMethod;
+      } else if (methods.any((m) => m.methodId == rid)) {
+        dropdownInitialValue = rid;
+      } else {
+        dropdownInitialValue =
+            methods.isNotEmpty ? methods.first.methodId : 'M001';
+      }
+    } else {
+      dropdownInitialValue = methods.any((m) => m.methodId == 'M001')
+          ? 'M001'
+          : (methods.isNotEmpty ? methods.first.methodId : 'M001');
+    }
+
     return Scaffold(
       backgroundColor: RoastmateColors.background,
-      appBar: const RoastmateAppBar(title: 'Resep Baru'),
+      appBar: RoastmateAppBar(
+        title: _isEditMode ? 'Edit Resep' : 'Resep Baru',
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -418,15 +515,18 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tambah Resep Seduh',
+                      _isEditMode ? 'Edit Resep Seduh' : 'Tambah Resep Seduh',
                       style: RoastmateText.titleLg.copyWith(
                         color: RoastmateColors.textPrimary,
                       ),
                     ),
                     const SizedBox(height: RoastmateSpacing.xs),
                     Text(
-                      'Simpan resep buatanmu sendiri. Tersimpan permanen di '
-                      'perangkat dan tampil di seksi Resep Kamu.',
+                      _isEditMode
+                          ? 'Perbarui resep buatanmu. Perubahan tersimpan '
+                              'permanen di perangkat.'
+                          : 'Simpan resep buatanmu sendiri. Tersimpan permanen di '
+                              'perangkat dan tampil di seksi Resep Kamu.',
                       style: RoastmateText.bodyMd.copyWith(
                         color: RoastmateColors.textSecondary,
                       ),
@@ -449,11 +549,7 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                     const SizedBox(height: RoastmateSpacing.md),
                     if (methods.isNotEmpty)
                       DropdownButtonFormField<String>(
-                        // initialValue di-capture saat field dibuat — dropdown
-                        // baru di-mount setelah metode KB termuat (prefill M001).
-                        initialValue: methods.any((m) => m.methodId == 'M001')
-                            ? 'M001'
-                            : methods.first.methodId,
+                        initialValue: dropdownInitialValue,
                         items: [
                           for (final m in methods)
                             DropdownMenuItem(
@@ -648,7 +744,9 @@ class _UserRecipeFormScreenState extends ConsumerState<UserRecipeFormScreen> {
                                   color: RoastmateColors.surface,
                                 ),
                               )
-                            : const Text('Simpan Resep'),
+                            : Text(
+                                _isEditMode ? 'Simpan Perubahan' : 'Simpan Resep',
+                              ),
                       ),
                     ),
                   ],

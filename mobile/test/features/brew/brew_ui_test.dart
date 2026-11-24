@@ -65,6 +65,9 @@ class _FakeBrewingRepository implements BrewingRepository {
   Future<void> deleteUserRecipe(String recipeId) async {}
 
   @override
+  Future<void> updateUserRecipe(BrewRecipe recipe) async {}
+
+  @override
   Future<BrewRecipe?> findDefaultRecipe({
     required String species,
     required String roastContext,

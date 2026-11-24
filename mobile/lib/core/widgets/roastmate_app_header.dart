@@ -18,6 +18,10 @@ class RoastmateAppHeader extends StatelessWidget
 
   final VoidCallback? onSettings;
 
+  /// Tombol kiri opsional (mis. kembali). Bila null, header tetap tanpa
+  /// leading — perilaku lama untuk layar bertab.
+  final Widget? leading;
+
   /// Tinggi area toolbar (tanpa inset status bar).
   static const double toolbarHeight = 64;
 
@@ -25,6 +29,7 @@ class RoastmateAppHeader extends StatelessWidget
     super.key,
     required this.subtitle,
     this.onSettings,
+    this.leading,
   });
 
   @override
@@ -37,6 +42,7 @@ class RoastmateAppHeader extends StatelessWidget
       elevation: 0,
       scrolledUnderElevation: 0,
       automaticallyImplyLeading: false,
+      leading: leading,
       toolbarHeight: toolbarHeight,
       titleSpacing: 20,
       title: Row(

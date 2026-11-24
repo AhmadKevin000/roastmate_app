@@ -11,10 +11,19 @@ class AnalysisHistoryItem {
   final String dateLabel;
   final String? imagePath;
 
+  /// Penilaian pribadi user (bintang 1–5, `analyses.personal_rating`);
+  /// null = belum dinilai.
+  final int? personalRating;
+
+  /// Catatan penilaian pribadi (`analyses.personal_rating_note`).
+  final String? personalRatingNote;
+
   const AnalysisHistoryItem({
     required this.detail,
     required this.dateLabel,
     this.imagePath,
+    this.personalRating,
+    this.personalRatingNote,
   });
 
   String get batchName => detail.batchName;
