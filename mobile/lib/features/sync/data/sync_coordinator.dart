@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -24,13 +26,17 @@ class SyncTickNotifier extends Notifier<int> {
 ///
 /// - single-flight: pemanggilan bersamaan memakai Future yang sama;
 /// - throttled: maksimal sekali per 5 menit kecuali [force];
-/// - best-effort: gagal jaringan tidak pernah melempar ke UI.
+/// - best-effort: gagal jaringan tidak pernah melempar ke UI;
+/// - dijadwalkan: [scheduleSync] menggabungkan beberapa perubahan lokal menjadi
+///   satu siklus.
 final syncCoordinatorProvider = Provider<SyncCoordinator>((ref) {
   return SyncCoordinator(ref);
 });
 
 class SyncCoordinator {
-  SyncCoordinator(this._ref);
+  SyncCoordinator(this._ref) {
+    _ref.onDispose(() => _debounce?.cancel());
+  }
 
   final Ref _ref;
 
@@ -38,6 +44,18 @@ class SyncCoordinator {
 
   Future<SyncResult?>? _inFlight;
   DateTime? _lastRun;
+  Timer? _debounce;
+
+  /// Jadwalkan sync setelah penulisan lokal (scan, rating, resep, hapus).
+  ///
+  /// Debounce menggabungkan pemicu yang berdekatan. Memakai `force: true`
+  /// supaya throttle pasif (5 menit saat app resume) tidak menunda data baru.
+  void scheduleSync({Duration delay = const Duration(seconds: 2)}) {
+    _debounce?.cancel();
+    _debounce = Timer(delay, () {
+      syncNow(force: true);
+    });
+  }
 
   Future<SyncResult?> syncNow({bool force = false}) {
     final inFlight = _inFlight;

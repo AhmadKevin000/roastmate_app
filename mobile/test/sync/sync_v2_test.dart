@@ -67,6 +67,34 @@ void main() {
       expect(map.containsKey('sync_status'), isFalse);
     });
 
+    test('foto pending tidak mem-blok payload: path lokal jadi null', () {
+      final pending = analysisToCloudMap(
+        {
+          'uuid': 'u-pending',
+          'image_path': '/data/user/0/roastmate/cache/scan.jpg',
+          'image_sync_status': 'pending',
+          'image_upload_attempts': 1,
+        },
+        userId: 'user-1',
+      );
+      expect(pending['uuid'], 'u-pending');
+      expect(pending['image_path'], isNull);
+      expect(pending.containsKey('image_sync_status'), isFalse);
+
+      final uploaded = analysisToCloudMap(
+        {
+          'uuid': 'u-uploaded',
+          'image_path': 'https://res.cloudinary.com/demo/image/upload/a.jpg',
+          'image_sync_status': 'uploaded',
+        },
+        userId: 'user-1',
+      );
+      expect(
+        uploaded['image_path'],
+        'https://res.cloudinary.com/demo/image/upload/a.jpg',
+      );
+    });
+
     test('cloudToAnalysisRow: URL cloud → uploaded, path lokal → none', () {
       final uploaded = cloudToAnalysisRow({
         'uuid': 'u-2',

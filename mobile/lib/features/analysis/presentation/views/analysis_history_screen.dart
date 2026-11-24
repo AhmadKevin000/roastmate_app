@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/theme/roastmate_colors.dart';
@@ -12,6 +13,7 @@ import '../../domain/entities/analysis_history_item.dart';
 import '../widgets/history_filter_bar.dart';
 import '../widgets/history_card.dart';
 import '../widgets/history_export_card.dart';
+import '../../../sync/data/sync_coordinator.dart';
 
 /// Layar Riwayat Analisis (tab Analisis).
 ///
@@ -19,17 +21,18 @@ import '../widgets/history_export_card.dart';
 /// (mis. dari test), nilainya dipakai apa adanya. Bila database kosong atau
 /// gagal dibuka, fallback ke [mockAnalysisHistory] agar UI tetap bisa
 /// didemokan sebelum pipeline analisis menyimpan data nyata.
-class AnalysisHistoryScreen extends StatefulWidget {
+class AnalysisHistoryScreen extends ConsumerStatefulWidget {
   /// Daftar item riwayat. Bila null, muat dari SQLite (fallback ke mock).
   final List<AnalysisHistoryItem>? items;
 
   const AnalysisHistoryScreen({super.key, this.items});
 
   @override
-  State<AnalysisHistoryScreen> createState() => _AnalysisHistoryScreenState();
+  ConsumerState<AnalysisHistoryScreen> createState() =>
+      _AnalysisHistoryScreenState();
 }
 
-class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
+class _AnalysisHistoryScreenState extends ConsumerState<AnalysisHistoryScreen> {
   static const List<String> _filterOptions = [
     'Semua',
     'Arabica',
@@ -127,6 +130,7 @@ class _AnalysisHistoryScreenState extends State<AnalysisHistoryScreen> {
     try {
       final db = await AppDatabase.instance.database;
       await AnalysisRepository(db).deleteAnalysis(id);
+      ref.read(syncCoordinatorProvider).scheduleSync();
       await _loadItems();
       if (mounted) {
         ScaffoldMessenger.of(

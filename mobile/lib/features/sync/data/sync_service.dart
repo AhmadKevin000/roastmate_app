@@ -182,7 +182,10 @@ class SyncResult {
 /// - data immutable (analisis, defect, rekomendasi): union by `uuid`,
 ///   append-only;
 /// - data mutable (rating, resep user): last-write-wins `updated_at` server;
-/// - hapus: tombstone `deleted_records` agar tidak hidup lagi saat pull.
+/// - hapus: tombstone `deleted_records` agar tidak hidup lagi saat pull;
+/// - upload foto bersifat opsional dan terpisah dari push data: baris dengan
+///   `image_sync_status = 'pending'` tetap dikirim dengan `image_path = null`
+///   (sanitasi), lalu dikirim ulang dengan URL setelah upload berhasil.
 class SyncService {
   SyncService(
     this._db,
@@ -349,7 +352,9 @@ class SyncService {
       whereArgs: ['pending'],
     );
     for (final row in pending) {
-      if (!_imageReadyForPush(row)) continue;
+      // Foto dan data adalah dua jalur independen: `publicImagePath()` sudah
+      // mengubah path lokal menjadi null, jadi tidak ada alasan untuk
+      // menunda pengiriman baris hanya karena upload foto belum sukses.
       final localId = row['id'] as int;
       final uuid = row['uuid'] as String;
       try {
@@ -413,18 +418,6 @@ class SyncService {
       }
     }
     return pushed;
-  }
-
-  /// Tunda push selama foto masih menunggu upload (maks percobaan).
-  bool _imageReadyForPush(Map<String, Object?> row) {
-    // Tanpa Cloudinary terkonfigurasi (build tanpa dart-define), antrean tidak
-    // bisa diproses. Kirim baris dengan image_path=null daripada memblokir
-    // seluruh riwayat selamanya.
-    if (_cloudinary == null) return true;
-    final status = row['image_sync_status'] as String? ?? 'none';
-    if (status != 'pending') return true;
-    final attempts = (row['image_upload_attempts'] as num?)?.toInt() ?? 0;
-    return attempts >= maxUploadAttempts;
   }
 
   Future<void> _pushChildren(

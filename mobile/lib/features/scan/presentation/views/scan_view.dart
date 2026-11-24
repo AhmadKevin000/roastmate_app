@@ -17,6 +17,7 @@ import '../../../analysis/data/sources/reason_template_source.dart';
 import '../../../analysis/data/sources/recommendation_resolver.dart';
 import '../../../analysis/domain/batch_result_builder.dart';
 import '../../../brew/data/repositories/brewing_repository_impl.dart';
+import '../../../sync/data/sync_coordinator.dart';
 import '../viewmodels/scan_setup_view_model.dart';
 import '../viewmodels/scan_view_model.dart';
 import '../widgets/analyzing_overlay.dart';
@@ -411,6 +412,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
         imagePath: image.path,
         recommendation: recommendation,
       );
+      // Data sudah aman di SQLite — sinkronisasi menyusul (foto terpisah).
+      ref.read(syncCoordinatorProvider).scheduleSync();
     } catch (e) {
       debugPrint('[Scan] Gagal menyimpan analisis ke SQLite: $e');
       if (mounted) {
