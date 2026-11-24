@@ -185,7 +185,9 @@ class SyncResult {
 /// - hapus: tombstone `deleted_records` agar tidak hidup lagi saat pull;
 /// - upload foto bersifat opsional dan terpisah dari push data: baris dengan
 ///   `image_sync_status = 'pending'` tetap dikirim dengan `image_path = null`
-///   (sanitasi), lalu dikirim ulang dengan URL setelah upload berhasil.
+///   (sanitasi), lalu dikirim ulang dengan URL setelah upload berhasil;
+/// - defect & rekomendasi punya retry mandiri: tidak menunggu induk berstatus
+///   `pending`, jadi baris child yang gagal sekali tetap dikirim ulang.
 class SyncService {
   SyncService(
     this._db,
@@ -212,10 +214,11 @@ class SyncService {
     final deleted = await pushDeletes();
     final uploaded = await retryUploads();
     final pushed = await push();
+    final childrenPushed = await pushPendingChildren();
     final pulled = await pull();
     await pullTombstones();
     return SyncResult(
-      pushed: pushed,
+      pushed: pushed + childrenPushed,
       pulled: pulled,
       deleted: deleted,
       uploaded: uploaded,
@@ -368,7 +371,6 @@ class SyncService {
             .upsert(payload)
             .select('updated_at')
             .single();
-        await _pushChildren(client, localId, uuid);
         await _db.update(
           'analyses',
           {
@@ -420,17 +422,34 @@ class SyncService {
     return pushed;
   }
 
-  Future<void> _pushChildren(
-    SupabaseClient client,
-    int localId,
-    String analysisUuid,
-  ) async {
+  /// Kirim defect & rekomendasi `pending` tanpa bergantung pada status
+  /// analisis induknya.
+  ///
+  /// Jalur lama memanggil children hanya saat induk `pending`; kalau upsert
+  /// child gagal sekali, induk tetap `synced` dan child tidak pernah dicoba
+  /// lagi. Method ini dipanggil tiap siklus setelah [push] sehingga baris
+  /// yang nyangkut otomatis retry.
+  Future<int> pushPendingChildren() async {
+    final client = _client;
+    if (client == null) return 0;
+
+    final parents = await _db.query('analyses', columns: ['id', 'uuid']);
+    final uuidById = <int, String>{
+      for (final row in parents)
+        if (row['id'] != null && row['uuid'] != null)
+          row['id'] as int: row['uuid'] as String,
+    };
+
+    var pushed = 0;
+
     final defects = await _db.query(
       'analysis_defects',
-      where: 'analysis_id = ? AND sync_status = ?',
-      whereArgs: [localId, 'pending'],
+      where: 'sync_status = ?',
+      whereArgs: ['pending'],
     );
     for (final d in defects) {
+      final analysisUuid = uuidById[d['analysis_id'] as int?];
+      if (analysisUuid == null) continue;
       try {
         await client.from('analysis_defects').upsert({
           'uuid': d['uuid'],
@@ -445,17 +464,20 @@ class SyncService {
           where: 'id = ?',
           whereArgs: [d['id']],
         );
+        pushed++;
       } catch (e) {
-        debugPrint('[Sync] push defect gagal: $e');
+        debugPrint('[Sync] push defect gagal (${d['uuid']}): $e');
       }
     }
 
     final recs = await _db.query(
       'recommendations',
-      where: 'analysis_id = ? AND sync_status = ?',
-      whereArgs: [localId, 'pending'],
+      where: 'sync_status = ?',
+      whereArgs: ['pending'],
     );
     for (final r in recs) {
+      final analysisUuid = uuidById[r['analysis_id'] as int?];
+      if (analysisUuid == null) continue;
       try {
         await client.from('recommendations').upsert({
           'uuid': r['uuid'],
@@ -472,10 +494,12 @@ class SyncService {
           where: 'id = ?',
           whereArgs: [r['id']],
         );
+        pushed++;
       } catch (e) {
-        debugPrint('[Sync] push rekomendasi gagal: $e');
+        debugPrint('[Sync] push rekomendasi gagal (${r['uuid']}): $e');
       }
     }
+    return pushed;
   }
 
   /// Pull baris cloud milik user (paging 1000 baris per halaman).
