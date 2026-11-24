@@ -12,6 +12,7 @@ import '../../features/brew/presentation/views/user_recipe_detail_screen.dart';
 import '../../features/brew/presentation/views/user_recipe_form_screen.dart';
 import '../../features/brew/domain/entities/brew_recipe.dart';
 import '../../features/home/presentation/views/home_view.dart';
+import '../../features/onboarding/presentation/views/onboarding_view.dart';
 import '../../features/result/presentation/views/result_view.dart';
 import '../../features/scan/presentation/views/scan_setup_view.dart';
 import '../../features/scan/presentation/views/scan_view.dart';
@@ -37,12 +38,22 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/home',
   refreshListenable: AuthGateListenable.instance,
   redirect: (context, state) {
-    final auth = AuthGateListenable.instance.authState;
+    final gate = AuthGateListenable.instance;
+    final auth = gate.authState;
     final loggedIn = auth?.loggedIn ?? false;
     final unavailable = auth?.unavailable ?? false;
     final goingToAuth =
         state.matchedLocation == '/login' ||
         state.matchedLocation == '/register';
+    final goingToOnboarding = state.matchedLocation == '/onboarding';
+
+    // Gate Onboarding: jika belum menyelesaikan onboarding dan belum di rute /onboarding
+    if (!gate.onboardingCompleted && !goingToOnboarding) {
+      return '/onboarding';
+    }
+
+    // Jika sedang berada di /onboarding (first-run atau dibuka dari Profil), jangan dialihkan
+    if (goingToOnboarding) return null;
 
     // Supabase tidak dikonfigurasi (.env kosong) → tanpa gate, app jalan
     // offline penuh (fallback defensif; di production tidak terjadi).
@@ -120,14 +131,18 @@ final GoRouter appRouter = GoRouter(
       path: '/profile',
       builder: (context, state) => const ProfileScreen(),
     ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingView(),
+    ),
   ],
 );
 
-/// Jembatan Riverpod ↔ GoRouter untuk auth gate (D-30).
+/// Jembatan Riverpod ↔ GoRouter untuk auth gate (D-30) dan status onboarding.
 ///
 /// [RoastmateApp] (ConsumerWidget) memanggil [update] tiap
 /// `authControllerProvider` berubah; router membaca [authState] di redirect
-/// dan mendengarkan notify agar re-navigate saat login/logout.
+/// dan mendengarkan notify agar re-navigate saat login/logout/onboarding.
 class AuthGateListenable extends ChangeNotifier {
   AuthGateListenable._();
   static final AuthGateListenable instance = AuthGateListenable._();
@@ -135,9 +150,18 @@ class AuthGateListenable extends ChangeNotifier {
   AuthState? _authState;
   AuthState? get authState => _authState;
 
+  bool _onboardingCompleted = true;
+  bool get onboardingCompleted => _onboardingCompleted;
+
   void update(AuthState state) {
     if (_authState == state) return;
     _authState = state;
+    notifyListeners();
+  }
+
+  void updateOnboarding(bool completed) {
+    if (_onboardingCompleted == completed) return;
+    _onboardingCompleted = completed;
     notifyListeners();
   }
 }

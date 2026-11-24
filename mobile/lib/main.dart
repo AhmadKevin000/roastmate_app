@@ -10,6 +10,7 @@ import 'app/app.dart';
 import 'core/auth/auth_controller.dart';
 import 'core/network/supabase_service.dart';
 import 'app/router/app_router.dart';
+import 'features/onboarding/data/repositories/onboarding_repository_impl.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,11 @@ Future<void> main() async {
     // Supabase tidak terkonfigurasi → tanpa gate (fallback offline penuh).
     AuthGateListenable.instance.update(const AuthState(unavailable: true));
   }
+
+  // Onboarding status: muat dari SQLite lokal (meta)
+  final onboardingRepo = OnboardingRepositoryImpl();
+  final onboardingCompleted = await onboardingRepo.isOnboardingCompleted();
+  AuthGateListenable.instance.updateOnboarding(onboardingCompleted);
 
   runApp(
     ProviderScope(

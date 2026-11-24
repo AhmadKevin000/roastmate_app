@@ -149,6 +149,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               label: const Text('Keluar'),
             ),
           ],
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 12),
+          Text(
+            'PANDUAN & BANTUAN',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: RoastmateColors.textSecondary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            margin: EdgeInsets.zero,
+            child: ListTile(
+              leading: const Icon(
+                Icons.menu_book_outlined,
+                color: RoastmateColors.primary,
+              ),
+              title: const Text('Panduan Fitur (Onboarding)'),
+              subtitle: const Text('Pelajari kembali 6 alur fitur utama RoastMate'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => context.push('/onboarding'),
+            ),
+          ),
         ],
       ),
     );
