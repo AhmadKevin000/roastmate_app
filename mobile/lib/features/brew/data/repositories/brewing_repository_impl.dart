@@ -223,6 +223,33 @@ class BrewingRepositoryImpl implements BrewingRepository {
     );
   }
 
+  @override
+  Future<void> updateUserRecipe(BrewRecipe recipe) async {
+    final db = await _db;
+    await db.update(
+      'user_brew_recipes',
+      <String, Object?>{
+        'name': recipe.name,
+        'method_id': recipe.methodId,
+        'method_name': recipe.methodName,
+        'species': recipe.species,
+        'quality_profile': recipe.qualityProfile,
+        'roast_context': recipe.roastContext,
+        'dose_g': recipe.doseG,
+        'water_volume_ml': recipe.waterVolumeMl,
+        'grind_size': recipe.grindSize,
+        'temperature_c': recipe.temperatureC,
+        'brewing_time_s': recipe.brewingTimeS,
+        'steps': recipe.steps.isEmpty ? null : jsonEncode(_stepsToJson(recipe.steps)),
+        'video_url': recipe.videoUrl,
+        'notes': recipe.notes,
+        'updated_at': DateTime.now().toIso8601String(),
+      },
+      where: 'recipe_id = ?',
+      whereArgs: [recipe.recipeId],
+    );
+  }
+
   Future<List<BrewTool>> _getToolsForMethod(Database db, String methodId) async {
     final rows = await db.rawQuery('''
       SELECT t.tool_id, t.tool_name, t.category, t.image_asset, t.description,

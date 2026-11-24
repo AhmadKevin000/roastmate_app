@@ -34,7 +34,8 @@ class UserRecipeDetailScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(color: RoastmateColors.primary),
         ),
-        error: (e, _) => _buildNotFound(context, message: 'Gagal memuat resep: $e'),
+        error: (e, _) =>
+            _buildNotFound(context, message: 'Gagal memuat resep: $e'),
         data: (recipe) => recipe == null
             ? _buildNotFound(context)
             : _buildContent(recipe),

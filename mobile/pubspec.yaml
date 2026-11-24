@@ -45,23 +45,19 @@ dependencies:
   uuid: ^4.5.1
   # Catatan: `cloudinary_flutter` (semua versi) HANYA widget/URL gen — tidak
   # punya API upload. Upload signed memakai paket `cloudinary` (SDK Dart murni).
-  cloudinary: ^2.1.1
+  cloudinary: ^2.0.0
   url_launcher: ^6.3.3
   tflite_flutter: ^0.12.1
   image: ^4.5.4
   path_provider: ^2.1.5
+  sqflite_common_ffi: ^2.3.4
+  sqflite_common_ffi_web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.3.4
   http: ^1.6.0
 
 # For information on the generic Dart part of this file, see the

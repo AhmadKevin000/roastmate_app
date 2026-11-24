@@ -7,11 +7,15 @@ import '../theme/roastmate_text.dart';
 /// AppBar konsisten untuk layar yang di-push (Scan, Setup Scan, Detail
 /// Inspeksi, Detail Resep).
 ///
-/// Tombol kembali + judul di tengah. Tidak memakai avatar.
+/// Tombol kembali + judul di tengah. `actions` opsional untuk tombol
+/// tambahan di sisi kanan (mis. ikon edit, bagikan).
 class RoastmateAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
 
-  const RoastmateAppBar({super.key, required this.title});
+  /// Widget opsional di sisi kanan AppBar (mis. `IconButton` edit/bagikan).
+  final List<Widget>? actions;
+
+  const RoastmateAppBar({super.key, required this.title, this.actions});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -35,6 +39,7 @@ class RoastmateAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       centerTitle: true,
+      actions: actions,
     );
   }
 }
