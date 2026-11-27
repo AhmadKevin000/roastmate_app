@@ -367,7 +367,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
       return;
     }
 
-    final batchName = ref.read(scanBatchNameProvider).trim();
+    final nameFromWidget = widget.coffeeName?.trim();
+    final nameFromProvider = ref.read(scanBatchNameProvider).trim();
+    final batchName = (nameFromWidget != null && nameFromWidget.isNotEmpty)
+        ? nameFromWidget
+        : nameFromProvider;
     final displayName = batchName.isEmpty ? 'Kopi Tanpa Nama' : batchName;
 
     // 1) Inference (isolate). Overlay menutup latensi; kamera dilepas dulu
